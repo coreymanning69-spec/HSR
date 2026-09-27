@@ -1,9 +1,10 @@
 import {syncPuppets} from './puppet-dom.js';
-import {createHSRClient} from './hsr-client.js?v=attunement-help-1';
+import {createHSRClient} from './hsr-client.js?v=drain-1';
 import {createArcadeCanvas} from './arcade-canvas.js';
 import {bindArcadeInput} from './arcade-input.js';
 import {createArcadeLoop} from './arcade-loop.js';
-import {createCombatDirector, DEFAULT_COMBAT_SETTINGS, damageMath, healMath} from './combat-director.js?v=director-11';
+import {createCombatDirector, DEFAULT_COMBAT_SETTINGS, damageMath, healMath} from './combat-director.js?v=director-12';
+import {combatStyle, styleAllows, isTypingTarget, stepDestination, groundDestination, withinMovement, threatenedBy, hotbarSlots, spaceIntent, radialItems, radialLayout, gridDistance} from './combat-input.js?v=input-1';
 import {createVoiceFeed, DEFAULT_VOICE_SETTINGS} from './voice-feed.js?v=2';
 import {ffLayout, effectRack, visibleEffects, effectLabel, turnOrderStrip, commandWindow, partyStatusPanel} from './battle-scene.js?v=effects-2';
 import {routeMap, nodeGlyph} from './expedition-map.js?v=xp-2';
@@ -609,6 +610,8 @@ function navigationState() { return {hsr:true, phase:state.phase, route:[...stat
 function clearScreenTransientState() {
   state.titleActive = null;
   state.actionPicker = null;
+  state.combatRadial = null;
+  state.threatWarning = null;
   state.focusTarget = null;
   state.pendingConversation = null;
   state.consoleDraft = '';
@@ -985,7 +988,11 @@ function result(reply) {
     if (Array.isArray(turnZero) && turnZero.length && !(previousView?.combat?.turn_zero || []).length) {
       for (const row of turnZero) addMessage(`Turn 0 · ${row.tell || String(row.type || 'effect').replaceAll('_', ' ')}${row.defeated?.length ? ` (${row.defeated.length} fell before initiative)` : ''}`, 'note');
     }
-    combatDirector.ingest(previousView, state.view);
+    // Enemy turns and NPC reactions the host played inside this one step.
+    const steps = reply.result?.receipts || reply.result?.turn?.receipts || [];
+    const npcSteps = steps.some(row => { const who = row?.presentation?.actor_id || row?.actor || row?.source; return who && !playerControlled(who, state.view); });
+    combatDirector.ingest(previousView, state.view, steps, {banner: npcSteps && playerControlled(previousView?.combat?.current, previousView) ? 'Opposition phase' : ''});
+    announceTurnChange(previousView, state.view, {opposed: npcSteps});
     surfaceCommentary(reply);
     if (state.focusTarget && !livingOpponents().some(row => row.id === state.focusTarget)) state.focusTarget = null;
   }
@@ -1017,7 +1024,71 @@ async function work(fn, label = 'Working', line = '') {
     state.link.lastRequestMs = performance.now() - state.activity.started;
     state.busy = false; state.activity = {...state.activity, requests: 0, visible: false, label: 'Ready'};
     lockControls(false); render();
+    scheduleNpcDrain();
   }
+}
+// ---- Autonomous opposition ---------------------------------------------------
+// When the host hands the turn (or a reaction window) to an AI-controlled
+// combatant, the client asks it to play those steps itself (design_drain_npc)
+// instead of waiting on an "Advance NPC turn" click. The host stops at the
+// first player decision; each step's receipt queues on the combat director.
+function playerControlled(id, view = state.view) {
+  if (!id) return false;
+  // The public view reports "player", "npc" or (when unrecorded) "unknown";
+  // only an explicit "npc" hands a party member to the policy.
+  const member = (view?.party || []).find(row => row.id === id);
+  if (member) return member.controller === 'player' || (member.controller !== 'npc' && String(id).startsWith('p'));
+  return false;
+}
+function npcDecisionPending(view = state.view) {
+  if (!tacticalActive(view)) return false;
+  const step = encounterStepActor(view);
+  return Boolean(step) && !playerControlled(step, view);
+}
+function combatSignature(view = state.view) {
+  const c = view?.combat || {};
+  return JSON.stringify([view?.run_id, c.current, c.round, (c.order || []).indexOf(c.current), (c.pending || []).length,
+    (view?.opposition || []).map(row => row.hp), (view?.party || []).map(row => row.hp)]);
+}
+let npcDrainRunning = false;
+function scheduleNpcDrain() {
+  if (npcDrainRunning || state.busy || state.preferences.combat.autoNpc === false || !npcDecisionPending()) return;
+  // A drain that changed nothing is not retried until the combat moves on.
+  if (state.npcDrainStalled && state.npcDrainStalled === combatSignature()) return;
+  setTimeout(() => { drainNpcTurns(); }, 0);
+}
+async function drainNpcTurns() {
+  if (npcDrainRunning || state.busy || !state.client?.drainNpc || !state.runId || !npcDecisionPending()) return;
+  npcDrainRunning = true;
+  state.npcPhase = true;
+  const before = combatSignature();
+  try {
+    await work(async () => {
+      render();
+      for (let call = 0; call < 8 && npcDecisionPending(); call++) {
+        const reply = result(await state.client.drainNpc(state.runId));
+        const drain = reply.result?.drain || {};
+        if (!drain.steps || drain.stopped !== 'step_limit') break;
+      }
+    }, 'Enemy turn', 'The opposition moves…');
+  } finally {
+    npcDrainRunning = false;
+    state.npcPhase = false;
+    state.npcDrainStalled = combatSignature() === before ? before : null;
+    if (npcDecisionPending() && !state.npcDrainStalled) scheduleNpcDrain(); else render();
+  }
+}
+function announceTurnChange(previous, next, {opposed = false} = {}) {
+  const before = previous?.combat, after = next?.combat;
+  if (!after || after.complete || !after.current || !tacticalActive(next) || before?.current === after.current) return;
+  if (!before || before.complete || previous?.run_id !== next?.run_id) return;
+  const fighters = [...(next.party || []), ...(next.opposition || [])];
+  const name = fighters.find(row => row.id === after.current)?.name || after.current;
+  if (playerControlled(after.current, next)) {
+    combatDirector.queueBanner(`${name}'s turn`, 'turn');
+    // The dock follows whoever the host says acts now.
+    if ((next.party || []).some(row => row.id === after.current)) state.selectedActor = after.current;
+  } else if (!opposed && playerControlled(before.current, previous)) combatDirector.queueBanner('Opposition phase', 'enemy');
 }
 async function boot() {
   const reply = result(await state.client.boot('DESIGN'));
@@ -2321,6 +2392,8 @@ function stageOverlay(item = {}, index = 0) {
   const focused = enemy && state.focusTarget === id && !down;
   const picking = Boolean(state.actionPicker) && actionTargets(state.actionPicker.action).some(choice => choice.value === id);
   const selected = !enemy && actor().id === id;
+  // A queued step would leave this foe's reach: warn before the host rolls it.
+  const threatened = enemy && !down && (state.threatWarning?.foes || []).includes(id);
   const showBar = c.hpBars === 'all' || (c.hpBars === 'enemies' && enemy) || (c.hpBars === 'party' && !enemy);
   const ratio = Number.isFinite(hp) && max > 0 ? Math.max(0, Math.min(1, hp / max)) : null;
   const tone = ratio == null ? 'none' : ratio <= .25 ? 'crit' : ratio <= .5 ? 'low' : 'ok';
@@ -2328,10 +2401,11 @@ function stageOverlay(item = {}, index = 0) {
   const overlay = [
     c.turnMarker && active ? '<span class="doll-turn" aria-hidden="true"></span>' : '',
     c.targetRing && (focused || picking) ? `<span class="doll-ring${picking ? ' is-picking' : ''}" aria-hidden="true"></span>` : '',
+    threatened ? '<span class="doll-threat" aria-hidden="true"></span>' : '',
     showBar && ratio != null ? `<span class="doll-hp" data-tone="${tone}" aria-hidden="true"><i style="width:${(ratio * 100).toFixed(1)}%"></i>${c.hpNumbers ? `<em>${Math.max(0, hp)}/${max}</em>` : ''}</span>` : '',
     c.statusChips ? effectRack({member: item, E}) : '',
   ].join('');
-  const flags = [enemy && 'opponent', active && 'is-active-turn', focused && 'is-targeted', picking && 'is-pickable', selected && 'is-selected', down && 'is-down'].filter(Boolean).join(' ');
+  const flags = [enemy && 'opponent', active && 'is-active-turn', focused && 'is-targeted', threatened && 'is-threatening', picking && 'is-pickable', selected && 'is-selected', down && 'is-down'].filter(Boolean).join(' ');
   const label = `${item.name || id}${ratio != null ? `, ${Math.max(0, hp)} of ${max} HP` : ''}${active ? ', acting now' : ''}${focused ? ', targeted' : ''}${down ? ', down' : ''}${effects.length ? `, ${effects.length} effects: ${effects.map(effectLabel).join('; ')}` : ''}`;
   return {id, overlay, flags, attrs: {'data-stage-actor': id, role: 'button', tabindex: '0', 'aria-label': label, 'aria-pressed': focused || selected ? 'true' : 'false'}};
 }
@@ -2782,9 +2856,12 @@ function autoToggle() {
   const auto = state.view?.auto;
   const stepActor = encounterStepActor();
   if (!auto?.supported || !stepActor) return '';
-  const isPlayer = stepActor.startsWith('p');
-  const label = isPlayer ? '⚡ Auto turn (Gambit)' : (auto.active ? 'Resolving NPC turn…' : 'Advance NPC turn');
-  return `<button type="button" class="action secondary" data-auto-step="${E(auto.step_command)}" title="${isPlayer ? 'Execute automated turn via character Gambits' : 'Advance NPC combat turn'}">${label}</button>`;
+  const isPlayer = playerControlled(stepActor);
+  const label = isPlayer ? '⚡ Auto turn (Gambit)' : (state.npcPhase ? 'Enemy turn in progress…' : 'Play enemy turns');
+  // NPC steps drain through design_drain_npc; this button is the manual
+  // fallback when automatic enemy turns are switched off in Options.
+  const command = isPlayer || !tacticalActive() ? auto.step_command : 'design_drain_npc';
+  return `<button type="button" class="action secondary" data-auto-step="${E(command)}" title="${isPlayer ? 'Execute automated turn via character Gambits' : 'Play every NPC turn until a hero must decide'}">${label}</button>`;
 }
 function signatureActions() {
   const identity = actor().identity;
@@ -2813,7 +2890,7 @@ function turnPanel() {
   const playerTurn = String(current || '').startsWith('p');
   const turnActions = playerTurn
     ? '<div class="actions turn-actions"><button type="button" class="action" data-engine-action="attack">⚔ Attack</button><button type="button" class="action" data-engine-action="cast">✧ Cast</button><button type="button" class="action" data-engine-action="move">⇢ Move</button><button type="button" class="action" data-engine-action="end_turn">⏳ End turn</button></div>'
-    : '<p class="notice" aria-live="polite">NPC turn. Advance it through the host-resolved Encounter control.</p>';
+    : `<p class="notice npc-phase" aria-live="polite">${state.npcPhase || state.preferences.combat.autoNpc !== false ? 'Enemy turn in progress… the host plays it and hands control back at your next decision.' : 'Enemy turn. Automatic enemy turns are off; use "Play enemy turns".'}</p>`;
   const targets = (c.target_context || []).map(target => {
     const visible = (state.view?.opposition || []).find(item => item.id === target.id);
     return `<span><b>${E(visible?.name || target.id)}</b> ${E(target.distance_ft)} ft</span>`;
@@ -3524,6 +3601,38 @@ function contextMenu() {
     <div class="context-menu-footer"><button type="button" class="action secondary" data-action="close-context-menu">Close</button></div>
   </aside>`;
 }
+// The right-click action wheel on an enemy (mouse / hybrid combat styles).
+// Items come from combat-input.radialItems over the host's contextual rows.
+function openCombatRadial(id, x, y) {
+  const who = currentCombatant();
+  state.focusTarget = id;
+  state.contextMenu = null;
+  state.combatRadial = {x, y, target: id,
+    items: radialItems(id, state.view?.combat?.contextual_actions || [], {identity: who.identity, playerTurn: myTacticalTurn()})};
+  render();
+  document.querySelector('.combat-radial button:not([disabled])')?.focus({preventScroll: true});
+}
+function combatRadialMenu() {
+  const menu = state.combatRadial;
+  if (!menu || !tacticalActive()) return '';
+  const name = livingOpponents().find(row => row.id === menu.target)?.name || menu.target;
+  const spots = radialLayout(menu.items.length, 78);
+  const x = Math.max(96, Math.min(Number(menu.x) || 0, innerWidth - 96));
+  const y = Math.max(96, Math.min(Number(menu.y) || 0, innerHeight - 96));
+  const items = menu.items.map((item, index) => `<button type="button" class="combat-radial-item${item.available ? '' : ' is-unavailable'}" data-radial-item="${index}" style="--rx:${spots[index].x}px;--ry:${spots[index].y}px"${item.available ? '' : ' disabled'} data-tooltip="${E(item.available ? item.label : `${item.label}: ${item.reason}`)}" aria-label="${E(item.label)}"><span aria-hidden="true">${E(item.icon)}</span><small>${E(item.label)}</small></button>`).join('');
+  return `<aside class="combat-radial" role="menu" aria-label="${E(name)} combat actions" style="left:${x}px;top:${y}px"><strong class="combat-radial-hub">${E(name)}</strong>${items}</aside>`;
+}
+function runRadialItem(index) {
+  const menu = state.combatRadial;
+  const item = menu?.items?.[index];
+  state.combatRadial = null;
+  if (!item || !item.available) { render(); return; }
+  const target = menu.target;
+  const name = livingOpponents().find(row => row.id === target)?.name || target;
+  if (item.action === 'inspect') { render(); openExamineDialog({entity_type: 'target', entity_id: target}); return; }
+  if (item.action === 'cast') { state.focusTarget = target; render(); clickEngineButton('cast'); return; }
+  submitTarget(item.action, 'target', target, `${item.label} → ${name}`);
+}
 function toggleFullscreen() {
   try {
     if (!document.fullscreenElement) {
@@ -3597,6 +3706,11 @@ function combatOptions() {
       ['combat.floatMs', 'Number lifetime', 'How long a floating number stays up.', {type: 'range', min: 500, max: 3000, step: 100}],
       ['combat.floatScale', 'Number size', 'Scale of floating numbers.', {type: 'range', min: .6, max: 2, step: .1}],
     ]],
+    ['Controls', [
+      ['combat.style', 'Combat controls', 'Hybrid: every style at once. Turn-based: the command dock and pickers only. WASD: W/A/S/D steps 5 ft, Space attacks the focused or nearest foe in reach (or ends the turn once your attack is spent), 1-4 fire the hotbar, Tab/Q cycle targets. Mouse: left-click the ground to move, left-click a foe to focus it (double-click attacks), right-click a foe for the action wheel, right-click the ground to clear. The host still validates every move and roll.', {type: 'select', options: [['hybrid', 'Hybrid (all)'], ['turn_based', 'Turn-based dock'], ['direct_wasd', 'WASD + Space'], ['mouse_click', 'Left / right mouse']]}],
+      ['combat.autoNpc', 'Automatic enemy turns', 'Enemies and their reactions play by themselves until a hero must decide. Off: an explicit "Play enemy turns" button.', {type: 'bool'}],
+      ['combat.threatWarn', 'Opportunity-attack warning', 'A step that would leave a foe\'s reach rings that foe in red first; repeat the step to commit it.', {type: 'bool'}],
+    ]],
     ['Stage overlays & targeting', [
       ['combat.hpBars', 'HP bars', 'Bars drawn on the figures themselves, on the ground, flight and arcade stages alike.', {type: 'select', options: [['all', 'Everyone'], ['enemies', 'Enemies only'], ['party', 'Party only'], ['off', 'Off']]}],
       ['combat.hpNumbers', 'HP numbers', 'Current/max printed on the bar.', {type: 'bool'}],
@@ -3605,7 +3719,7 @@ function combatOptions() {
       ['combat.targetRing', 'Target ring', 'Ring under the focused enemy, dashed rings under every legal pick while choosing.', {type: 'bool'}],
       ['combat.clickMode', 'Clicking an enemy', 'Focus: click marks the target, double-click attacks it. Attack: one click attacks. Double: only a double-click attacks.', {type: 'select', options: [['focus', 'Focus (double-click attacks)'], ['attack', 'Attack on click'], ['double', 'Attack on double-click only']]}],
       ['combat.attackUsesFocus', 'Attack uses focused target', 'The Attack button fires at the focused enemy instead of opening the picker.', {type: 'bool'}],
-      ['combat.hotkeys', 'Hotkeys', 'On the battle screen: [ ] or Tab cycle targets, A attacks, E ends the turn, Esc clears. Ignored while typing.', {type: 'bool'}],
+      ['combat.hotkeys', 'Hotkeys', 'On the battle screen: [ ] or Tab cycle targets, E ends the turn, Esc clears; WASD styles add movement, Space and 1-4; the turn-based and mouse styles keep A to attack. Ignored while typing.', {type: 'bool'}],
     ]],
     ['Diagnostics', [
       ['combat.fillMissing', 'Infer dropped hits', 'The host sends its last five receipts. When HP falls by more than those explain, play the difference as an inferred hit.', {type: 'bool'}],
@@ -3813,23 +3927,164 @@ function activateFigure(id, {double = false} = {}) {
   if (c.clickMode === 'focus' && wasFocused && double) { attackFocused(); return; }
   focusTarget(id);
 }
+const groundBoundStages = new WeakSet();
+// On the formation (side-view) stage x is not a grid projection, so a click
+// on the foes' half closes on the nearest foe and one on the party's half
+// falls back, each capped to the movement left.
+function formationStep(origin, fraction) {
+  if (!Array.isArray(origin)) return null;
+  const foes = foeRows().filter(row => Array.isArray(row.position));
+  const nearest = foes.slice().sort((a, b) => gridDistance(origin, a.position) - gridDistance(origin, b.position))[0];
+  if (!nearest) return null;
+  const toward = Math.sign(nearest.position[0] - origin[0]) || 1;
+  if (fraction >= 0.5) return [Math.max(0, Math.min(120, nearest.position[0] - 5 * toward)), nearest.position[1], origin[2]];
+  return [Math.max(0, Math.min(120, origin[0] - toward * Number(currentEconomy().movement || 0))), origin[1], origin[2]];
+}
 function bindStageTargeting() {
+  const liveStage = document.querySelector('#app .combat-stage:not(.demo-stage):not(.flight-stage)');
+  if (liveStage && !groundBoundStages.has(liveStage)) {
+    groundBoundStages.add(liveStage);
+    liveStage.addEventListener('click', event => {
+      if (!styleAllows(style(), 'mouse') || !myTacticalTurn()) return;
+      if (event.target.closest('[data-stage-actor], button, a, [role="button"], .ff-order, .combat-radial, .combat-inspector')) return;
+      if (state.combatRadial) { state.combatRadial = null; render(); return; }
+      const who = currentCombatant();
+      const origin = combatPosition(who.id);
+      const rect = liveStage.getBoundingClientRect();
+      if (!rect.width) return;
+      const fraction = (event.clientX - rect.left) / rect.width;
+      const destination = liveStage.classList.contains('ff-stage') ? formationStep(origin, fraction) : groundDestination(origin, fraction);
+      if (destination) stepTo(destination, 'Walk');
+    });
+  }
+  document.querySelectorAll('[data-radial-item]').forEach(node => node.onclick = event => { event.stopPropagation(); runRadialItem(Number(node.dataset.radialItem)); });
   document.querySelectorAll('.illustrated-scene:not(.demo-stage) [data-stage-actor], .combat-stage:not(.demo-stage) [data-stage-actor]').forEach(node => {
     node.onclick = () => activateFigure(node.dataset.stageActor);
     node.ondblclick = event => { event.preventDefault(); activateFigure(node.dataset.stageActor, {double: true}); };
     node.onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); activateFigure(node.dataset.stageActor, {double: event.key === 'Enter' && event.shiftKey}); } };
   });
 }
+// ---- Combat input router ------------------------------------------------------
+// Keys and clicks become the same engine actions the command dock sends
+// (web/combat-input.js holds the pure mapping). Options > Combat controls
+// picks the style: hybrid (everything), turn_based, direct_wasd, mouse_click.
+const style = () => combatStyle(state.preferences.combat.style);
+function myTacticalTurn() {
+  return tacticalActive() && playerTurn() && !state.busy && playerControlled(state.view?.combat?.current)
+    && !(state.view?.combat?.pending || []).length;
+}
+function currentCombatant() {
+  const id = state.view?.combat?.current;
+  return party().find(row => row.id === id) || {};
+}
+function currentEconomy() {
+  const c = state.view?.combat || {};
+  return c.economy?.[c.current] || {};
+}
+const combatPosition = id => state.view?.combat?.positions?.[id] || [...party(), ...(state.view?.opposition || [])].find(row => row.id === id)?.position || null;
+function foeRows() {
+  return livingOpponents().map(row => ({...row, position: combatPosition(row.id)}));
+}
+// A step that leaves a foe's reach is announced first: the threatening foes
+// get a red ring, and the same step again within THREAT_CONFIRM_MS commits.
+const THREAT_CONFIRM_MS = 2600;
+async function stepTo(destination, label = 'Move') {
+  if (!destination || !myTacticalTurn()) return false;
+  const who = currentCombatant();
+  const origin = combatPosition(who.id);
+  const capped = withinMovement(origin, destination, currentEconomy().movement);
+  if (!capped) { state.note = 'No movement left this turn.'; addMessage(state.note); render(); return false; }
+  const threats = state.preferences.combat.threatWarn === false ? [] : threatenedBy(origin, capped, foeRows(), {disengaged: (who.statuses || []).includes('DISENGAGED')});
+  const warned = state.threatWarning;
+  if (threats.length && !(warned && String(warned.destination) === String(capped) && performance.now() - warned.at < THREAT_CONFIRM_MS)) {
+    const stamp = performance.now();
+    state.threatWarning = {destination: capped, foes: threats, at: stamp};
+    const names = threats.map(id => livingOpponents().find(row => row.id === id)?.name || id).join(', ');
+    state.note = `Leaving ${names}'s reach provokes an opportunity attack. Repeat the move to commit, or Disengage first.`;
+    addMessage(state.note);
+    render();
+    setTimeout(() => { if (state.threatWarning?.at === stamp) { state.threatWarning = null; render(); } }, THREAT_CONFIRM_MS);
+    return false;
+  }
+  state.threatWarning = null;
+  await work(async () => {
+    result(await state.client.designTurn(state.runId, `${label} to ${capped.join(',')}`, {type: 'move', actor: who.id, destination: capped}));
+    await loadReadout(state.runId);
+  });
+  return true;
+}
+async function engineSubmit(type, target = null, label = '') {
+  if (!myTacticalTurn()) return false;
+  const who = currentCombatant();
+  if (target) { submitTarget(type, 'target', target, label || `${type} ${target}`); return true; }
+  const fields = {type, actor: who.id};
+  await work(async () => {
+    result(await state.client.designTurn(state.runId, label || type, fields));
+    await loadReadout(state.runId);
+  });
+  return true;
+}
+function clickEngineButton(id) {
+  const node = [...document.querySelectorAll(`[data-engine-action="${CSS.escape(id)}"]`)].find(button => !button.disabled);
+  if (node) { node.click(); return true; }
+  return false;
+}
+// Hotbar slot N: the contextual action combat-input.hotbarSlots binds it to.
+function fireHotbar(slot) {
+  const who = currentCombatant();
+  const rows = state.view?.combat?.contextual_actions || [];
+  const bound = hotbarSlots(who.identity, rows).find(row => row.slot === slot);
+  if (!bound?.id) return false;
+  if (!bound.available) { state.note = `${bound.label}: ${bound.reason || 'not available now.'}`; addMessage(state.note); render(); return true; }
+  if (bound.id === 'cast' || bound.id === 'move') return clickEngineButton(bound.id);
+  if (bound.targets?.length) {
+    const focus = bound.targets.includes(state.focusTarget) ? state.focusTarget : null;
+    const origin = combatPosition(who.id);
+    const target = focus || bound.targets.slice().sort((a, b) => gridDistance(origin, combatPosition(a)) - gridDistance(origin, combatPosition(b)))[0];
+    submitTarget(bound.id, 'target', target, `${bound.label} → ${livingOpponents().find(row => row.id === target)?.name || target}`);
+    return true;
+  }
+  engineSubmit(bound.id, null, bound.label);
+  return true;
+}
+function spaceAction() {
+  const who = currentCombatant();
+  const wren = String(who.identity || '').toLowerCase() === 'wren';
+  const intent = spaceIntent({economy: currentEconomy(), focus: state.focusTarget, foes: foeRows(),
+    position: combatPosition(who.id), reach: wren ? 60 : String(who.identity || '').toLowerCase() === 'doran' ? 70 : 5, wren});
+  if (intent.kind === 'attack') {
+    const name = livingOpponents().find(row => row.id === intent.target)?.name || intent.target;
+    state.focusTarget = intent.target;
+    submitTarget('attack', 'target', intent.target, `Attack ${name}`);
+    return true;
+  }
+  return clickEngineButton('end_turn') || (engineSubmit('end_turn', null, 'End turn'), true);
+}
 // Hotkeys only while the battle stage is on screen and no text field has focus.
 document.addEventListener('keydown', event => {
   if (!state.preferences.combat.hotkeys || state.phase !== 'ready' || !document.querySelector('#app .combat-stage:not(.demo-stage)')) return;
-  if (event.target.closest?.('input,textarea,select,[contenteditable]') || event.ctrlKey || event.metaKey || event.altKey) return;
+  if (isTypingTarget(event.target) || isTypingTarget(document.activeElement) || event.ctrlKey || event.metaKey || event.altKey) return;
+  if (document.querySelector('dialog[open]') || state.systemMenuOpen || state.bookbagOpen) return;
   const key = event.key;
-  if (key === ']' || (key === 'Tab' && document.activeElement?.closest?.('.combat-stage'))) { event.preventDefault(); cycleTarget(event.shiftKey ? -1 : 1); }
-  else if (key === '[') { event.preventDefault(); cycleTarget(-1); }
-  else if (key === 'a' || key === 'A') { if (attackFocused()) event.preventDefault(); }
-  else if (key === 'e' || key === 'E') { const end = [...document.querySelectorAll('[data-engine-action="end_turn"]')].find(node => !node.disabled); if (end) { event.preventDefault(); end.click(); } }
-  else if (key === 'Escape' && (state.focusTarget || state.actionPicker)) { state.focusTarget = null; state.actionPicker = null; render(); }
+  const lower = String(key).toLowerCase();
+  const direct = styleAllows(style(), 'keys');
+  const handled = () => { event.preventDefault(); event.stopPropagation(); };
+  if (key === ']' || (key === 'Tab' && (direct || document.activeElement?.closest?.('.combat-stage')))) { handled(); cycleTarget(event.shiftKey ? -1 : 1); return; }
+  if (key === '[') { handled(); cycleTarget(-1); return; }
+  if (direct && lower === 'q') { handled(); cycleTarget(event.shiftKey ? -1 : 1); return; }
+  if (key === 'Escape' && (state.focusTarget || state.actionPicker || state.combatRadial || state.threatWarning)) {
+    handled(); state.focusTarget = null; state.actionPicker = null; state.combatRadial = null; state.threatWarning = null; render(); return;
+  }
+  if (direct && tacticalActive()) {
+    const who = currentCombatant();
+    const destination = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(lower) && !event.shiftKey
+      ? stepDestination(combatPosition(who.id), lower) : null;
+    if (destination) { handled(); if (myTacticalTurn()) stepTo(destination, 'Step'); return; }
+    if (key === ' ' || event.code === 'Space') { handled(); if (myTacticalTurn()) spaceAction(); return; }
+    if (/^[1-4]$/.test(key)) { handled(); if (myTacticalTurn()) fireHotbar(Number(key)); return; }
+  }
+  if (styleAllows(style(), 'legacy_keys') && lower === 'a') { if (attackFocused()) handled(); return; }
+  if (lower === 'e') { const end = [...document.querySelectorAll('[data-engine-action="end_turn"]')].find(node => !node.disabled); if (end) { handled(); end.click(); } }
 });
 // ---- Replay -----------------------------------------------------------------
 // Run titles come from what the run is (lead, scenario, progress), not its id,
@@ -4658,7 +4913,7 @@ function render() {
   const liveArcade = document.querySelector('#app [data-arcade-root]'); liveArcade?.remove();
   if (worldStage?.el.isConnected) worldStage.el.remove();
   if (toolbox?.el.isConnected) toolbox.el.remove();
-    const nextHtml = `${topNavigation()}${body}${staleSandboxNotice}${activityNotice}${messagePanelHtml}${commandBarHtml}${dockContent && state.preferences.showActionDock !== false ? `<div class="hsr-dock tray-${E(state.trayState)}">${trayHandle()}<div class="tray-content">${dockContent}</div></div>` : ''}${mobileNavigation()}${contextMenu()}${disconnectOverlay()}${bookbagModal()}${systemMenuModal()}`;
+    const nextHtml = `${topNavigation()}${body}${staleSandboxNotice}${activityNotice}${messagePanelHtml}${commandBarHtml}${dockContent && state.preferences.showActionDock !== false ? `<div class="hsr-dock tray-${E(state.trayState)}">${trayHandle()}<div class="tray-content">${dockContent}</div></div>` : ''}${mobileNavigation()}${contextMenu()}${combatRadialMenu()}${disconnectOverlay()}${bookbagModal()}${systemMenuModal()}`;
   if (app.innerHTML !== nextHtml) {
     const temp = document.createElement('div');
     temp.innerHTML = nextHtml;
@@ -5348,6 +5603,15 @@ function bind() {
       return;
     }
     if (state.contextMenu && event.target.closest('.hsr-context-menu')) { event.preventDefault(); state.contextMenu = null; render(); return; }
+    // Mouse combat: right-click a foe opens the action wheel; right-click the
+    // ground clears the focus and any open menu.
+    if (styleAllows(style(), 'mouse') && tacticalActive() && event.target.closest('#app .combat-stage:not(.demo-stage)')) {
+      const figure = event.target.closest('[data-stage-actor]');
+      const id = figure?.dataset.stageActor;
+      if (id && livingOpponents().some(row => row.id === id)) { event.preventDefault(); openCombatRadial(id, event.clientX, event.clientY); return; }
+      if (!figure) { event.preventDefault(); state.focusTarget = null; state.combatRadial = null; state.contextMenu = null; state.threatWarning = null; render(); return; }
+    }
+    if (state.combatRadial && !event.target.closest('.combat-radial')) { state.combatRadial = null; }
     const target = contextTarget(event.target);
     if (!target) return;
     event.preventDefault();
@@ -5384,6 +5648,10 @@ function bind() {
         }
       }
       if (state.contextMenu && !event.target.closest('.hsr-context-menu')) { state.contextMenu = null; render(); }
+      // A click away from the action wheel only closes it.
+      if (state.combatRadial && !event.target.closest('.combat-radial')) {
+        state.combatRadial = null; event.preventDefault(); event.stopPropagation(); render();
+      }
     }, true);
     app.addEventListener('pointermove', event => {
       if (state.contextMenu && event.pointerType !== 'touch') {
@@ -6363,4 +6631,8 @@ globalThis.HollowStarUI = Object.freeze({
   navigate: screen => state.phase === 'ready' ? refreshScreen(screen) : false,
   refresh: () => refreshScreen(state.selected),
   refreshReadout: () => state.runId ? work(() => loadReadout(state.runId)) : false,
+  // Combat input/drain state for probes: no setters, nothing a click can't reach.
+  getCombatStatus: () => ({draining: npcDrainRunning, npcPhase: Boolean(state.npcPhase), style: combatStyle(state.preferences.combat.style),
+    radial: state.combatRadial ? structuredClone(state.combatRadial) : null, threat: state.threatWarning ? structuredClone(state.threatWarning) : null,
+    focus: state.focusTarget, history: combatDirector.history}),
 });

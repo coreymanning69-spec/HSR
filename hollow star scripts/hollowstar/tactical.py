@@ -2090,6 +2090,9 @@ def apply(run, action):
             result = weapon_attack(run, key, window["target"], reaction=True)
             if window["kind"] == "opportunity" and r.get("identity") == "doran" and result["roll"]["success"]:
                 economy(run, window["target"])["movement"] = 0
+        if isinstance(result, dict):
+            # Which window this answered, so a client can announce it.
+            result.setdefault("reaction_kind", window["kind"])
         state["pending"].remove(window)
         pending_movement=state.get("pending_movement")
         if pending_movement and not any(w.get('kind') in {'opportunity','brace'}
@@ -2106,6 +2109,7 @@ def apply(run, action):
                 movement={'actor':mover,'cancelled':'actor defeated'}
                 committed=False
             result={'type':'reaction_and_movement','reaction':result,'movement':movement,
+                    'reaction_kind':window['kind'],
                     'evidence':{'movement_committed_after_reaction':committed,
                                 'origin':pending_movement['origin'],'path':pending_movement['path']}}
             state.pop('pending_movement',None)

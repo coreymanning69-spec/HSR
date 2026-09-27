@@ -63,6 +63,7 @@ PUBLIC_EVENT_KEEP_KEYS = {
     "pressure",
     "purchase",
     "presentation",
+    "reaction_kind",
     "receipt",
     "result",
     "reward",
@@ -123,6 +124,14 @@ def public_event_summary(value):
         public = public_event_summary(redacted["combat"])
         for key in ("reward", "commentary", "sfx", "pressure"):
             if key in redacted: public[key] = copy.deepcopy(redacted[key])
+        return public
+    if redacted.get("type") == "reaction_and_movement" and isinstance(redacted.get("reaction"), dict):
+        # The strike is what a viewer sees; the committed step rides along.
+        public = public_event_summary(redacted["reaction"])
+        public.setdefault("reaction_kind", redacted.get("reaction_kind"))
+        if redacted.get("presentation") and not public.get("presentation"):
+            public["presentation"] = copy.deepcopy(redacted["presentation"])
+        public["movement"] = copy.deepcopy(redacted.get("movement"))
         return public
     public = {key: redacted[key] for key in PUBLIC_EVENT_KEEP_KEYS if key in redacted}
     if redacted.get("type") in {"cast", "staff_cast"}:

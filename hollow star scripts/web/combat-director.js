@@ -48,6 +48,10 @@ export const DEFAULT_COMBAT_SETTINGS = Object.freeze({
   clickMode: 'focus',   // enemy click: 'focus' | 'attack' (single click) | 'double' (double-click attacks)
   attackUsesFocus: true,// Attack skips the picker when a target is focused
   hotkeys: true,        // Tab/[ ] cycle targets, A attack, E end turn, Esc clear
+  // Combat controls (read by the app's input router, web/combat-input.js)
+  style: 'hybrid',      // 'hybrid' | 'turn_based' | 'direct_wasd' | 'mouse_click'
+  autoNpc: true,        // enemy turns and NPC reactions play themselves (design_drain_npc)
+  threatWarn: true,     // warn before a step that provokes an opportunity attack
 });
 const MAX_HISTORY = 40;
 
@@ -134,6 +138,32 @@ export function beatFromReceipt(receipt) {
   const healDetail = Number.isFinite(healing) ? healMath(evidence.rolled != null ? evidence : result.evidence) : '';
   return {actor, target, kind, weaponMode, targets: kind === 'grand_cleave' ? receipt.targets : null, facing: receipt.facing, style: beatStyle, casting: castingProfile({...receipt,damageType}), effectApplied: receipt.applied===true || result.applied===true, outcome, damage, healing, destination, animation: tags,
     roll: math, damageRolls, damageType, expression: evidence.damage_expression || null, damageDetail, healDetail};
+}
+
+// A reaction the host resolved gets a banner before its strike, so an
+// opportunity attack or a Shield reads as what it is. `reaction_kind` is the
+// window the receipt answered (tactical.apply tags it).
+const REACTION_BANNERS = {
+  opportunity: ['⚡ Opportunity attack', 'opportunity'],
+  legendary: ['☄ Legendary action', 'legendary'],
+  deft_answer: ['↺ Deft Answer', 'reaction'],
+  brace: ['⛨ Brace', 'reaction'],
+  spell: ['✦ Staff absorbs the spell', 'reaction'],
+  save: ['✧ Aura of the Unbound', 'reaction'],
+  command: ["⚑ Commander's Strike", 'reaction'],
+};
+export function reactionBanner(row) {
+  const kind = row?.reaction_kind;
+  if (!kind || row.type === 'declined') return null;
+  let entry = REACTION_BANNERS[kind];
+  if (kind === 'hit') {
+    if (!row.defense || row.defense === 'declined') return null;
+    entry = [row.defense === 'shield' ? '🛡 Shield reaction' : '🛡 Parry reaction', 'defense'];
+  }
+  if (!entry) return null;
+  const p = row.presentation || {};
+  return {style: 'banner', kind: 'banner', actor: p.actor_id || row.actor || row.source || null,
+    target: null, text: entry[0], tone: entry[1], animation: {}};
 }
 
 // placeFigure(node, position) moves a figure to a host position (the app owns
@@ -275,8 +305,32 @@ export function createCombatDirector({getStage, reducedMotion = () => false, onI
     actorNode.style.setProperty('--beat-dx', `${dx.toFixed(0)}px`);
   }
 
+  // A stage-wide caption: reactions, and the app's turn transitions.
+  function banner(text, tone = 'note', ms = 1100) {
+    const stage = getStage();
+    if (!stage || !text) return;
+    stage.querySelectorAll(':scope > .combat-banner').forEach(node => node.remove());
+    const node = document.createElement('div');
+    node.className = `combat-banner banner-${tone}`;
+    node.setAttribute('role', 'status');
+    node.textContent = text;
+    node.style.animationDuration = `${ms}ms`;
+    stage.append(node);
+    setTimeout(() => node.remove(), ms);
+  }
+
   async function play(beat) {
     const c = cfg();
+    if (beat.style === 'banner') {
+      const ms = reducedMotion() ? 700 : 1100;
+      banner(beat.text, beat.tone, ms);
+      await wait(reducedMotion() ? 0 : 480 * pace());
+      history.push({at: Math.round(performance.now() - started), ms: 0, actor: beat.actor, target: null,
+        style: 'banner', outcome: null, damage: null, healing: null, detail: beat.text, inferred: false, missingFigure: false});
+      if (history.length > MAX_HISTORY) history.shift();
+      onBeat(history);
+      return;
+    }
     const actorNode = figure(beat.actor);
     const targetNode = beat.target ? figure(beat.target) : null;
     const reduced = reducedMotion();
@@ -438,25 +492,12 @@ export function createCombatDirector({getStage, reducedMotion = () => false, onI
     }
   }
 
-  return {
-    // Queue receipts not seen before on this run. Seen-ness is remembered per
-    // run rather than diffed against the previous view: compact turn replies
-    // omit recent_receipts, so the previous view is not a reliable baseline.
-    // The first view of a run is history, not something that just happened.
-    ingest(_previous, next) {
-      const rows = next?.recent_receipts;
-      if (!Array.isArray(rows)) return 0;
-      const hp = hpById(next);
-      if (seenRun !== next.run_id) {
-        seenRun = next.run_id; seen.clear(); queue.length=0; fxOverlay?.engine.clear(); lastHp = hp;
-        rows.forEach(row => seen.add(signature(row)));
-        return 0;
-      }
-      const beats = [];
-      for (const row of rows) {
-        const key = signature(row);
-        if (seen.has(key)) continue;
-        seen.add(key);
+  // Every beat one receipt plays: a spell's per-target events, or the
+  // receipt's own beat followed by any distinct nested impacts.
+  const rowBeats = row => {
+    const beats = [];
+    const banner = reactionBanner(row);
+    if (banner) beats.push(banner);
         if(['cast','staff_cast'].includes(row.type)&&Array.isArray(row.events)&&row.events.length) {
           for(const ev of row.events) {
             const result=ev.result&&typeof ev.result==='object'?ev.result:{};
@@ -473,7 +514,7 @@ export function createCombatDirector({getStage, reducedMotion = () => false, onI
               roll:ev.attack||null});
             if(spellBeat)beats.push(spellBeat);
           }
-          continue;
+          return beats;
         }
         const beat = beatFromReceipt(row);
         const hasMultipleEvents = Array.isArray(row?.events) && row.events.length > 1;
@@ -513,7 +554,66 @@ export function createCombatDirector({getStage, reducedMotion = () => false, onI
             }
           }
         }
+      
+    return beats;
+  };
+
+  return {
+    // Queue receipts not seen before on this run. Seen-ness is remembered per
+    // run rather than diffed against the previous view: compact turn replies
+    // omit recent_receipts, so the previous view is not a reliable baseline.
+    // The first view of a run is history, not something that just happened.
+    // `extra` is the reply's own step receipts (enemy turns and NPC reactions
+    // one host step played); they queue after recent_receipts, and count
+    // toward the damage that fillMissing would otherwise infer.
+    // `banner` (text) is played between the view's receipts and those steps.
+    ingest(_previous, next, extra = [], {banner: stepBanner = '', bannerTone = 'enemy'} = {}) {
+      const steps = Array.isArray(extra) ? extra.filter(row => row && typeof row === 'object') : [];
+      const rows = Array.isArray(next?.recent_receipts) ? next.recent_receipts : null;
+      if (!rows && !steps.length) return 0;
+      const hp = hpById(next);
+      if (seenRun !== next.run_id) {
+        seenRun = next.run_id; seen.clear(); queue.length=0; fxOverlay?.engine.clear(); lastHp = hp;
+        [...(rows || []), ...steps].forEach(row => seen.add(signature(row)));
+        return 0;
       }
+      const beats = [];
+      for (const row of rows || []) {
+        const key = signature(row);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        beats.push(...rowBeats(row));
+      }
+      const stepBeats = [];
+      for (const row of steps) {
+        const key = signature(row);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        stepBeats.push(...rowBeats(row));
+      }
+      if (stepBanner && stepBeats.length) beats.push({style: 'banner', kind: 'banner', actor: null, target: null, text: stepBanner, tone: bannerTone, animation: {}});
+      beats.push(...stepBeats);
+      return this.enqueue(beats, next, hp);
+    },
+    // Receipts the reply carried beyond view.recent_receipts: the enemy
+    // turns and NPC reactions a single host step played (design_drain_npc,
+    // or the opposition turns after a player action). Queued in order after
+    // whatever ingest() just queued; a receipt ingest already saw is skipped.
+    queueReceipts(rows, view) {
+      if (!Array.isArray(rows) || !rows.length || !view || seenRun !== view.run_id) return 0;
+      const beats = [];
+      for (const row of rows) {
+        if (!row || typeof row !== 'object') continue;
+        const key = signature(row);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        beats.push(...rowBeats(row));
+      }
+      if (!cfg().enabled || !beats.length) return 0;
+      queue.push(...beats);
+      return beats.length;
+    },
+    enqueue(beats, next, hp) {
       // The host sends only its last five receipts, so a busy reply can drop
       // its first events. Damage the receipts do not account for still shows,
       // as an impact played before the rest of this reply.
@@ -542,6 +642,14 @@ export function createCombatDirector({getStage, reducedMotion = () => false, onI
       return beats.length;
     },
     kick() { if (!playing && queue.length) run(); },
+    // Show a banner now, outside the beat queue.
+    announce(text, tone = 'turn', ms = 1300) { banner(text, tone, ms); },
+    // Queue a banner after the beats already waiting (a turn transition
+    // reads after the blows that led to it). The next render kicks it.
+    queueBanner(text, tone = 'turn') {
+      if (!text || !cfg().enabled) return;
+      queue.push({style: 'banner', kind: 'banner', actor: null, target: null, text, tone, animation: {}});
+    },
     // Queue beats directly: the Options demo feeds sample beats through here.
     play(beats) { queue.push(...beats.filter(Boolean)); this.kick(); },
     get history() { return history.slice(); },

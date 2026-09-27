@@ -1342,6 +1342,9 @@ class HSRHost:
                             "next_input": "Ask for the next intent when the visible state leaves a decision open.",
                         },
                     }
+                    receipts = _step_receipts(redact_public(outcome["event"]))
+                    if receipts:
+                        turn["receipts"] = receipts
                     if not public_only:
                         turn["visible_state"] = visible_state
                     self._record_session(

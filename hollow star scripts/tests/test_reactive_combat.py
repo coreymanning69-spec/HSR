@@ -13,6 +13,7 @@ from hollowstar import tactical as t
 from hollowstar import policies
 from hollowstar import maneuvers
 from hollowstar import monsters
+from hollowstar.view_model import public_event_summary
 
 
 class Fixture(unittest.TestCase):
@@ -80,6 +81,23 @@ class ReactionPolicyTest(Fixture):
         self.assertEqual(len(result["auto_reactions"]), 1)
         self.assertEqual(result["evidence"]["auto_resolved_reactions"], 1)
         self.assertFalse([w for w in self.combat["pending"] if t.ai_controlled(self.run, w["reactor"])])
+
+    def test_reaction_receipts_name_their_window_and_show_the_strike(self):
+        self.turn("p0")
+        self.adjacent()
+        t.move(self.run, "p0", [40, 20, 0])
+        settled = t.settle_npc_reactions(self.run)[0]
+        self.assertEqual(settled["reaction_kind"], "opportunity")
+        self.assertEqual(settled["reaction"]["reaction_kind"], "opportunity")
+        public = public_event_summary(settled)
+        # The strike is what plays: its roll and target, with the reactor's
+        # presentation and the committed step alongside.
+        self.assertEqual(public["type"], "attack")
+        self.assertEqual(public["target"], "p0")
+        self.assertIn("roll", public)
+        self.assertEqual(public["reaction_kind"], "opportunity")
+        self.assertEqual(public["presentation"]["actor_id"], "e0")
+        self.assertIn("movement", public)
 
     def test_default_move_still_opens_the_window(self):
         # Without the opt-in, tactical.move keeps its historical contract.
@@ -260,6 +278,20 @@ class DrainTest(unittest.TestCase):
                     self.call("design_action", action={"type": "end_turn", "actor": decider})
                 run = self.host._runs()._active["drain"]
                 combat = run.context["combat"]
+
+    def test_design_turn_carries_the_same_step_receipts(self):
+        combat = self.enter_combat()
+        while t.ai_controlled(self.live, self.decider()) and not combat["complete"]:
+            self.call("design_auto_combat")
+            combat = self.live.context["combat"]
+        if combat["complete"]:
+            self.skipTest("the fight ended before a player turn")
+        reply = self.call("design_turn", intent="end my turn", action={"type": "end_turn", "actor": self.decider()})
+        self.assertTrue(reply["ok"], reply)
+        turn = reply["result"]["turn"]
+        outcome = turn["outcome"]
+        played = len(outcome.get("opposition_turns") or []) + len(outcome.get("auto_reactions") or [])
+        self.assertEqual(len(turn.get("receipts") or []), played)
 
     def test_drain_outside_combat_is_refused(self):
         reply = self.call("design_drain_npc")

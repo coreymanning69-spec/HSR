@@ -273,7 +273,9 @@ class ProfileService:
         if not isinstance(profile_id, str) or not _ID.fullmatch(profile_id):
             raise ProfileError("profile_id must be non-empty and contain only letters, digits, _ or -")
         path = assert_safe_write_path(self.root / f"{profile_id}.json")
-        if path.parent != self.root.resolve():
+        # Compare resolved paths: a relative root (".local/...") must not read
+        # as an escape just because only one side was made absolute.
+        if path.resolve().parent != self.root.resolve():
             raise ProfileError("profile path escapes the profile root")
         return path
 

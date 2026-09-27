@@ -12,7 +12,7 @@ TARGETED_TYPES = {"attack", "cast", "reaction", "shove", "trip", "grapple", "hel
 # Conditions judged against the forecast of the resolved "then" action.
 # Values are percentages, like the HP conditions, except expected_damage_gte (points).
 FORECAST_CONDITIONS = {"hit_chance_gte", "kill_chance_gte", "expected_damage_gte"}
-PLAN_GOALS = {"damage", "kill", "heal"}
+PLAN_GOALS = {"damage", "kill", "heal", "control", "defend"}
 
 
 # --- Candidates -----------------------------------------------------------------
@@ -35,13 +35,16 @@ def informed(run, actor_key):
 
 def _row(source, kind, label, action, forecast, cost):
     anchor = action.get("target") or ",".join(map(str, action.get("center") or []))
-    return {"id": ":".join(str(part) for part in (kind, action.get("mode") or action.get("spell") or "",
-                                                  "bonus" if action.get("bonus") else "", anchor)),
+    variant = action.get("mode") or action.get("spell") or ""
+    if action.get("maneuver"):
+        variant = f"{action['maneuver']}/{variant}"
+    return {"id": ":".join(str(part) for part in (kind, variant, "bonus" if action.get("bonus") else "", anchor)),
             "source": source, "kind": kind, "label": label, "action": action,
             "target": action.get("target"), "legal": bool(forecast.get("legal")), "reason": forecast.get("reason"),
             "cost": cost, "hit": forecast.get("hit"), "kill": forecast.get("kill", 0.0),
             "expected_damage": forecast.get("expected_damage", 0.0),
-            "expected_healing": forecast.get("expected_healing", 0.0), "forecast": forecast}
+            "expected_healing": forecast.get("expected_healing", 0.0),
+            "control": forecast.get("control", 0.0), "forecast": forecast}
 
 
 def _weapon_candidates(run, key, know):
@@ -118,9 +121,66 @@ def _spell_candidates(run, key, know):
     return rows
 
 
-# Every source of candidates, in catalog order. Maneuvers, domains and items
-# join here as (name, function) once each has a read-only forecast.
-CANDIDATE_SOURCES = [("weapon", _weapon_candidates), ("spell", _spell_candidates)]
+def _maneuver_candidates(run, key, know):
+    """Doran's attack maneuvers, priced by maneuvers.forecast_maneuver."""
+    from hollowstar import maneuvers
+    if t.rules(run, key).get("identity") != "doran" or t.actor(run, key).resources.get("superiority_dice", 0) <= 0:
+        return []
+    living = {k: v for k, v in t.actors(run).items() if v.alive}
+    rows = []
+    for target in living:
+        if t.same_side(key, target):
+            continue
+        for name in maneuvers.FORECAST_MANEUVERS:
+            for mode in ("dagger", "cleaver"):
+                if name == "Quick Toss" and mode == "cleaver":
+                    continue
+                action = {"type": "maneuver", "actor": key, "maneuver": name, "target": target, "mode": mode}
+                if name == "Sweeping Attack":
+                    second = min((k for k in living if k != target and t.same_side(k, target)
+                                  and t.distance(run, target, k) <= 5), key=lambda k: (living[k].hp, k), default=None)
+                    if second is None:
+                        continue
+                    action["second_target"] = second
+                if name == "Maneuvering Attack":
+                    ally = min((k for k in living if k != key and t.same_side(k, key)
+                                and t.economy(run, k).get("reaction")), key=lambda k: (t.distance(run, key, k), k),
+                               default=None)
+                    if ally is None:
+                        continue
+                    action["ally"] = ally
+                forecast = maneuvers.forecast_maneuver(run, key, action, informed=know)
+                cost = forecast.get("cost") or {"economy": {"attack": 1}, "resources": {"superiority_dice": 1}}
+                rows.append(_row("maneuver", "maneuver", f"{name} ({mode})", action, forecast, cost))
+    return rows
+
+
+def _contest_candidates(run, key, know):
+    """Shove, trip, grapple and Help against each foe, plus Dodge, Disengage and Dash."""
+    rows = []
+    living = {k: v for k, v in t.actors(run).items() if v.alive}
+    for target in living:
+        if t.same_side(key, target):
+            continue
+        for action, label in (({"type": "shove", "actor": key, "target": target, "mode": "push"}, "Shove"),
+                              ({"type": "shove", "actor": key, "target": target, "mode": "prone"}, "Trip"),
+                              ({"type": "grapple", "actor": key, "target": target}, "Grapple"),
+                              ({"type": "help", "actor": key, "target": target}, "Help")):
+            forecast = t.forecast_contest(run, key, {**action, "type": "trip"} if label == "Trip" else action)
+            if label == "Help" and forecast.get("ally"):
+                action["ally"] = forecast["ally"]
+            rows.append(_row("contest", action["type"], label, action, forecast, forecast.get("cost")))
+    for kind in ("dodge", "disengage", "dash"):
+        action = {"type": kind, "actor": key}
+        forecast = t.forecast_contest(run, key, action)
+        rows.append(_row("contest", kind, kind.title(), action, forecast, forecast.get("cost")))
+    return rows
+
+
+# Every source of candidates, in catalog order. Domains and items join here as
+# (name, function) once each has a read-only forecast.
+CANDIDATE_SOURCES = [("weapon", _weapon_candidates), ("spell", _spell_candidates),
+                     ("maneuver", _maneuver_candidates), ("contest", _contest_candidates)]
 
 
 def candidate_actions(run, key, *, informed_forecast=None, include_illegal=False):
@@ -170,6 +230,10 @@ def plan_action(run, key, goal, *, spend=True, candidates=None):
             candidate can, so a gambit list falls through to its next line.
     heal:   the most-hurt ally that any candidate can reach, then the most
             expected healing.
+    control: the likeliest to land a consequence (prone, grappled, pushed,
+            frightened, disarmed, ...) on an enemy; None when nothing can.
+    defend: Dodge (or Disengage, when Cunning Action makes it a bonus action)
+            while a conscious foe is within 5 feet; None when unthreatened.
     Anything within PLAN_BAND of the best score counts as tied, and the tie
     goes to the candidate that burns the least (resource_weight), then the
     catalog id, so the choice is deterministic. spend=False keeps to
@@ -184,6 +248,14 @@ def plan_action(run, key, goal, *, spend=True, candidates=None):
         best = _thrifty([row for row in rows if row["expected_damage"] > 0], lambda row: row["expected_damage"])
     elif goal == "kill":
         best = _thrifty([row for row in rows if row["kill"] > 0], lambda row: row["kill"])
+    elif goal == "control":
+        best = _thrifty([row for row in rows if row.get("control", 0) > 0 and row["target"]
+                         and not t.same_side(key, row["target"])], lambda row: row["control"])
+    elif goal == "defend":
+        guards = [row for row in rows if row["kind"] in {"dodge", "disengage"}
+                  and (row["forecast"].get("threatened_by") or [])]
+        # Dodge while the action is free; a bonus-action Disengage otherwise.
+        best = min(guards, key=lambda row: (row["kind"] != "dodge", row["id"]), default=None)
     else:
         rows = [row for row in rows if row["expected_healing"] > 0]
         actors = t.actors(run)
@@ -222,6 +294,11 @@ def forecast_action(run, actor_key, action):
     if kind == "cast":
         from hollowstar import spells
         return spells.preview_cast(run, actor_key, action, informed=know)
+    if kind == "maneuver":
+        from hollowstar import maneuvers
+        return maneuvers.forecast_maneuver(run, actor_key, action, informed=know)
+    if kind in t.CONTEST_TYPES:
+        return t.forecast_contest(run, actor_key, action)
     return None
 
 
@@ -446,14 +523,122 @@ def approach(run,key,target,maximum,cap=10):
     return None
 
 
+# A Parry (1d12+3, about 9.5) is worth a superiority die against a blow at
+# least this large, or any blow that would drop the defender.
+PARRY_FLOOR = 10
+# The Tarrasque's routine by expected damage, and each attack's reach.
+TARRASQUE_PREFERENCE = ("bite", "horns", "claw", "tail")
+TARRASQUE_REACH = {"bite": 10, "horns": 10, "claw": 15, "tail": 20}
+
+
+def _legendary_choice(run, key, window):
+    """The Tarrasque's legendary action at the end of another creature's turn:
+    a claw (one point) at whoever it can reach, else a tail sweep, else none."""
+    a = t.actor(run, key)
+    if t.rules(run, key).get("identity") != "tarrasque" or a.resources.get("legendary_actions", 0) <= 0:
+        return None
+    foes = [k for k, v in t.actors(run).items() if not t.same_side(k, key) and v.alive
+            and "total" != run.context["combat"]["terrain"]["cover"].get(k)]
+    preferred = window.get("target")
+    for mode in ("claw", "tail"):
+        reach = TARRASQUE_REACH[mode]
+        near = [k for k in foes if t.distance(run, key, k) <= reach]
+        if near:
+            target = preferred if preferred in near else min(near, key=lambda k: (t.actor(run, k).hp, k))
+            return {"type": "legendary", "actor": key, "mode": mode, "target": target}
+    return None
+
+
+def reaction_action(run, window):
+    """The automated answer to one reaction window, for whoever holds it.
+
+    opportunity: take the attack.  brace: brace while a superiority die lasts.
+    hit: Shield when offered and a slot remains; Parry when the blow is at
+    least PARRY_FLOOR or would drop the defender.  legendary: the Tarrasque
+    spends a point (_legendary_choice).  spell: Wren's staff absorbs it.
+    save: Aura of the Unbound when offered.  deft_answer and command: take it.
+    Anything else, or an answer the reactor cannot pay for, declines.
+    """
+    key = window.get("reactor")
+    kind = window.get("kind")
+    options = window.get("options") or []
+    decline = {"type": "decline_reaction", "actor": key}
+    if key not in t.actors(run):
+        return decline
+    a = t.actor(run, key)
+    if not t.conscious(a):
+        return decline
+    if kind == "hit":
+        if "shield" in options and a.resources.get("slot_1_general", 0) > 0:
+            return {"type": "reaction", "actor": key, "defense": "shield"}
+        if "parry" in options and a.resources.get("superiority_dice", 0) > 0 and (
+                window.get("amount", 0) >= PARRY_FLOOR or window.get("amount", 0) >= a.hp):
+            return {"type": "reaction", "actor": key, "defense": "parry"}
+        return decline
+    if kind == "legendary":
+        return _legendary_choice(run, key, window) or decline
+    if kind == "spell":
+        return {"type": "staff_absorb", "actor": key} if t.economy(run, key).get("reaction") else decline
+    if kind == "save":
+        return {"type": "domain_reaction", "actor": key} if window.get("feature") == "Aura of the Unbound" else decline
+    if kind == "brace":
+        return {"type": "reaction", "actor": key, "defense": "brace"} \
+            if a.resources.get("superiority_dice", 0) > 0 else decline
+    if kind in {"opportunity", "deft_answer", "command"}:
+        target = window.get("target")
+        if kind != "command" and (target not in t.actors(run) or not t.actor(run, target).alive):
+            return decline
+        return {"type": "reaction", "actor": key}
+    return decline
+
+
+def _tarrasque_turn(run, key, target):
+    """One step of the Tarrasque's own turn: the five-attack routine at
+    whatever it can reach, closing the distance when nothing reaches."""
+    r, e = t.rules(run, key), t.economy(run, key)
+    routine = r.get("routine") or []
+    if not routine and not e["action"]:
+        return {"type": "end_turn", "actor": key}
+    remaining = routine or ["bite", "claw", "claw", "horns", "tail"]
+    foes = [k for k, v in t.actors(run).items() if not t.same_side(k, key) and v.alive
+            and "total" != run.context["combat"]["terrain"]["cover"].get(k)]
+    for mode in TARRASQUE_PREFERENCE:
+        if mode not in remaining:
+            continue
+        near = [k for k in foes if t.distance(run, key, k) <= TARRASQUE_REACH[mode]]
+        if mode == "bite" and r.get("bite_target") in near:
+            victim = r["bite_target"]
+            large = t.rules(run, victim).get("size", "medium") in {"huge", "gargantuan"}
+            return {"type": "monster", "actor": key, "target": victim, "mode": "bite" if large else "swallow"}
+        if mode == "bite" and r.get("bite_target") is not None and r.get("bite_target") not in near:
+            continue  # the jaws are holding someone out of reach
+        if near:
+            victim = target if target in near else min(near, key=lambda k: (t.actor(run, k).hp, k))
+            return {"type": "monster", "actor": key, "target": victim, "mode": mode}
+    reach = max(TARRASQUE_REACH[mode] for mode in remaining)
+    destination = approach(run, key, target, reach) if e.get("movement") else None
+    if destination is not None:
+        return {"type": "move", "actor": key, "destination": destination}
+    return {"type": "end_turn", "actor": key}
+
+
+def _enemy_spell(run, key, e):
+    """A spellcasting enemy's best damaging cast, when it beats its weapon."""
+    if key.startswith("p") or not t.rules(run, key).get("known_spells") or not (e["action"] or e["bonus"]):
+        return None
+    rows = candidate_actions(run, key)
+    spell = plan_action(run, key, "damage", candidates=[row for row in rows if row["kind"] == "cast"])
+    if spell is None:
+        return None
+    weapon = max((row["expected_damage"] for row in rows if row["kind"] == "attack"), default=0.0)
+    cast = max(row["expected_damage"] for row in rows if row["action"] == spell)
+    return spell if cast > weapon else None
+
+
 def combat_action(run):
     state=run.context['combat']
     if state['pending']:
-        window=state['pending'][0]
-        if window['kind']=='hit':
-            return {'type':'reaction','actor':window['reactor'],'defense':'shield'} if 'shield' in window['options'] else {'type':'decline_reaction','actor':window['reactor']}
-        if window['kind']=='legendary':return {'type':'decline_reaction','actor':window['reactor']}
-        return {'type':'reaction','actor':window['reactor']}
+        return reaction_action(run, state['pending'][0])
     key=t.current(run);a=t.actor(run,key);e=t.economy(run,key)
     if not t.conscious(a):return {'type':'end_turn','actor':key}
     targets=[k for k,v in t.actors(run).items() if not t.same_side(k,key) and v.alive]
@@ -493,6 +678,11 @@ def combat_action(run):
             else:
                 return {'type':'cast','actor':key,'spell':'Sacred Flame@5e','targets':[target]}
         return {'type':'end_turn','actor':key}
+    if identity=='tarrasque':
+        return _tarrasque_turn(run,key,target)
+    spell=_enemy_spell(run,key,e)
+    if spell is not None:
+        return spell
     maximum=70 if identity=='doran' else t.rules(run,key).get('range',[5,5])[1]
     if t.distance(run,key,target)>maximum:
         destination=approach(run,key,target,maximum)

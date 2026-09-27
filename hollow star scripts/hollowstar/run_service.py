@@ -44,6 +44,10 @@ LAUNCH_ROLES = frozenset({"CHAMPION", "CUSTOM", "SUPPORTED"})
 #: Threshold verbs that stay Forge-owned even once its world is running, so a
 #: canon-candidate receipt can still be cut mid-run.
 FORGE_RECEIPT_ACTIONS = frozenset({"complete", "promote_candidate", "resolve", "threshold"})
+# One design_drain_npc call plays at most this many NPC steps (a move, one
+# attack, a reaction, an end of turn); callers repeat while it reports
+# "step_limit". Bounded so a stuck policy can never spin a request forever.
+DRAIN_NPC_LIMIT = 12
 
 
 def selector_name(selector: str) -> str:
@@ -591,6 +595,71 @@ class RunService:
                                 action_label=action.get("type"),
                                 player_intent=intent.strip() if intent else None,
                                 include_state=include_state)
+
+    def drain_npc(self, run_id: str, *, max_steps: int = DRAIN_NPC_LIMIT) -> dict:
+        """Play consecutive AI-controlled combat steps: NPC turns and the
+        reaction windows NPCs hold, each chosen by policies.combat_action and
+        applied as an ordinary engine action.
+
+        Stops, before acting, when a player-controlled actor holds the turn
+        or the first pending window, when combat completes, or after
+        max_steps (at most DRAIN_NPC_LIMIT). The event lists every step in
+        order and says why it stopped.
+        """
+        from hollowstar import tactical as t
+        from hollowstar.policies import combat_action
+        try:
+            budget = max(1, min(int(max_steps), DRAIN_NPC_LIMIT))
+        except (TypeError, ValueError):
+            raise RunServiceError(f"max_steps must be an integer between 1 and {DRAIN_NPC_LIMIT}")
+        original = self._active.get(run_id)
+        if original is None:
+            raise RunServiceError("load the run first")
+        combat = original.context.get("combat")
+        if not isinstance(combat, dict) or combat.get("complete") or not combat.get("order"):
+            raise RunServiceError("no active combat to drain")
+
+        def drain(run):
+            from hollowstar import dungeon
+            in_dungeon = "dungeon" in run.context and not isinstance(run.context.get("sandbox"), dict)
+            step = (lambda choice: dungeon.act(run, choice)) if in_dungeon else (lambda choice: t.apply(run, choice))
+            steps, stopped = [], "step_limit"
+            for _ in range(budget):
+                state = run.context["combat"]
+                if state.get("complete"):
+                    stopped = "combat_complete"
+                    break
+                if in_dungeon and dungeon.state(run).get("status") != "active":
+                    stopped = "run_ended"
+                    break
+                decider = state["pending"][0]["reactor"] if state["pending"] else t.current(run)
+                if not t.ai_controlled(run, decider):
+                    stopped = "player_reaction" if state["pending"] else "player_turn"
+                    break
+                choice = combat_action(run)
+                try:
+                    steps.append(step(choice))
+                except t.ActionError as exc:
+                    # A refused policy choice must never stall the drain:
+                    # decline the window, or end the turn, and note why.
+                    fallback = ({"type": "decline_reaction", "actor": decider} if state["pending"]
+                                else {"type": "end_turn", "actor": decider})
+                    try:
+                        steps.append({**step(fallback), "policy_refused": {"action": choice, "reason": str(exc)}})
+                    except t.ActionError:
+                        stopped = "stalled"
+                        break
+            state = run.context["combat"]
+            waiting = None if state.get("complete") else (state["pending"][0]["reactor"] if state["pending"] else t.current(run))
+            if stopped == "step_limit" and state.get("complete"):
+                stopped = "combat_complete"
+            elif stopped == "step_limit" and not t.ai_controlled(run, waiting):
+                stopped = "player_reaction" if state["pending"] else "player_turn"
+            return {"type": "npc_drain", "steps": steps, "stopped": stopped, "next_actor": waiting,
+                    "evidence": {"action": "design_drain_npc", "steps": len(steps), "stopped": stopped,
+                                 "budget": budget, "next_actor": waiting, "state_committed": True}}
+
+        return self._transition(run_id, drain, action_label="design_drain_npc")
 
     def idle_tick(self, run_id: str, *, max_steps: int = 1) -> dict:
         """Advance only safe automatic Floor One steps."""

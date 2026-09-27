@@ -18,7 +18,7 @@ from pathlib import Path
 from hollowstar import __version__ as ENGINE_VERSION
 from hollowstar.world import world_context
 from hollowstar.protocol import response
-from hollowstar.view_model import narrator_state, redact_public
+from hollowstar.view_model import narrator_state, public_event_summary, redact_public
 from hollowstar.profiles import ProfileError, ProfileService
 from hollowstar.run_service import RunService, RunServiceError, runtime_for, validate_launch
 from hollowstar.run_history import RunHistory
@@ -47,7 +47,7 @@ RUN_MUTATION_COMMANDS = {
     "design_turn", "idle_tick", "auto_travel", "forge_start", "forge_action",
     "sandbox_start", "sandbox_release", "sandbox_action", "sandbox_branch",
     "checkpoint", "bank_checkpoint", "resume_checkpoint", "design_auto", "design_auto_combat",
-    "arcade_tick", "arcade_toggle_flight", "arcade_set_movement_mode",
+    "design_drain_npc", "arcade_tick", "arcade_toggle_flight", "arcade_set_movement_mode",
     "expedition_start", "expedition_choose", "expedition_auto", "expedition_resolve",
 }
 EXPEDITION_COMMANDS = {"expedition_start", "expedition_choose", "expedition_auto",
@@ -74,19 +74,48 @@ def _readout_receipt(visible_state: dict) -> dict | str:
     return "readout contains no private debug state"
 
 
+# Event keys whose nested steps each played on screen: NPC reactions settled
+# inside the step, the opposition turns that followed, and a drain's steps.
+STEP_RECEIPT_KEYS = ("auto_reactions", "opposition_turns", "steps")
+
+
+def _step_receipts(event: dict) -> list[dict]:
+    """Every nested step an event carries, as compact public receipts, in order.
+
+    view.recent_receipts holds one summary per transition, so the enemy
+    turns played inside one transition would otherwise never reach the
+    combat director; clients queue these after that summary.
+    """
+    rows = []
+    if not isinstance(event, dict):
+        return rows
+    for key in STEP_RECEIPT_KEYS:
+        steps = event.get(key)
+        for step in steps if isinstance(steps, list) else []:
+            if isinstance(step, dict):
+                summary = public_event_summary(step)
+                if summary:
+                    rows.append(summary)
+    return rows
+
+
 def _public_outcome(outcome: dict, *, mode: str | None, run_id: str) -> dict:
     """Project a run transition before it crosses the JSON host boundary."""
     if not isinstance(outcome, dict) or not isinstance(outcome.get("state"), dict):
         return outcome
     event = redact_public(outcome.get("event", {}))
     state = redact_public(narrator_state(outcome["state"]))
-    return {
+    projected = {
         **outcome,
         "event": event,
         "state": state,
         "public_view": build_public_view(state, event=event, mode=mode, run_id=run_id),
         "public_receipt": _public_receipt(event),
     }
+    receipts = _step_receipts(event)
+    if receipts:
+        projected["receipts"] = receipts
+    return projected
 
 
 @dataclass
@@ -382,7 +411,7 @@ class HSRHost:
                 "start-run", "observe", "submit-action", "resolve-round", "test-perception", "reveal-room-record", "show-temporary-inventory", "sanctum-check-in", "save-run", "create-forge-receipt",
                 "conversation", "npc_list", "prepare_idle", "idle_tick", "auto_travel", "auto_battle", "salvage", "trade", "buy", "acquire_weapon", "acquire_armor", "imprint_rune",
                 "decant", "release_attunement", "meta_shop", "meta_shop_purchase",
-                "character_options", "character_roll", "peek_creation_seed", "randomize_build", "preview_character", "build_character", "content_catalog", "affix_catalog", "scenario_catalog", "design_start", "design_action", "design_turn", "arcade_tick", "arcade_toggle_flight", "arcade_set_movement_mode", "readout", "report", "register_ruling", "spell_catalog", "spell_workshop_catalog", "spell_workshop_preview", "spell_workshop_save", "spell_workshop_list", "design_auto", "design_auto_combat", "checkpoint", "bank_checkpoint", "resume_checkpoint", "terminal_receipt", "progression", "settle_run", "upgrade", "identify", "combine", "replay_token", "inspect_replay_token",
+                "character_options", "character_roll", "peek_creation_seed", "randomize_build", "preview_character", "build_character", "content_catalog", "affix_catalog", "scenario_catalog", "design_start", "design_action", "design_turn", "arcade_tick", "arcade_toggle_flight", "arcade_set_movement_mode", "readout", "report", "register_ruling", "spell_catalog", "spell_workshop_catalog", "spell_workshop_preview", "spell_workshop_save", "spell_workshop_list", "design_auto", "design_auto_combat", "design_drain_npc", "checkpoint", "bank_checkpoint", "resume_checkpoint", "terminal_receipt", "progression", "settle_run", "upgrade", "identify", "combine", "replay_token", "inspect_replay_token",
                 "sandbox_start", "sandbox_release", "sandbox_action", "sandbox_debug", "sandbox_branch", "finished_runs", "sandbox_prestige",
                 *sorted(EXPEDITION_COMMANDS),
                 "create_run", "load_run", "list_runs", "inspect_run", "save_run", "statistics",
@@ -1001,7 +1030,7 @@ class HSRHost:
                 return self._ok(request, {"recipe": stored, "storage": str(self.paths.data_root / "metamagic_workshop" / "recipes.json")})
             except (spell_workshop.WorkshopError, OSError, ValueError, TypeError) as exc:
                 return self._error(request, "SPELL_WORKSHOP_INVALID", str(exc))
-        if command in {"character_options", "character_roll", "peek_creation_seed", "allocate_creation_seed", "randomize_build", "preview_character", "build_character", "content_catalog", "design_start", "design_action", "design_turn", "arcade_tick", "arcade_toggle_flight", "arcade_set_movement_mode", "idle_tick", "auto_travel", "observe", "readout", "report", "reveal-room-record", "test-perception", "register_ruling", "spell_catalog", "design_auto", "design_auto_combat", "checkpoint", "bank_checkpoint", "resume_checkpoint", "terminal_receipt", "progression", "settle_run", "upgrade", "meta_shop", "meta_shop_purchase", "identify", "combine", "replay_token", "inspect_replay_token", "design_auto", "sandbox_start", "sandbox_release", "sandbox_action", "sandbox_debug", "sandbox_branch", "finished_runs", "sandbox_prestige", "forge_start", "forge_action", "forge_receipt"} | EXPEDITION_COMMANDS:
+        if command in {"character_options", "character_roll", "peek_creation_seed", "allocate_creation_seed", "randomize_build", "preview_character", "build_character", "content_catalog", "design_start", "design_action", "design_turn", "arcade_tick", "arcade_toggle_flight", "arcade_set_movement_mode", "idle_tick", "auto_travel", "observe", "readout", "report", "reveal-room-record", "test-perception", "register_ruling", "spell_catalog", "design_auto", "design_auto_combat", "design_drain_npc", "checkpoint", "bank_checkpoint", "resume_checkpoint", "terminal_receipt", "progression", "settle_run", "upgrade", "meta_shop", "meta_shop_purchase", "identify", "combine", "replay_token", "inspect_replay_token", "design_auto", "sandbox_start", "sandbox_release", "sandbox_action", "sandbox_debug", "sandbox_branch", "finished_runs", "sandbox_prestige", "forge_start", "forge_action", "forge_receipt"} | EXPEDITION_COMMANDS:
             blocked = self._require_booted(request)
             if blocked:
                 return blocked
@@ -1210,6 +1239,21 @@ class HSRHost:
                     return self._ok(request, _public_outcome(
                         outcome, mode=self.mode, run_id=request.get("run_id"),
                     ))
+                if command == "design_drain_npc":
+                    run = self._runs()._active.get(request.get("run_id"))
+                    if run is None: raise RunServiceError("load the run first")
+                    combat_state = run.context.get("combat")
+                    if not isinstance(combat_state, dict) or combat_state.get("complete"):
+                        return self._error(request, "NOT_IN_COMBAT", "no active combat to drain")
+                    from hollowstar.run_service import DRAIN_NPC_LIMIT
+                    outcome = self._runs().drain_npc(request.get("run_id"),
+                                                     max_steps=request.get("max_steps", DRAIN_NPC_LIMIT))
+                    public = _public_outcome(outcome, mode=self.mode, run_id=request.get("run_id"))
+                    event = outcome.get("event") or {}
+                    public["receipts"] = _step_receipts(redact_public(event))
+                    public["drain"] = {"steps": len(event.get("steps") or []), "stopped": event.get("stopped"),
+                                       "next_actor": event.get("next_actor")}
+                    return self._ok(request, public)
                 if command in {"arcade_tick", "arcade_toggle_flight", "arcade_set_movement_mode"}:
                     action = request.get("action")
                     if not isinstance(action, dict):
@@ -1298,6 +1342,9 @@ class HSRHost:
                             "next_input": "Ask for the next intent when the visible state leaves a decision open.",
                         },
                     }
+                    receipts = _step_receipts(redact_public(outcome["event"]))
+                    if receipts:
+                        turn["receipts"] = receipts
                     if not public_only:
                         turn["visible_state"] = visible_state
                     self._record_session(

@@ -338,7 +338,8 @@ class PlanningTest(CombatFixture):
                     "then": {"type": "attack", "target": "nearest_enemy"}},
                    {"id": "plan", "priority": 2, "then": {"type": "plan", "goal": "damage"}}]
         action = policies.macro_action(self.run, "p0", certain)
-        self.assertEqual(action["type"], "attack")
+        # The planner may now pick a superiority-die maneuver over a plain swing.
+        self.assertIn(action["type"], {"attack", "maneuver"})
         self.assertIn("mode", action)  # came from the planner, not the first gambit
         likely = [{"id": "likely", "when": {"hit_chance_gte": 50, "expected_damage_gte": 1},
                    "then": {"type": "attack", "target": "likeliest_hit_enemy"}}]

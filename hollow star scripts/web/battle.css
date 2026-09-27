@@ -157,3 +157,33 @@ body:not([data-layout="idle"]) #app.app-shell .play-surface .center-stage > .com
 .combat-stage>canvas.battle-wounds{z-index:55}
 .combat-stage.has-set{background:#0b0e16}
 .combat-stage.has-set>.scene-moon,.combat-stage.has-set>.scene-mountains,.combat-stage.has-set>.scene-road{display:none}
+
+/* ---- Reactive combat: banners, threat rings, the action wheel ------------- */
+/* Stage-wide caption for reactions (opportunity attack, Shield, legendary)
+   and turn transitions; combat-director.js adds and removes it. */
+.combat-banner{position:absolute;left:50%;top:14%;z-index:30;transform:translateX(-50%);padding:8px 22px;border:1px solid var(--gold-a50,#c9a86a80);background:linear-gradient(90deg,transparent,rgba(12,16,27,.92) 18%,rgba(12,16,27,.92) 82%,transparent);color:var(--paper,#efe6d2);font:600 15px/1.2 var(--font-display,Georgia,serif);letter-spacing:.2em;text-transform:uppercase;white-space:nowrap;pointer-events:none;text-shadow:0 2px 0 #000;animation:combat-banner 1.1s ease-out forwards}
+.combat-banner.banner-opportunity{border-color:#ff7a66;color:#ffd2c9;box-shadow:0 0 22px #ff7a6655}
+.combat-banner.banner-defense{border-color:#7fb8ff;color:#d8e8ff;box-shadow:0 0 22px #7fb8ff55}
+.combat-banner.banner-legendary{border-color:#e3be7e;color:#ffe6b8;box-shadow:0 0 26px #e3be7e66}
+.combat-banner.banner-enemy{border-color:#b04c44;color:#f3c1bb}
+.combat-banner.banner-turn{border-color:var(--gold,#c9a86a);color:var(--gold,#c9a86a)}
+@keyframes combat-banner{0%{opacity:0;transform:translate(-50%,-8px) scale(.94)}14%{opacity:1;transform:translate(-50%,0) scale(1)}78%{opacity:1}100%{opacity:0;transform:translate(-50%,-6px)}}
+@media (prefers-reduced-motion:reduce){.combat-banner{animation-name:none}}
+
+/* A queued step would leave this foe's reach: a red warning ring. */
+.doll-threat{position:absolute;left:50%;bottom:-8px;z-index:0;width:132px;height:30px;transform:translateX(-50%);border:3px solid #e35b4f;border-radius:50%;box-shadow:0 0 18px #e35b4fcc,inset 0 0 12px #e35b4f88;animation:ring-pulse .7s ease-in-out infinite;pointer-events:none}
+.combat-stage .is-threatening{filter:drop-shadow(0 0 6px #e35b4f)}
+@media (prefers-reduced-motion:reduce){.doll-threat{animation:none}}
+
+.npc-phase{color:#f3c1bb}
+
+/* Right-click action wheel on a foe (mouse / hybrid combat styles). */
+.combat-radial{position:fixed;z-index:80;width:2px;height:2px;margin:-1px 0 0 -1px;pointer-events:none}
+.combat-radial-hub{position:absolute;left:0;top:0;transform:translate(-50%,-50%);display:grid;place-items:center;width:74px;height:74px;border-radius:50%;border:1px solid var(--gold,#c9a86a);background:radial-gradient(circle,rgba(12,16,27,.96),rgba(12,16,27,.82));color:var(--paper,#efe6d2);font:600 10px/1.15 var(--font-display,Georgia,serif);letter-spacing:.08em;text-align:center;padding:6px;overflow:hidden;pointer-events:none;box-shadow:0 0 24px #0009}
+.combat-radial-item{position:absolute;left:0;top:0;transform:translate(calc(-50% + var(--rx)),calc(-50% + var(--ry)));display:grid;place-items:center;gap:1px;width:58px;height:58px;border-radius:50%;border:1px solid var(--line,#c9a86a55);background:rgba(20,26,40,.95);color:var(--paper,#efe6d2);cursor:pointer;pointer-events:auto;box-shadow:0 6px 16px #000a;transition:transform .12s var(--ease,ease),background .12s,border-color .12s;animation:radial-in .16s ease-out both}
+.combat-radial-item span{font-size:19px;line-height:1}
+.combat-radial-item small{font:9px/1 Georgia,serif;letter-spacing:.04em;max-width:54px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.combat-radial-item:hover,.combat-radial-item:focus-visible{background:var(--gold,#c9a86a);color:var(--ink,#111);border-color:var(--gold,#c9a86a);outline:none;transform:translate(calc(-50% + var(--rx)),calc(-50% + var(--ry))) scale(1.1)}
+.combat-radial-item.is-unavailable{opacity:.38;cursor:not-allowed}
+@keyframes radial-in{from{opacity:0;transform:translate(-50%,-50%) scale(.6)}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.combat-radial-item{animation:none;transition:none}}

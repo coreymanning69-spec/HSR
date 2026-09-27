@@ -1,7 +1,8 @@
 # Tactical planning foundation
 
 > **Module**: Hollow Star Reliquary engine, `hollowstar/tactical.py`, `spells.py`, `policies.py`
-> **Status**: Foundational, first two capability sources live (weapons, spells)
+> **Status**: Foundational; four capability sources live (weapons, spells, maneuvers, contests).
+> Reactive combat (NPC reactions, NPC drain, input styles): docs/reactive-combat-and-controls.md
 > **Written**: 2026-09-26, tactical/planning pass part 2
 
 This note records what the planning layer is, what it promises, and how the rest
@@ -62,10 +63,10 @@ must bring its read-only twin first:
 |---|---|---|
 | Weapon modes (live) | `weapon_mode`, loadout, alternate modes, bonus pools | done |
 | Spells (live) | spell catalog, `known_spells`, slots, energy, metamagic | done |
-| Maneuvers | superiority dice, `maneuvers.apply` | `forecast_maneuver` built on `forecast_attack` + save odds |
+| Maneuvers (live) | superiority dice, `maneuvers.apply` | done: `maneuvers.forecast_maneuver` (attack maneuvers + Quick Toss) |
 | Domains / signature features | `domains.apply`, per-feature resources | per feature; most are save or heal shaped and can reuse `_target_forecast` |
 | Items and consumables | dungeon inventory, affixes (`affix_runtime`) | `preview_consume`; potions are heal shaped |
-| Skills and contests | `skill_check_bonus`, `contest` | `contest_odds` exists; shove/grapple/trip rows need only a wrapper |
+| Skills and contests (live) | `skill_check_bonus`, `contest` | done: `tactical.forecast_contest` (shove, trip, grapple, help, dodge, disengage, dash) |
 | Movement and location | positions, `move_cost`, terrain, cover, `path_squares` | a movement source that proposes squares scored by what they unlock (cover, range bands, flanking) |
 | Body parts / rig state | paperdoll and puppet presentation only | nothing mechanical yet; if parts ever carry rules (a maimed arm, a broken wing), they enter as statuses or rule flags and every twin above reads them for free |
 

@@ -22,7 +22,21 @@ export const TOD = Object.freeze({
   evening: {top: '#26325f', mid: '#b1655d', bot: '#f0a869', sun: {x: .82, y: .4, r: 24, color: '#ffe3a8', halo: '#ff9a5a'}, ambient: '#b4a2b0', haze: '#e0906a', lamps: 1, stars: 14, clouds: 3, cloud: '#ffb18a', far: '#524a72'},
   night: {top: '#060919', mid: '#111a36', bot: '#26335a', sun: {x: .78, y: .2, r: 19, color: '#eef3ff', halo: '#9fb4e6', crescent: true}, ambient: '#5b6a95', haze: '#3b4a77', lamps: 1, stars: 90, clouds: 2, cloud: '#5a6a9a', far: '#1b2340'},
 });
-export const todOf = value => TOD[String(value || '').toLowerCase()] ? String(value).toLowerCase() : 'evening';
+export const todOf = value => typeof value === 'number' ? (value < 300 || value >= 1140 ? 'night' : value < 420 ? 'morning' : value < 1020 ? 'day' : 'evening') : TOD[String(value || '').toLowerCase()] ? String(value).toLowerCase() : 'evening';
+export function paletteAt(value) {
+  if (typeof value !== 'number') return TOD[todOf(value)];
+  const m = ((value % 1440) + 1440) % 1440;
+  let a, b, f;
+  if (m >= 300 && m < 360) { a = TOD.night; b = TOD.morning; f = (m - 300) / 60; }
+  else if (m >= 360 && m < 420) { a = TOD.morning; b = TOD.day; f = (m - 360) / 60; }
+  else if (m >= 1020 && m < 1080) { a = TOD.day; b = TOD.evening; f = (m - 1020) / 60; }
+  else if (m >= 1080 && m < 1140) { a = TOD.evening; b = TOD.night; f = (m - 1080) / 60; }
+  else return m >= 420 && m < 1020 ? TOD.day : TOD.night;
+  const blend = (x, y) => Object.fromEntries(Object.keys(x).map(k => [k,
+    typeof x[k] === 'number' ? lerp(x[k], y[k], f) : typeof x[k] === 'string' && x[k].startsWith('#') ? mixHex(x[k], y[k], f) : x[k] && typeof x[k] === 'object' ? blend(x[k], y[k]) : f < .5 ? x[k] : y[k]]));
+  return blend(a, b);
+}
+export const sceneTime = (themeId, value) => ['drowned', 'lair', 'crypt', 'dungeon', 'cave', 'foundry', 'palace'].includes(themeId) ? 'night' : value;
 
 // ---------------------------------------------------------------------------
 // Shared builders for the painters below.
@@ -105,7 +119,7 @@ def('market', {
     ridge(ctx, K, hz - 18 * s, 22, mixHex(T.far, '#000000', .1), {step: 30}); ridge(ctx, K, hz + 4 * s, 12, mixHex(T.far, '#000000', .3), {step: 22});
     farTown(ctx, K, hz + 34 * s, mixHex(T.far, '#000000', .42));
     ctx.fillStyle = mixHex(T.far, '#000000', .5); ctx.fillRect(0, hz + 30 * s, W, back - hz);
-    facadeRow(ctx, K, {base: back, pals: ['#c9b79a', '#bfa98a', '#a9adb8', '#c69a78', '#b9c2b0'], lit: T.lamps ? .7 : .25, tallness: [120, 215]});
+    facadeRow(ctx, K, {base: back, pals: ['#c9b79a', '#bfa98a', '#a9adb8', '#c69a78', '#b9c2b0'], lit: (.25 + (.7 - .25) * T.lamps), tallness: [120, 215]});
     for (const b of K.bays) if (b.kind !== 'path' && b.kind !== 'arch') stoop(ctx, K, b, '#8b867e');
     floorPlane(ctx, K, back, H, 'cobble', K.floor, {conv: K.cam.farScale});
     if (K.rand() < 1) { string(ctx, K, W * .04, back - 150 * s, W * .5, back - 168 * s, 20, ['#b3403c', '#e8dfc6', '#3f6a8a']); string(ctx, K, W * .5, back - 168 * s, W * .96, back - 146 * s, 20, ['#3f6a8a', '#d6b36a', '#b3403c']); }
@@ -124,7 +138,7 @@ def('well', {
     sky(ctx, K, {top: T.top, mid: T.mid, bot: T.bot, y1: hz + 40 * s, sun: T.sun, stars: T.stars, clouds: T.clouds, cloud: T.cloud});
     ridge(ctx, K, hz - 10 * s, 24, mixHex(T.far, '#000000', .16), {step: 28}); farTown(ctx, K, hz + 34 * s, mixHex(T.far, '#000000', .45));
     ctx.fillStyle = mixHex(T.far, '#000000', .5); ctx.fillRect(0, hz + 30 * s, W, back - hz);
-    facadeRow(ctx, K, {base: back, pals: ['#bfa98a', '#a9adb8', '#c9b79a'], lit: T.lamps ? .7 : .2, tallness: [100, 190]});
+    facadeRow(ctx, K, {base: back, pals: ['#bfa98a', '#a9adb8', '#c9b79a'], lit: (.2 + (.7 - .2) * T.lamps), tallness: [100, 190]});
     floorPlane(ctx, K, back, H, 'cobble', K.floor, {conv: K.cam.farScale});
     // The well: a stone drum under a small roof, with the platform it drops.
     const cx = W * clearSpot(K.bays), base = back + (H - back) * .16, ww = 122 * s;
@@ -153,7 +167,7 @@ def('waterwheel', {
     // The mill: a long timber wall the wheel turns against, and a channel of water below it.
     const mill = back - 5 * s; block(ctx, K, W * .12, mill - 190 * s, W * .5, 190 * s, '#7a6a58', {band: .18}); planksWall(ctx, K, W * .12, mill - 190 * s, W * .62, mill, '#7a6a58', {plank: 20});
     roof(ctx, K, W * .1, mill - 190 * s, W * .54, 60 * s, '#5a4438', {style: 'gable'});
-    facadeRow(ctx, K, {base: back, pals: ['#8a7a68', '#6f7480'], lit: T.lamps ? .6 : .15, tallness: [90, 150], kinds: ['stone', 'timber']});
+    facadeRow(ctx, K, {base: back, pals: ['#8a7a68', '#6f7480'], lit: (.15 + (.6 - .15) * T.lamps), tallness: [90, 150], kinds: ['stone', 'timber']});
     ctx.fillStyle = vgrad(ctx, back - 26 * s, back + 30 * s, [[0, '#101a2a'], [1, '#26405c']]); ctx.fillRect(0, back - 6 * s, W, 36 * s);
     ctx.strokeStyle = rgba('#bfe0ff', .35); ctx.lineWidth = s; for (let i = 0; i < 14; i++) { const y = back + 2 * s + K.rand() * 22 * s, x = K.rand() * W; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 60 * s, y); ctx.stroke(); }
     floorPlane(ctx, K, back + 24 * s, H, 'plank', K.floor, {conv: K.cam.farScale});
@@ -299,7 +313,7 @@ def('homes', {
     const {W, H, S: s} = K, T = K.tod, back = Yb(K), hz = K.cam.horizon * H;
     sky(ctx, K, {top: T.top, mid: T.mid, bot: T.bot, y1: hz + 40 * s, sun: T.sun, stars: T.stars, clouds: T.clouds, cloud: T.cloud});
     ridge(ctx, K, hz - 14 * s, 22, mixHex(T.far, '#000000', .15)); farTown(ctx, K, hz + 34 * s, mixHex(T.far, '#000000', .45)); ctx.fillStyle = mixHex(T.far, '#000000', .5); ctx.fillRect(0, hz + 30 * s, W, back - hz);
-    facadeRow(ctx, K, {base: back, pals: ['#b8a687', '#a99a7c', '#9aa39a', '#c0a488'], lit: T.lamps ? .6 : .2, tallness: [80, 140], kinds: ['timber', 'timber', 'brick'], bayW: 150});
+    facadeRow(ctx, K, {base: back, pals: ['#b8a687', '#a99a7c', '#9aa39a', '#c0a488'], lit: (.2 + (.6 - .2) * T.lamps), tallness: [80, 140], kinds: ['timber', 'timber', 'brick'], bayW: 150});
     floorPlane(ctx, K, back, H, 'dirt', K.floor, {conv: K.cam.farScale});
     // Vegetable plots along the near edge and a wash line between two poles.
     for (const [x0, x1] of [[.03, .2], [.8, .97]]) for (let r = 0; r < 3; r++) { const y = back + (H - back) * (.5 + r * .12); ctx.fillStyle = shadeHex('#4a3a2c', .2); ctx.fillRect(W * x0, y, W * (x1 - x0), 5 * s); for (let i = 0; i < 9; i++) ellipse(ctx, W * x0 + i * W * (x1 - x0) / 9 + 8 * s, y - 2 * s, 5 * s, 7 * s, ['#5f8a3c', '#7d9b3f', '#4f7a3c'][i % 3], K.ink, 1, K); }
@@ -317,7 +331,7 @@ def('docks', {
   lights: () => [{x: .75, y: .5, r: .3, c: '#ffbe6a', a: .6, flick: .1, hz: 5}, {x: .5, y: .3, r: .8, c: '#8aa0ff', a: .2}],
   live: [{prop: 'boat', xn: .3, yn: 0, wn: .22, hn: .1, back: true, water: true}],
   paint(ctx, K) {
-    const {W, H, S: s} = K, T = K.tod === TOD.day || K.tod === TOD.morning ? K.tod : TOD.night, back = Yb(K), hz = K.cam.horizon * H;
+    const {W, H, S: s} = K, T = K.tod, back = Yb(K), hz = K.cam.horizon * H;
     sky(ctx, K, {top: T.top, mid: T.mid, bot: T.bot, y1: hz + 20 * s, sun: T.sun, stars: T.stars, clouds: T.clouds, cloud: T.cloud});
     ridge(ctx, K, hz - 6 * s, 16, mixHex(T.far, '#000000', .3)); farTown(ctx, K, hz + 6 * s, mixHex(T.far, '#000000', .5));
     // Warehouse fronts across the water, then the water itself in bands.
@@ -544,7 +558,7 @@ export function layoutExits(theme, exits = []) {
     let kind = DEST_DOOR[id] || theme.door;
     if (theme.indoor && kind === 'path') kind = 'arch';
     const open = kind === 'path';
-    return {key, id, name: dest?.name || id.replace(/[-_]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), x, kind, locked: Boolean(dest?.locked), w: open ? 5.4 : kind === 'gate' ? 6 : 4, h: open ? 8.4 : kind === 'gate' ? 8.4 : 7.6};
+    return {key, id, name: dest?.name || id.replace(/[-_]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), x, kind, locked: Boolean(dest?.locked), w: Number(dest?.width_ft) || (open ? 4.4 : kind === 'gate' ? 6 : 3.2), h: Number(dest?.height_ft) || (kind === 'gate' ? 8.4 : 7.1)};
   });
 }
 
@@ -559,14 +573,14 @@ export function bakeSet(themeId, W, H, {seed = 'set', tod = 'evening', bays = []
   const ctx = canvas.getContext('2d'); if (!ctx) return canvas;
   ctx.scale(dpr, dpr);
   const K = kit(W, H, rng(`${themeId}:${seed}`), theme.cam);
-  Object.assign(K, {tod: TOD[todOf(tod)], bays, floor: theme.floor, ppf: PPF * H, theme});
+  Object.assign(K, {skyRand: rng(`${themeId}:${seed}:sky`), tod: paletteAt(sceneTime(themeId, tod)), bays, floor: theme.floor, ppf: PPF * H, theme});
   theme.paint(ctx, K);
   return canvas;
 }
 // The animated back layer: doors, live props, water shimmer. `state` is
 // {t (s), doors: Map(key -> {open, hover}), objects: hover ids}.
 export function drawLive(ctx, theme, W, H, {t = 0, bays = [], doors = new Map(), tod = 'evening'} = {}) {
-  const K = kit(W, H, Math.random, theme.cam); K.tod = TOD[todOf(tod)]; K.ppf = PPF * H;
+  const K = kit(W, H, Math.random, theme.cam); K.tod = paletteAt(sceneTime(theme.id, tod)); K.ppf = PPF * H;
   const back = theme.cam.back * H, fs = theme.cam.farScale;
   for (const item of theme.live) {
     const w = item.wn * W, h = item.hn * H, x = item.xn * W, y = item.front ? (theme.cam.back + (theme.cam.front - theme.cam.back) * (item.yn ?? .2)) * H : back + (item.yn || 0) * H;
@@ -582,5 +596,4 @@ export function drawLive(ctx, theme, W, H, {t = 0, bays = [], doors = new Map(),
     drawDoor(ctx, K, b.kind, b.x * W, back + 2 * K.S, b.w * s, b.h * s, st.open, {beyond: theme.beyond, hover: st.hover, locked: b.locked, t});
   }
 }
-export function tint(themeId, tod = 'evening') { const t = THEMES[themeId]; return t.indoor ? t.ambient || '#8a8fa0' : (t.ambient && (t.id === 'alley' || t.id === 'docks' || t.id === 'camp' || t.id === 'shrine') ? t.ambient : TOD[todOf(tod)].ambient); }
-export {PPF as PX_PER_FOOT};
+export function tint(themeId, tod = 'evening') { const t = THEMES[themeId]; return t.indoor || themeId === 'drowned' ? t.ambient || '#8a8fa0' : paletteAt(sceneTime(themeId, tod)).ambient; }

@@ -8,6 +8,7 @@ import {createVoiceFeed, DEFAULT_VOICE_SETTINGS} from './voice-feed.js?v=2';
 import {ffLayout, effectRack, visibleEffects, effectLabel, turnOrderStrip, commandWindow, partyStatusPanel} from './battle-scene.js?v=effects-2';
 import {routeMap, nodeGlyph} from './expedition-map.js?v=xp-2';
 import {createStage} from './stage-view.js';
+import {screenFade, syncAmbient} from './qol.js';
 import {themeFor} from './stage-set.js';
 import {bodyOf} from './stage-world.js';
 import {createToolbox} from './actor-toolbox.js';
@@ -604,7 +605,7 @@ const party = () => state.view?.party || [];
 const actor = () => party().find(item => item.id === state.selectedActor) || party()[0] || {};
 const value = (object, ...keys) => keys.map(key => object?.[key]).find(item => item !== undefined && item !== null);
 const card = (title, body, extra = '') => `<section class="card ${extra}"><p class="label">${E(title)}</p>${body}</section>`;
-const button = (label, action, extra = '') => `<button type="button" class="action ${extra}" data-action="${E(action)}" data-tooltip="${E(label)}">${E(label)}</button>`;
+const button = (label, action, extra = '') => `<button type="button" class="action ${extra}" data-action="${E(action)}">${E(label)}</button>`;
 function navigationState() { return {hsr:true, phase:state.phase, route:[...state.route], selected:state.selected}; }
 function clearScreenTransientState() {
   state.titleActive = null;
@@ -2480,16 +2481,12 @@ let worldStage = null;
 // The host's clock is seconds since the run began (28800 = 08:00). The set is
 // painted for that hour; a scene with no clock keeps its named backdrop.
 function worldTimeOfDay(view = state.view) {
-  const seconds = Number(view?.room?.world_time);
-  if (Number.isFinite(seconds)) {
-    const hour = ((seconds / 3600) % 24 + 24) % 24;
-    return hour < 5 ? 'night' : hour < 10 ? 'morning' : hour < 17 ? 'day' : hour < 20 ? 'evening' : 'night';
-  }
+  if (view?.scene?.time) return view.scene.time.minute_of_day;
   const named = String(view?.scene?.background_id || '');
-  return /night/.test(named) ? 'night' : /dusk|evening/.test(named) ? 'evening' : /dawn|morning/.test(named) ? 'morning' : /day/.test(named) ? 'day' : 'evening';
+  return /night/.test(named) ? 'night' : /dusk|evening/.test(named) ? 'evening' : /dawn|morning/.test(named) ? 'morning' : 'day';
 }
 function worldLocked() {
-  return Boolean(state.busy || encounterActive() || state.overlay || state.contextMenu || state.systemMenuOpen || document.querySelector('.game-system-modal, dialog[open]'));
+  return Boolean(screenFade.active || state.busy || encounterActive() || state.overlay || state.contextMenu || state.systemMenuOpen || document.querySelector('.game-system-modal, dialog[open]'));
 }
 // The party rail and the info dock float over the display's edges; the stage
 // lays doors and props out in the clear middle and lets the painting bleed under them.
@@ -2506,7 +2503,7 @@ function hudInsets() {
 function ensureWorldStage() {
   if (worldStage) return worldStage;
   worldStage = createStage({
-    mode: 'world', reducedMotion: motionReduced, locked: worldLocked, insets: hudInsets,
+    mode: 'world', reducedMotion: motionReduced, swapMouseButtons: () => state.preferences.swapMouseButtons, locked: worldLocked, insets: hudInsets,
     onExit: bay => takeExit(bay.key, bay.id),
     onObject: id => objectAction('inspect', id),
     onTalk: id => { state.focusTarget = id; state.pendingConversation = null; state.consoleDraft = `talk to ${id}`; render(); document.querySelector('#console-input')?.focus(); },
@@ -2524,9 +2521,20 @@ function keepWorldStage() {
   const themeId = themeFor(room, scene), roomId = String(room.id || room.room_id || scene.location || themeId), prev = stage.roomId();
   slot.replaceWith(stage.el);
   stage.setRoom({themeId, tod: worldTimeOfDay(), roomId, exits: Object.entries(room.exits || {}), name: room.name || room.title || placeName(roomId),
-    sub: 'Public room projection', from: prev && prev !== roomId ? prev : null, wellHotspot: roomId === 'well'});
+    sub: scene.time ? `Day ${scene.time.day} · ${String(Math.floor(scene.time.minute_of_day / 60)).padStart(2, '0')}:${String(Math.floor(scene.time.minute_of_day % 60)).padStart(2, '0')}` : 'Public room projection', from: prev && prev !== roomId ? prev : null, wellHotspot: roomId === 'well'});
   stage.syncView(state.view || {}, {selected: state.selectedActor, encounter: encounterActive()});
   stage.start(); stage.relayout();
+  syncAmbient({runId: state.runId, scene, stage, paused: () => worldLocked() || Boolean(state.activeDialogueNpc || state.pendingConversation || state.view?.conversation?.active),
+    onLine: line => {
+      addMessage(`${line.speaker}: “${line.text}”`, 'voice voice-ambient');
+      document.querySelectorAll('.message-history').forEach(box => {
+        const row = document.createElement('div'); row.className = 'message-row voice voice-ambient';
+        const text = document.createElement('span'); text.className = 'message-text'; text.textContent = `${line.speaker}: “${line.text}”`;
+        row.append(text); box.append(row);
+        while (box.querySelectorAll('.message-row').length > 100) box.querySelector('.message-row').remove();
+        box.scrollTop = box.scrollHeight;
+      });
+    }});
 }
 // Encounters get the painted set of the room they are in, under the combat stage's own layout.
 function keepBattleBackdrop() {
@@ -2619,7 +2627,7 @@ function objectActions(obj = {}) {
 function roomObjects() {
   const objects = Object.values(state.view?.room?.objects || {}).filter(obj => obj && obj.visible !== false);
   if (!objects.length) return '';
-  return `<div class="room-objects"><p class="label">Things worth a closer look</p>${objects.map(obj => `<div class="object-row" role="button" tabindex="0" data-object="${E(obj.object_id || obj.id)}" data-tooltip="Examine ${E(objectLabel(obj))}"><span>${E(objectLabel(obj))}${obj.discovered ? '' : '<small> · undiscovered</small>'}</span><span class="actions compact-actions">${objectActions(obj)}</span></div>`).join('')}</div>`;
+  return `<div class="room-objects"><p class="label">Things worth a closer look</p>${objects.map(obj => `<div class="object-row" role="button" tabindex="0" data-object="${E(obj.object_id || obj.id)}"><span>${E(objectLabel(obj))}${obj.discovered ? '' : '<small> · undiscovered</small>'}</span><span class="actions compact-actions">${objectActions(obj)}</span></div>`).join('')}</div>`;
 }
 async function openExamineDialog({entity_type = '', entity_id = '', query = ''} = {}) {
   let dialog = document.querySelector('#examine-dialog');
@@ -2770,7 +2778,7 @@ function journey() {
   // signal here -- the idle-pause "social choice" notice never clears while
   // that resident stands there, and must not gate the one real way down.
   const canDescend = (state.view?.available_actions || []).some(row => (row.id || row.action || row.type) === 'descend');
-  const entities = (scene.visible_entities || []).slice(0, 5).map(row => `<span class="journey-entity" role="button" tabindex="0" data-resident="${E(row.id || '')}" data-tooltip="${E(`${row.name || row.id} · right-click for options`)}"><strong>${E(row.name || row.id)}</strong><small>${E(row.role || 'resident')}</small></span>`).join('');
+  const entities = (scene.visible_entities || []).slice(0, 5).map(row => `<span class="journey-entity" role="button" tabindex="0" data-resident="${E(row.id || '')}"><strong>${E(row.name || row.id)}</strong><small>${E(row.role || 'resident')}</small></span>`).join('');
   return `${sceneWorld('journey')}${card('Journey', `<div class="room-hero"><div><p class="eyebrow">${E(scene.floor_id || 'Reliquary')}</p><h2>${E(scene.phase || 'exploration')} · ${E(state.view?.room?.name || state.view?.room?.title || 'Unknown route')}</h2><p>Move from left to right through the public route. Social decisions remain yours; idle travel pauses when a meaningful choice appears.</p></div><span class="room-sigil">→</span></div>
     <div class="journey-progress" aria-label="Floor progress"><span style="width:${progress}%"></span></div><div class="journey-meta"><span>${E(progress)}% route progress</span><span>Background: ${E(scene.background_id || 'unreported')}</span><span>Direction: ${E(scene.direction || 'right')}</span></div>
     ${entities ? `<div class="journey-entities"><p class="label">Visible decision points</p>${entities}</div>` : '<p class="notice">No public residents are currently visible.</p>'}
@@ -3505,6 +3513,8 @@ function placeContextMenu(menuState) {
   menu.style.left = `${Math.max(8, Math.min(Number(menuState.x) || 8, window.innerWidth - width - 8))}px`;
   menu.style.top = `${Math.max(8, Math.min(Number(menuState.y) || 8, window.innerHeight - height - 8))}px`;
 }
+document.addEventListener('pointerdown', event => { if (event.button === 0 && state.contextMenu && !event.target.closest('.hsr-context-menu')) dismissContextMenu(); });
+function dismissContextMenu() { state.contextMenu = null; document.querySelector('.hsr-context-menu')?.remove(); }
 function contextMenu() {
   const menu = state.contextMenu;
   if (!menu) return '';
@@ -3521,7 +3531,7 @@ function contextMenu() {
     ${menu.description ? `<p class="context-menu-description">${E(menu.description)}</p>` : '<p class="notice">No additional description is available.</p>'}
     <p class="context-menu-description" data-context-detail${menu.detail ? '' : ' hidden'}>${E(menu.detail || '')}</p>
     ${actions}
-    <div class="context-menu-footer"><button type="button" class="action secondary" data-action="close-context-menu">Close</button></div>
+    
   </aside>`;
 }
 function toggleFullscreen() {
@@ -4458,11 +4468,11 @@ const ACTION_ICONS = {inspect: '⌕', investigate: '◌', enter: '↳', descend:
 // The Help popup is a <details>; a full render rebuilds the DOM, so its open
 // state lives in state.engineHelpOpen. Escape or a click outside closes it.
 function closeEngineHelp() {
-  if (!state.engineHelpOpen) return;
+  if (!state.engineHelpOpen && !document.querySelector('#engine-help[open]')) return;
   state.engineHelpOpen = false;
   document.querySelector('#engine-help')?.removeAttribute('open');
 }
-document.addEventListener('keydown', event => { if (event.key === 'Escape') closeEngineHelp(); });
+document.addEventListener('keydown', event => { if (event.key === 'Escape' && (state.engineHelpOpen || document.querySelector('#engine-help[open]'))) { event.preventDefault(); event.stopPropagation(); closeEngineHelp(); } });
 document.addEventListener('pointerdown', event => { if (!event.target?.closest?.('#engine-help')) closeEngineHelp(); });
 // Click feedback on the main display: a ring pings where the scene was
 // clicked, so every click on the stage visibly lands before the host replies.
@@ -4572,7 +4582,7 @@ function restoreRenderContinuity(snapshot) {
 let renderedScreen = null;
 const SCREEN_EXIT_MS = 200;
 let screenExitTimer = 0;
-function screenKey() { return state.phase === 'ready' ? `ready:${state.selected}` : state.phase; }
+function screenKey() { return state.phase === 'ready' ? `ready:${state.selected}:${state.runId || ''}:${state.view?.room?.id || state.view?.room?.room_id || ''}` : state.phase; }
 function ghostScreen(app) {
   return null; // Do not clone frame chrome between screens.
   if (!app?.childElementCount) return null;
@@ -4598,6 +4608,10 @@ function releaseGhost(entry, app) {
   }, SCREEN_EXIT_MS + 40);
 }
 function render() {
+  screenFade.request(screenKey(), motionReduced(), renderNow);
+}
+function renderNow() {
+  dismissContextMenu();
   const app = document.querySelector('#app');
   const key = screenKey();
   const firstPaint = renderedScreen === null;
@@ -4658,17 +4672,18 @@ function render() {
   const liveArcade = document.querySelector('#app [data-arcade-root]'); liveArcade?.remove();
   if (worldStage?.el.isConnected) worldStage.el.remove();
   if (toolbox?.el.isConnected) toolbox.el.remove();
-    const nextHtml = `${topNavigation()}${body}${staleSandboxNotice}${activityNotice}${messagePanelHtml}${commandBarHtml}${dockContent && state.preferences.showActionDock !== false ? `<div class="hsr-dock tray-${E(state.trayState)}">${trayHandle()}<div class="tray-content">${dockContent}</div></div>` : ''}${mobileNavigation()}${contextMenu()}${disconnectOverlay()}${bookbagModal()}${systemMenuModal()}`;
+    const nextHtml = `${topNavigation()}${body}${staleSandboxNotice}${activityNotice}${messagePanelHtml}${commandBarHtml}${dockContent && state.preferences.showActionDock !== false ? `<div class="hsr-dock tray-${E(state.trayState)}">${trayHandle()}<div class="tray-content">${dockContent}</div></div>` : ''}${mobileNavigation()}${disconnectOverlay()}${bookbagModal()}${systemMenuModal()}`;
   if (app.innerHTML !== nextHtml) {
     const temp = document.createElement('div');
     temp.innerHTML = nextHtml;
     morphChildren(app, temp);
   }
-  document.querySelectorAll('#app [title]').forEach(node => { if (!node.dataset.tooltip) node.dataset.tooltip = node.getAttribute('title'); node.removeAttribute('title'); });
+  document.querySelectorAll('#app [title]').forEach(node => node.removeAttribute('title'));
   document.querySelectorAll('button,input,select').forEach(node => { node.disabled = state.busy || node.dataset.locked === 'true'; });
   reconcileBattleStage(liveStage);
   keepArcadeRoot(liveArcade);
   keepWorldStage();
+  document.querySelectorAll('#app [data-item],#app [data-gear]').forEach(node => node.dataset.tooltipRich = 'true');
   keepToolbox();
   keepBattleBackdrop();
   syncPuppets(app, {reducedMotion: motionReduced});
@@ -4700,10 +4715,6 @@ function render() {
     if (!continuity.overlayHadFocus) overlayRoot.querySelector('.cc-overlay-close, .action')?.focus({preventScroll: true});
   }
   app.classList.remove('screen-enter', 'stage-enter');
-  if (animate && (firstPaint || phaseChanged || tabChanged)) {
-    void app.offsetWidth; // restart the entrance even when the class was already set
-    app.classList.add(tabChanged ? 'stage-enter' : 'screen-enter');
-  }
   releaseGhost(ghost, app);
 }
 addEventListener('keydown', event => {
@@ -4945,7 +4956,7 @@ function bind() {
   document.querySelectorAll('[data-action=\"champion-rehearsal\"]').forEach(n => n.onclick = beginChampionRehearsal);
   document.querySelectorAll('#engine-help').forEach(n => n.ontoggle = event => { state.engineHelpOpen = event.currentTarget.open; });
   const app = document.querySelector('#app');
-  const tooltipSelector = '[data-tooltip],[title],[aria-label],[data-item],[data-gear],[data-actor],[data-stage-actor],[data-conversation],[data-resident],[data-object],[data-xp-node],.object-row,.npc-card,.item-row,.item-card,.champion-card';
+  const tooltipSelector = '[data-tooltip],[data-tooltip-rich]';
 
   const renderRichTooltip = node => {
     if (!node) return null;
@@ -4997,7 +5008,7 @@ function bind() {
       }
     }
 
-    const stageActor = node.closest('[data-stage-actor]');
+    const stageActor = node.closest('[data-stage-actor]:not([data-resident])');
     if (stageActor) {
       const id = stageActor.dataset.stageActor;
       const entity = [...party(), ...(state.view?.opposition || [])].find(row => String(row.id) === id);
@@ -5022,23 +5033,8 @@ function bind() {
   };
 
   const tooltipText = node => {
-    if (node?.getAttribute('role') === 'group' && !node.dataset.tooltipForce) return '';
-    const direct = node?.dataset.tooltip || node?.getAttribute('title') || node?.getAttribute('aria-label');
-    if (direct) {
-      if (node.tagName === 'BUTTON' && direct.trim() === node.textContent.trim() && !node.dataset.tooltipForce) {
-        return '';
-      }
-      return direct;
-    }
-    const conversationNode = node?.closest('[data-conversation]');
-    if (conversationNode) return conversationNode.innerText.trim().slice(0, 260);
-    const objectNode = node?.closest('[data-object]');
-    if (objectNode) {
-      const entity = Object.values(state.view?.room?.objects || {}).find(row => String(row.object_id || row.id) === objectNode.dataset.object);
-      return entity?.description || entity?.material || objectLabel(entity) || '';
-    }
-    const cardNode = node?.closest('.object-row,.npc-card,.item-row,.item-card,.champion-card');
-    return cardNode?.innerText.trim().slice(0, 260) || '';
+    const text = node?.dataset.tooltip || '';
+    return text.trim() === node?.textContent?.trim() && !node.dataset.tooltipForce ? '' : text;
   };
 
   const hideTooltip = () => {
@@ -5048,7 +5044,7 @@ function bind() {
 
   const showTooltip = (node, x, y) => {
     if (node?.closest('.hsr-context-menu')) return;
-    const rich = renderRichTooltip(node);
+    const rich = node.matches('[data-tooltip-rich],[data-item],[data-gear]') ? renderRichTooltip(node) : '';
     const text = rich ? '' : tooltipText(node);
     if (!rich && !text) return;
     hideTooltip();
@@ -5129,7 +5125,7 @@ function bind() {
       };
     }
 
-    const stageActor = node.closest('[data-stage-actor]');
+    const stageActor = node.closest('[data-stage-actor]:not([data-resident])');
     if (stageActor && !stageActor.dataset.resident) {
       const id = stageActor.dataset.stageActor;
       const entity = [...party(), ...(state.view?.opposition || [])].find(row => String(row.id) === id);
@@ -5311,6 +5307,7 @@ function bind() {
       render();
       return;
     }
+    if (target.kind === 'action' && target.value.startsWith('talk:') && worldStage?.el.isConnected) { worldStage.talkTo(target.value.slice(5)); return; }
     if (target.kind === 'hotspot') { activateHotspot(target.node); return; }
     // Object verbs go straight to the host; a matching button may not be on screen.
     const objectVerb = target.kind === 'action' && /^object-(inspect|search|open|take):/.exec(target.value);
@@ -5339,33 +5336,31 @@ function bind() {
   };
 
   if (app) app.oncontextmenu = event => {
-    if (state.preferences.swapMouseButtons && event.isTrusted && !event.target.closest('.hsr-context-menu')) {
+    if (state.preferences.swapMouseButtons && !event.hsrContextOnly && (event.isTrusted || event.hsrNativeSecondary) && !event.target.closest('.hsr-context-menu')) {
       event.preventDefault();
       const target = contextTarget(event.target);
-      if (target?.primaryTarget) {
-        requestAnimationFrame(() => activate(target.primaryTarget));
-      }
+      if (target?.primaryTarget) requestAnimationFrame(() => activate(target.primaryTarget));
       return;
     }
-    if (state.contextMenu && event.target.closest('.hsr-context-menu')) { event.preventDefault(); state.contextMenu = null; render(); return; }
-    const target = contextTarget(event.target);
-    if (!target) return;
     event.preventDefault();
-    state.contextMenu = {x: event.clientX, y: event.clientY, ...target, primaryAction: Boolean(target.primaryTarget)};
-    render();
-    const openedMenu = state.contextMenu;
-    placeContextMenu(openedMenu);
-    document.querySelector('.hsr-context-menu button')?.focus({preventScroll: true});
-    if (target.examine && state.runId) state.client.examine(state.runId, target.examine).then(reply => {
-      const info = reply?.result?.examine;
-      if (!reply?.ok || !info || state.contextMenu !== openedMenu) return;
-      openedMenu.detail = info.short || info.description || '';
-      const detail = document.querySelector('.hsr-context-menu [data-context-detail]');
-      if (!detail) return;
-      detail.textContent = openedMenu.detail;
-      detail.hidden = !openedMenu.detail;
-      placeContextMenu(openedMenu);
-    }).catch(() => {});
+    if (event.target.closest('.hsr-context-menu')) { dismissContextMenu(); return; }
+    const target = contextTarget(event.target) || {label: 'Workspace', contextKind: 'scene'};
+    const primary = target.contextKind !== 'scene' ? target.contextActions?.find(row => !['examine', 'fullscreen', 'system_menu'].includes(row.target?.kind)) : null;
+    const examine = target.examine ? {label: 'Examine', target: {kind: 'examine', payload: target.examine}} : null;
+    state.contextMenu = {x: event.clientX, y: event.clientY, ...target,
+      contextActions: [primary, examine, {label: 'Menu', target: {kind: 'system_menu'}}, {label: 'Fullscreen', target: {kind: 'fullscreen'}}].filter(Boolean)};
+    document.querySelector('.hsr-context-menu')?.remove();
+    app.insertAdjacentHTML('beforeend', contextMenu());
+    const menu = document.querySelector('.hsr-context-menu');
+    menu.addEventListener('click', e => {
+      const button = e.target.closest('[data-action]'); if (!button) return;
+      e.preventDefault(); e.stopPropagation();
+      const index = Number(button.dataset.action.split(':').at(-1));
+      const selected = state.contextMenu?.contextActions?.[index]?.target;
+      dismissContextMenu(); activate(selected);
+    });
+    placeContextMenu(state.contextMenu);
+    menu.querySelector('button')?.focus({preventScroll: true});
   };
 
   if (app && !app.dataset.secondaryInteractions) {
@@ -5374,7 +5369,7 @@ function bind() {
   if (app && !app.dataset.contextDismiss) {
     app.dataset.contextDismiss = 'true';
     app.addEventListener('click', event => {
-      if (state.preferences.swapMouseButtons && event.button === 0 && !event.target.closest('.hsr-context-menu, .system-btn, button, a, [role="button"], input, select, summary')) {
+      if (state.preferences.swapMouseButtons && event.button === 0 && !event.target.closest('.world-stage') && !event.target.closest('.hsr-context-menu, .system-btn, button, a, [role="button"], input, select, summary')) {
         const target = contextTarget(event.target);
         if (target) {
           event.preventDefault();
@@ -5383,30 +5378,8 @@ function bind() {
           return;
         }
       }
-      if (state.contextMenu && !event.target.closest('.hsr-context-menu')) { state.contextMenu = null; render(); }
+      if (state.contextMenu && !event.target.closest('.hsr-context-menu')) dismissContextMenu();
     }, true);
-    app.addEventListener('pointermove', event => {
-      if (state.contextMenu && event.pointerType !== 'touch') {
-        if (event.target.closest('.hsr-context-menu')) return;
-        const target = contextTarget(event.target);
-        if (target && target.label !== state.contextMenu.label) {
-          state.contextMenu = {x: event.clientX, y: event.clientY, ...target, primaryAction: Boolean(target.primaryTarget)};
-          render();
-          const openedMenu = state.contextMenu;
-          placeContextMenu(openedMenu);
-          if (target.examine && state.runId) state.client.examine(state.runId, target.examine).then(reply => {
-            const info = reply?.result?.examine;
-            if (!reply?.ok || !info || state.contextMenu !== openedMenu) return;
-            openedMenu.detail = info.short || info.description || '';
-            const detail = document.querySelector('.hsr-context-menu [data-context-detail]');
-            if (!detail) return;
-            detail.textContent = openedMenu.detail;
-            detail.hidden = !openedMenu.detail;
-            placeContextMenu(openedMenu);
-          }).catch(() => {});
-        }
-      }
-    });
     app.addEventListener('pointerover', event => {
       if (event.pointerType === 'touch') return;
       const node = event.target.closest(tooltipSelector);
@@ -5415,13 +5388,14 @@ function bind() {
     app.addEventListener('pointerout', event => {
       if (event.pointerType !== 'touch' && event.target.closest(tooltipSelector) && !event.target.closest(tooltipSelector).contains(event.relatedTarget)) hideTooltip();
     });
-    app.addEventListener('focusin', event => { const node = event.target.closest(tooltipSelector); if (node) showTooltip(node); });
+    app.addEventListener('focusin', event => { const node = event.target.closest(tooltipSelector); if (node) showTooltip(node); else hideTooltip(); });
     app.addEventListener('focusout', event => { if (event.target.closest(tooltipSelector)) hideTooltip(); });
     app.addEventListener('pointerdown', event => {
       if (event.pointerType !== 'touch') return;
       const node = event.target.closest('button,a,input,select,summary,[role="button"],[tabindex]');
       const text = tooltipText(node);
-      if (!node || !text) { state.tapHint = null; state.touchReveal = null; return; }
+      const rich = node?.matches('[data-tooltip-rich]') && renderRichTooltip(node);
+      if (!node || (!text && !rich)) { state.tapHint = null; state.touchReveal = null; return; }
       if (state.tapHint !== node) {
         state.tapHint = node; state.touchReveal = node; state.touchActivate = null; showTooltip(node);
       } else {
@@ -5439,7 +5413,9 @@ function bind() {
     }, true);
   }
   window.onkeydown = event => {
-    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
+    if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) { event.preventDefault(); openContextAt(document.activeElement || app); return; }
+    if (event.defaultPrevented) return;
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName) && !['Escape', 'F11'].includes(event.key)) return;
     if (event.key === 'F11') {
       event.preventDefault();
       toggleFullscreen();
@@ -5476,7 +5452,7 @@ function bind() {
       if (state.equipmentSelectedItem) { state.equipmentSelectedItem = null; render(); return; }
       if (state.systemMenuOpen) { state.systemMenuOpen = false; render(); return; }
       if (state.bookbagOpen) { state.bookbagOpen = false; render(); return; }
-      if (state.contextMenu || document.querySelector('#hsr-tooltip')) { state.contextMenu = null; hideTooltip(); render(); return; }
+      if (state.contextMenu || document.querySelector('#hsr-tooltip')) { dismissContextMenu(); hideTooltip(); return; }
       const openDialog = document.querySelector('dialog[open]');
       if (openDialog) { openDialog.close(); return; }
       if (state.phase === 'ready') { state.systemMenuOpen = true; render(); return; }
@@ -6021,6 +5997,7 @@ function bind() {
   document.querySelectorAll('[data-pref]').forEach(node => node.onchange = () => {
     const key = node.dataset.pref;
     if (key === 'iconActions') state.preferences.iconActions = node.checked;
+    else if (key === 'swapMouseButtons') state.preferences.swapMouseButtons = node.checked;
     else if (key === 'motion') state.preferences.motion = node.checked ? 'reduced' : 'full';
     else if (key === 'effects') state.preferences.effects = node.checked ? 'soft' : 'full';
     else if (key === 'layout') state.preferences.layout = node.value;

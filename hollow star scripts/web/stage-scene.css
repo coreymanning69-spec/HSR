@@ -83,3 +83,11 @@
 #app .toolbox{padding-top:64px;box-sizing:border-box}
 
 .world-stage .scene-frame-label[data-action]{pointer-events:auto;cursor:pointer}
+
+/* Speech follows the actor's projected head; only one line is visible. */
+.ws-speech { position:absolute; z-index:12; max-width:240px; padding:9px 12px; transform:translate(-50%,-100%); border:1px solid #c8b99688; border-radius:8px; background:#10131aee; color:#f0e8d5; font:14px/1.45 Georgia,serif; text-align:center; pointer-events:none; box-shadow:0 4px 12px #0008; }
+.ws-speech[hidden] { display:none; }
+.ws-speech::after { content:''; position:absolute; top:100%; left:50%; border:6px solid transparent; border-top-color:#10131aee; transform:translateX(-50%); }
+#hsr-screen-fade { position:fixed; inset:0; z-index:2147483646; background:#000; opacity:0; pointer-events:none; transition:opacity 100ms linear; }
+#hsr-screen-fade.covered { opacity:1; pointer-events:auto; }
+#hsr-screen-fade.revealing { transition-duration:140ms; }

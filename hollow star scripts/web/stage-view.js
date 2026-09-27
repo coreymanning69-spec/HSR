@@ -13,7 +13,7 @@
 // and this view only walks, turns, opens, swings and draws.
 import {clamp, lerp, TAU, hash32, rgba, mixHex} from './actor-core.js';
 import {createWorld, makeProp, makeEntity, bodyOf, PROP_TYPES, SWING_STYLES, SWING_ORDER, swingTiming, rng, MATERIALS} from './stage-world.js';
-import {THEMES, themeFor, layoutExits, bakeSet, drawLive, todOf, TOD, PPF, tint, clearSpot} from './stage-set.js';
+import {THEMES, themeFor, layoutExits, bakeSet, drawLive, todOf, paletteAt, sceneTime, TOD, PPF, tint, clearSpot} from './stage-set.js';
 import {drawProp, kit, PROP_KINDS} from './stage-art.js';
 import {characterFigure, dollModel, visualWeapon} from './paperdoll.js?v=puppet-1';
 import {syncPuppets, figureSocket, figureImpulse} from './puppet-dom.js';
@@ -49,6 +49,17 @@ export function createStage(options = {}) {
   const liveEl = $('.ws-live'), things = $('.ws-things'), fxEl = $('.ws-fx'), lightEl = $('.ws-light'), glowEl = $('.ws-glow'), hot = $('.ws-hotspots'), camEl = $('.ws-cam');
   const liveCtx = liveEl.getContext('2d'), fxCtx = fxEl.getContext('2d'), lightCtx = lightEl.getContext('2d'), glowCtx = glowEl.getContext('2d');
 
+  const bubble = document.createElement('div'); bubble.className = 'ws-speech'; bubble.hidden = true; root.append(bubble);
+  let speech = null;
+  function say(line) { speech = line; bubble.textContent = line.text; bubble.dataset.speaker = line.speaker; bubble.hidden = false; }
+  function clearSpeech() { speech = null; bubble.hidden = true; }
+  function positionSpeech() {
+    const rec = speech && st.things.get(speech.speaker_id);
+    if (!rec || opts.locked?.()) { bubble.hidden = true; return; }
+    const {P, h} = actorBox(rec); bubble.hidden = false;
+    bubble.style.left = `${clamp(P.sx, 120, Math.max(120, st.W - 120))}px`;
+    bubble.style.top = `${Math.max(12, P.sy - h - 16)}px`;
+  }
   const fx = new StageFx();
   const st = {W: 0, H: 0, L: 0, R: 0, UW: 0, dpr: 1, ppf0: 30, worldW: REF_W, theme: null, themeId: '', tod: 'evening', roomId: '', seed: 'room', bays: [], doors: new Map(), things: new Map(),
     world: createWorld({width: REF_W, depth: WORLD_DEPTH, seed: 'stage'}), leadId: null, hover: null, t: 0, last: 0, raf: 0, running: false, bakeKey: '', debug: false, shake: 0,
@@ -108,7 +119,7 @@ export function createStage(options = {}) {
   function setRoom({themeId, tod = 'evening', roomId = '', exits = [], name = '', sub = '', from = null, seed = null, wellHotspot = false} = {}) {
     const changed = roomId !== st.roomId || themeId !== st.themeId;
     st.roomId = roomId;
-    st.theme = THEMES[themeId] || THEMES.market; st.themeId = st.theme.id; st.tod = todOf(tod); st.seed = seed || roomId || themeId; st.hostile = HOSTILE.has(st.themeId);
+    st.theme = THEMES[themeId] || THEMES.market; st.themeId = st.theme.id; st.tod = sceneTime(st.themeId, tod); st.seed = seed || roomId || themeId; st.hostile = HOSTILE.has(st.themeId);
     st.bays = layoutExits(st.theme, exits);
     // Back-wall doors are placed in screen space; the world floor is wide enough at the back to stand in front of each.
     for (const b of st.bays) { const s = depthScale(1); b.xFt = st.worldW / 2 + (b.x - .5) * st.worldW / s; if (!st.doors.has(b.key) || changed) st.doors.set(b.key, {open: 0, target: 0, hover: 0, until: 0}); }
@@ -118,6 +129,7 @@ export function createStage(options = {}) {
     st.wellHotspot = wellHotspot;
     if (st.W) { rebake(); }
     if (changed) {
+      clearSpeech();
       if (!toolbox) for (const [id, rec] of [...st.things]) if (!(rec.kind === 'actor' && rec.role === 'party')) { rec.node.remove(); world.remove(id); st.things.delete(id); }
       rebuildDecor(); fx.clear(); st.enter = {from, at: st.t}; st.hp.clear(); settle(false); st.busyDoor = false;
       if (!toolbox) {
@@ -268,7 +280,7 @@ export function createStage(options = {}) {
     const buttons = [];
     for (const b of st.bays) {
       const s = ppfAt(1), w = b.w * s, h = b.h * s, y = cam().back * st.H;
-      buttons.push(`<button type="button" class="scene-hotspot hotspot-exit ws-hot" style="left:${(st.L + b.x * st.UW - w / 2).toFixed(1)}px;top:${(y - h).toFixed(1)}px;width:${w.toFixed(1)}px;height:${h.toFixed(1)}px" data-hotspot="exit" data-exit="${HSRUI.escape(b.key)}" data-destination="${HSRUI.escape(b.id)}" data-walk-x="${((st.L + b.x * st.UW) / st.W * 100).toFixed(1)}" data-tooltip="Walk to ${HSRUI.escape(b.name)}" aria-label="Walk to ${HSRUI.escape(b.name)}"><small>${HSRUI.escape(b.name)}</small></button>`);
+      buttons.push(`<button type="button" class="scene-hotspot hotspot-exit ws-hot" style="left:${(st.L + b.x * st.UW - w / 2).toFixed(1)}px;top:${(y - h).toFixed(1)}px;width:${w.toFixed(1)}px;height:${h.toFixed(1)}px" data-hotspot="exit" data-exit="${HSRUI.escape(b.key)}" data-destination="${HSRUI.escape(b.id)}" data-walk-x="${((st.L + b.x * st.UW) / st.W * 100).toFixed(1)}" aria-label="Walk to ${HSRUI.escape(b.name)}"><small>${HSRUI.escape(b.name)}</small></button>`);
     }
     for (const rec of st.things.values()) if (rec.obj) {
       const P = project(rec.ent.x, rec.ent.d), w = rec.ent.body.width * ppfAt(rec.ent.d), h = rec.ent.body.height * ppfAt(rec.ent.d);
@@ -276,7 +288,7 @@ export function createStage(options = {}) {
     }
     if (st.wellHotspot) {
       const B = wellBox();
-      buttons.push(`<button type="button" class="scene-hotspot hotspot-object ws-hot" style="left:${(B.x - B.w / 2).toFixed(1)}px;top:${(B.y - B.h).toFixed(1)}px;width:${B.w.toFixed(1)}px;height:${(B.h + 4).toFixed(1)}px" data-hotspot="well" data-object="well" data-walk-x="${(B.x / st.W * 100).toFixed(1)}" data-tooltip="The town well: examine or descend" aria-label="The town well"><small>The well</small></button>`);
+      buttons.push(`<button type="button" class="scene-hotspot hotspot-object ws-hot" style="left:${(B.x - B.w / 2).toFixed(1)}px;top:${(B.y - B.h).toFixed(1)}px;width:${B.w.toFixed(1)}px;height:${(B.h + 4).toFixed(1)}px" data-hotspot="well" data-object="well" data-walk-x="${(B.x / st.W * 100).toFixed(1)}" aria-label="The town well"><small>The well</small></button>`);
     }
     const html = buttons.join('');
     if (hot.dataset.sig !== html) { hot.innerHTML = html; hot.dataset.sig = html; }
@@ -407,7 +419,7 @@ export function createStage(options = {}) {
   }
   function setHover(hit, at = null) {
     const key = hit ? `${hit.kind}:${hit.rec?.id || hit.bay?.key || ''}` : '';
-    if (at) { const tip = $('.ws-tip'), text = verbFor(hit); tip.hidden = !text; if (text) { tip.textContent = text; tip.style.left = `${clamp(at.x + 14, 4, st.W - 190)}px`; tip.style.top = `${clamp(at.y - 30, 4, st.H - 30)}px`; } }
+    if (toolbox && at) { const tip = $('.ws-tip'), text = verbFor(hit); tip.hidden = !text; if (text) { tip.textContent = text; tip.style.left = `${clamp(at.x + 14, 4, st.W - 190)}px`; tip.style.top = `${clamp(at.y - 30, 4, st.H - 30)}px`; } }
     else $('.ws-tip').hidden = true;
     if (st.hoverKey === key) return; st.hoverKey = key; st.hover = hit;
     for (const r of st.things.values()) r.node.classList.toggle('is-hover', Boolean(hit?.rec === r));
@@ -416,6 +428,11 @@ export function createStage(options = {}) {
   root.addEventListener('pointermove', e => { if (opts.locked?.()) return; const p = localPt(e); setHover(pick(p.x, p.y), p); });
   root.addEventListener('pointerleave', () => setHover(null));
   root.addEventListener('click', e => {
+    if (e.isTrusted && opts.swapMouseButtons?.() && !e.target.closest('.scene-frame-label')) {
+      e.preventDefault(); e.stopPropagation();
+      const menuEvent = new MouseEvent('contextmenu', {bubbles:true, cancelable:true, clientX:e.clientX, clientY:e.clientY});
+      menuEvent.hsrContextOnly = true; e.target.dispatchEvent(menuEvent); return;
+    }
     if (opts.locked?.() || e.button !== 0) return;
     const btn = e.target.closest?.('button[data-hotspot]');
     if (btn && e.detail === 0) { e.preventDefault(); activate(btn.dataset); return; }
@@ -432,10 +449,11 @@ export function createStage(options = {}) {
     else if (hit.kind === 'ground' && L) walkLead(hit.x, hit.d, {run});
   });
   root.addEventListener('contextmenu', e => {
+    if (e.target.closest('.ws-actor,.ws-hot')) return;
     const p = localPt(e), hit = pick(p.x, p.y); let target = null;
     if (hit.kind === 'actor') target = hit.rec.node; else if (hit.kind === 'prop' && hit.rec.obj) target = root.querySelector(`.ws-hot[data-object="${CSS.escape(hit.rec.objectId)}"]`);
     else if (hit.kind === 'door') target = root.querySelector(`.ws-hot[data-exit="${CSS.escape(hit.bay.key)}"]`); else if (hit.kind === 'well') target = root.querySelector('.ws-hot[data-hotspot="well"]');
-    if (target && target !== e.target) { e.preventDefault(); e.stopPropagation(); target.dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, cancelable: true, clientX: e.clientX, clientY: e.clientY})); }
+    if (target && target !== e.target) { e.preventDefault(); e.stopPropagation(); const forwarded = new MouseEvent('contextmenu', {bubbles: true, cancelable: true, clientX: e.clientX, clientY: e.clientY}); forwarded.hsrNativeSecondary = e.isTrusted; forwarded.hsrContextOnly = e.hsrContextOnly; target.dispatchEvent(forwarded); }
   }, true);
   // Activate a hotspot by its dataset (keyboard or the app's context menu).
   function activate(d) {
@@ -461,7 +479,7 @@ export function createStage(options = {}) {
 
   // ---- frame ---------------------------------------------------------------------
   function lightsNow() {
-    const key = `${st.themeId}|${st.tod}`; if (key !== st.lightsKey) { st.lightsKey = key; st.lights = st.theme.lights({tod: TOD[st.tod], cam: cam()}); }
+    const key = `${st.themeId}|${st.tod}`; if (key !== st.lightsKey) { st.lightsKey = key; const palette = paletteAt(st.tod); st.lights = st.theme.lights({tod: palette, cam: cam()}).map(light => !st.theme.indoor && light.c !== palette.sun?.halo ? {...light, a: light.a * palette.lamps} : light); }
     return st.lights;
   }
   function carryFor(rec) {
@@ -606,6 +624,7 @@ export function createStage(options = {}) {
     }
   }
   function drawFx(dt) {
+    positionSpeech();
     const c = fxCtx, S = st.H / 500; c.setTransform(st.dpr, 0, 0, st.dpr, 0, 0); c.clearRect(0, 0, st.W, st.H);
     if (!opts.reducedMotion()) { fx.stepAmbient(dt, st.W, st.H, S); fx.drawAmbient(c, S); }
     fx.step(dt);
@@ -667,7 +686,7 @@ export function createStage(options = {}) {
   addEventListener('keydown', e => { if (e.key === 'Shift') st.shift = true; }); addEventListener('keyup', e => { if (e.key === 'Shift') st.shift = false; });
 
   const api = {
-    el: root, world, st, start, stop, destroy, resize, relayout() { resize(); layoutHotspots(); }, roomId: () => st.roomId, setRoom, syncView, walkLead, enterDoor, talkTo, useObject, activate, swing, toggleDoor, project, unproject, pick, fx,
+    el: root, world, st, start, stop, destroy, resize, relayout() { resize(); layoutHotspots(); }, roomId: () => st.roomId, setRoom, syncView, say, clearSpeech, walkLead, enterDoor, talkTo, useObject, activate, swing, toggleDoor, project, unproject, pick, fx,
     setDebug(on) { st.debug = Boolean(on); }, get debug() { return st.debug; },
     setCombat(on) { st.combat = Boolean(on); },
     on(type, fn) { (st.listeners.get(type) || st.listeners.set(type, new Set()).get(type)).add(fn); return () => st.listeners.get(type).delete(fn); },

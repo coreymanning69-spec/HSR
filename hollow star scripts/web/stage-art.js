@@ -78,8 +78,9 @@ export function tree(ctx, K, x, base, h, colour, trunk = '#4a3626') {
 // ---------------------------------------------------------------------------
 // Sky. Gradient, an optional sun/moon with halo, stars, flat cel clouds.
 export function sky(ctx, K, {top, mid, bot, y1 = K.H * .55, sun = null, stars = 0, clouds = 0, cloud = '#ffffff', cloudAlpha = .22}) {
+  const rand = K.skyRand || K.rand;
   ctx.fillStyle = vgrad(ctx, 0, y1, [[0, top], [.55, mid], [1, bot]]); ctx.fillRect(0, 0, K.W, y1 + 2);
-  for (let i = 0; i < stars; i++) { ctx.globalAlpha = .25 + K.rand() * .6; ctx.fillStyle = '#fff6dc'; const s = (.6 + K.rand() * 1.4) * K.S; ctx.fillRect(K.rand() * K.W, K.rand() * y1 * .7, s, s); }
+  for (let i = 0; i < stars; i++) { ctx.globalAlpha = .25 + rand() * .6; ctx.fillStyle = '#fff6dc'; const s = (.6 + rand() * 1.4) * K.S; ctx.fillRect(rand() * K.W, rand() * y1 * .7, s, s); }
   ctx.globalAlpha = 1;
   if (sun) {
     glow(ctx, sun.x * K.W, sun.y * K.H, sun.r * K.S * 5, sun.halo || sun.color, .5);
@@ -87,7 +88,7 @@ export function sky(ctx, K, {top, mid, bot, y1 = K.H * .55, sun = null, stars = 
     if (sun.crescent) { ctx.fillStyle = mid; ctx.beginPath(); ctx.arc(sun.x * K.W + sun.r * K.S * .35, sun.y * K.H - sun.r * K.S * .1, sun.r * K.S * .92, 0, TAU); ctx.fill(); }
   }
   for (let i = 0; i < clouds; i++) {
-    const cx = K.rand() * K.W, cy = y1 * (.12 + K.rand() * .5), w = (90 + K.rand() * 170) * K.S;
+    const cx = rand() * K.W, cy = y1 * (.12 + rand() * .5), w = (90 + rand() * 170) * K.S;
     ctx.fillStyle = rgba(cloud, cloudAlpha);
     for (let j = 0; j < 4; j++) ellipse(ctx, cx + (j - 1.5) * w * .22, cy + Math.sin(j * 2) * 5 * K.S, w * .2, w * .07, rgba(cloud, cloudAlpha));
   }
@@ -144,7 +145,8 @@ export function house(ctx, K, {x, base, w, h, kind = 'timber', wall = '#b9a487',
     for (let i = 0; i < n; i++) {
       const ww = 15 * s, cx = x + w * (i + .5) / n - ww / 2, cy = top + f * fh + fh * .26;
       if (door && f === floors - 1 && i === Math.floor(n / 2)) continue;
-      windowPane(ctx, K, cx, cy, ww, ww * 1.35, {lit: K.rand() < lit ? .45 + K.rand() * .55 : 0, shutter: kind === 'timber' || kind === 'brick' ? shutter : null, frame: trim});
+      const litRoll = K.rand(), glowRoll = K.rand();
+      windowPane(ctx, K, cx, cy, ww, ww * 1.35, {lit: Math.max(0, (lit - litRoll) / Math.max(.001, lit)) * (.45 + glowRoll * .55), shutter: kind === 'timber' || kind === 'brick' ? shutter : null, frame: trim});
     }
   }
   if (door) { const dw = 20 * s, dh = 36 * s; inkRect(ctx, K, x + w * .5 - dw / 2, base - dh, dw, dh, lightHex(trim, .12), 1.4); ctx.fillStyle = '#d6b36a'; ctx.beginPath(); ctx.arc(x + w * .5 + dw * .25, base - dh * .45, 1.3 * s, 0, TAU); ctx.fill(); }
@@ -463,6 +465,12 @@ export const DOOR_KINDS = Object.freeze(['wood', 'iron', 'gate', 'arch', 'path',
 export function drawDoor(ctx, K, kind, x, y, w, h, open = 0, {beyond = ['#0b0a0e', '#241a12'], wood = '#7a5232', stone = '#7d7a76', hover = 0, locked = false, t = 0, sign = ''} = {}) {
   const s = K.S, o = clamp(open, 0, 1);
   ctx.save(); ctx.translate(x, y);
+  // A shallow threshold and contact shadow anchor the opening to the floor.
+  ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.beginPath(); ctx.ellipse(0, 3 * s, w * .65, 5 * s, 0, 0, TAU); ctx.fill();
+  if (!['path', 'hatch'].includes(kind)) {
+    ctx.fillStyle = shadeHex(stone, .2); ctx.fillRect(-w / 2 - 5 * s, -2 * s, w + 10 * s, 5 * s);
+    ctx.strokeStyle = lightHex(stone, .18); ctx.lineWidth = s; ctx.beginPath(); ctx.moveTo(-w / 2 - 4 * s, -2 * s); ctx.lineTo(w / 2 + 4 * s, -2 * s); ctx.stroke();
+  }
   const opening = (cx0, cy0, cw, ch, round = false) => {
     ctx.beginPath(); round ? (ctx.moveTo(cx0, cy0 + ch), ctx.lineTo(cx0, cy0 + cw / 2), ctx.arc(cx0 + cw / 2, cy0 + cw / 2, cw / 2, Math.PI, 0), ctx.lineTo(cx0 + cw, cy0 + ch), ctx.closePath()) : ctx.rect(cx0, cy0, cw, ch);
     ctx.fillStyle = vgrad(ctx, cy0, cy0 + ch, [[0, beyond[0]], [1, beyond[1]]]); ctx.fill();
@@ -507,15 +515,28 @@ export function drawDoor(ctx, K, kind, x, y, w, h, open = 0, {beyond = ['#0b0a0e
     poly(ctx, [[x0, ya0], [x1, ya1 + (h - farH) * .0], [x1, yb1], [x0, yb0]]);
     const c = iron ? '#4b5058' : wood; ctx.fillStyle = c; ctx.fill(); ink(ctx, K, 1.6);
     ctx.save(); poly(ctx, [[x0, ya0], [x1, ya1], [x1, yb1], [x0, yb0]]); ctx.clip();
+    // Grain, small scuffs and plate highlights remain attached to the swinging leaf.
+    ctx.strokeStyle = rgba(iron ? '#b8bdc8' : '#d5a66d', .18); ctx.lineWidth = .65 * s;
+    ctx.beginPath();
+    for (let j = 1; j < 18; j++) {
+      const f = j / 19, xx = lerp(x0, x1, f), yy = -h * (.12 + ((j * 7) % 13) / 17);
+      ctx.moveTo(xx, yy); ctx.lineTo(xx + (iron ? 3 : Math.sin(j) * 1.5) * s, yy + h * .12);
+    } ctx.stroke();
     const pn = iron ? 7 : 5;
     ctx.strokeStyle = rgba(INK, iron ? .7 : .35); ctx.lineWidth = (iron ? 2.4 : 1.2) * s; ctx.beginPath();
     for (let i = 1; i < pn; i++) { const xx = lerp(x0, x1, i / pn); ctx.moveTo(xx, lerp(ya0, ya1, i / pn)); ctx.lineTo(xx, lerp(yb0, yb1, i / pn)); } ctx.stroke();
     ctx.fillStyle = iron ? '#2b2f36' : '#3b3f4a'; for (const f of [.22, .72]) { const yy0 = lerp(ya0, yb0, f); poly(ctx, [[x0, yy0 - 3 * s], [x1, lerp(ya1, yb1, f) - 3 * s], [x1, lerp(ya1, yb1, f) + 3 * s], [x0, yy0 + 3 * s]]); ctx.fill(); }
     ctx.fillStyle = shadeHex(c, .3); ctx.globalAlpha = .35 + o * .3; poly(ctx, [[x0, ya0], [x1, ya1], [x1, yb1], [x0, yb0]]); ctx.fill(); ctx.globalAlpha = 1;
     ctx.restore();
+    for (const f of [.22, .72]) {
+      ctx.fillStyle = '#242831'; ctx.fillRect(hinge - 2 * s, -h * (1 - f) - 5 * s, 4 * s, 10 * s);
+      ctx.fillStyle = '#a6a29a'; ctx.beginPath(); ctx.arc(hinge, -h * (1 - f), .9 * s, 0, TAU); ctx.fill();
+    }
     if (!gate || side > 0) { ctx.fillStyle = '#d6b36a'; ctx.beginPath(); ctx.arc(lerp(x0, x1, gate ? .82 : .86), -h * .48, 2.2 * s, 0, TAU); ctx.fill(); }
   }
   ctx.strokeStyle = jamb; ctx.lineWidth = 6 * s; ctx.strokeRect(-w / 2 - 3 * s, -h - 3 * s, w + 6 * s, h + 3 * s); ctx.strokeStyle = K.ink; ctx.lineWidth = 1.4 * s; ctx.strokeRect(-w / 2 - 6 * s, -h - 6 * s, w + 12 * s, h + 6 * s);
+  ctx.strokeStyle = rgba('#000000', .4); ctx.lineWidth = 2 * s; ctx.strokeRect(-w / 2, -h, w, h);
+  ctx.strokeStyle = rgba('#eee1c8', .25); ctx.lineWidth = s; ctx.beginPath(); ctx.moveTo(-w / 2 - 5 * s, 0); ctx.lineTo(-w / 2 - 5 * s, -h - 5 * s); ctx.lineTo(w / 2 + 5 * s, -h - 5 * s); ctx.stroke();
   rim(() => { ctx.beginPath(); ctx.rect(-w / 2 - 6 * s, -h - 6 * s, w + 12 * s, h + 6 * s); });
   if (locked) { ctx.fillStyle = '#d6b36a'; ctx.fillRect(-3 * s, -h * .45, 6 * s, 6 * s); }
   if (sign) { ctx.fillStyle = '#4a3626'; ctx.fillRect(-w * .36, -h - 22 * s, w * .72, 10 * s); ctx.strokeStyle = K.ink; ctx.lineWidth = s; ctx.strokeRect(-w * .36, -h - 22 * s, w * .72, 10 * s); }

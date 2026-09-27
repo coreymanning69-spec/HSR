@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import copy
 
+from hollowstar.clock import daylight
+
 
 FLOOR_ONE_ROUTE = {
     "market": (0.00, "town-market-dusk"), "tavern": (0.18, "town-tavern-evening"),
@@ -55,6 +57,9 @@ def build_scene(state: dict) -> dict:
         "landmarks": [{"id": room_id, "label": room.get("title") or room.get("name") or room_id, "progress": progress}],
         "party_positions": [{"id": row.get("id", f"p{index}"), "progress": progress, "lane": index}
                             for index, row in enumerate(party) if isinstance(row, dict)],
+        "time": daylight(state.get("event_clock", {}).get("seconds", 0) + state.get("daylight_offset_seconds", 0)),
+        "ambient_events": copy.deepcopy(state.get("ambient_events", [])),
+        "location": str(room_id),
         "visible_entities": visible,
         "encounter": encounter,
     }

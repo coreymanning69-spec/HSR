@@ -98,6 +98,7 @@ def _event(world: dict, event_type: str, public: dict, *, private: dict | None =
     if private:
         event["private"] = copy.deepcopy(private)
     world["events"].append(event)
+    _ambient_exchange(world, event_id)
     world["events"] = world["events"][-100:]
     return event
 
@@ -297,6 +298,7 @@ def view(run, *, debug: bool = False) -> dict:
         "status": world["status"],
         "world_time": world["world_time"],
         "event_clock": clock.view(world),
+        "ambient_events": copy.deepcopy(world.get("ambient_events", [])),
         "room": {"id": location["id"], "title": location["name"], "terrain": location["description"],
                  "law": "The town remembers public harm.", "resident": "Town population", "motive": "visible behavior only",
                  "tells": location.get("tells", []),
@@ -579,3 +581,39 @@ def act(run, action: dict) -> dict:
     if kind == "attack":
         return _attack(run, world, action)
     raise LifeError(f"unsupported Floor One life action {kind!r}; the town supports: {SUPPORTED_HINT}")
+
+
+# Authored public town exchanges. Selection uses visible residents and saved time only.
+AMBIENT_EXCHANGES = {
+    "day": [("The market is waking up. Hear those shutters?", "And the carts. Someone always starts with the carts."),
+            ("I hope the baker saved a loaf for us.", "Ask before the lunch crowd gets there."),
+            ("That breeze is carrying the smell of the river.", "Better than the smell of my boots.")],
+    "dawn": [("The lamps are still burning.", "Give the sun a moment. It has just arrived.")],
+    "dusk": [("Best finish our errands before the light goes.", "One more stop, then supper."),
+             ("Someone is lighting the windows already.", "It makes the street feel warmer.")],
+    "night": [("Keep to the lamplight on your way home.", "I will. No shortcuts tonight."),
+              ("The town sounds different after dark.", "You can hear the water between the footsteps.")],
+}
+
+
+def _ambient_exchange(world: dict, event_id: str) -> None:
+    now = world.get("event_clock", {}).get("seconds", 0)
+    if now - world.get("ambient_last_seconds", -30) < 30:
+        return
+    location = world["player"]["location"]
+    residents = sorted(_visible_residents(world, location), key=lambda row: row["id"])
+    if len(residents) < 2 or world.get("status") != "active":
+        return
+    phase = clock.daylight(now)["lighting_phase"]
+    exchanges = AMBIENT_EXCHANGES[phase]
+    sequence = world.get("ambient_sequence", 0)
+    words = exchanges[sequence % len(exchanges)]
+    speakers = residents[sequence % len(residents):] + residents[:sequence % len(residents)]
+    world.setdefault("ambient_events", []).append({
+        "id": f"{event_id}:ambient", "location": location,
+        "lines": [{"speaker_id": row["id"], "speaker": row["name"], "text": text}
+                  for row, text in zip(speakers[:2], words)],
+    })
+    del world["ambient_events"][:-8]
+    world["ambient_last_seconds"] = now
+    world["ambient_sequence"] = sequence + 1

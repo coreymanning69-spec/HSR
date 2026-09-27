@@ -5,7 +5,7 @@
 // same lamps as the figures, and lets blows leave cuts on what they hit for the
 // length of the fight. Presentation only: it reads what the director already
 // resolved and decides nothing.
-import {bakeSet, THEMES, todOf, TOD, tint} from './stage-set.js';
+import {bakeSet, THEMES, todOf, paletteAt, sceneTime, TOD, tint} from './stage-set.js';
 import {figureSocket} from './puppet-dom.js';
 import {paintWound} from './stage-fx.js';
 import {clamp, rgba, mixHex} from './actor-core.js';
@@ -14,9 +14,10 @@ import {clock} from './clock.js';
 // ---- the painted set and its light ------------------------------------------------------
 export function mountBattleBackdrop(stage, {themeId, tod = 'evening', seed = 'battle'} = {}) {
   if (!stage || !THEMES[themeId]) return;
+  tod = sceneTime(themeId, tod);
   const W = stage.clientWidth, H = stage.clientHeight;
   if (!W || !H) return;
-  const key = `${themeId}|${todOf(tod)}|${seed}|${W}x${H}`;
+  const key = `${themeId}|${tod}|${seed}|${W}x${H}`;
   if (stage.dataset.backdrop === key) return;
   stage.dataset.backdrop = key;
   const dpr = Math.min(2, devicePixelRatio || 1), theme = THEMES[themeId];
@@ -28,7 +29,7 @@ export function mountBattleBackdrop(stage, {themeId, tod = 'evening', seed = 'ba
   set.getContext('2d').drawImage(art, 0, 0);
   light.width = Math.max(8, W >> 2); light.height = Math.max(8, H >> 2);
   stage.classList.add('has-set');
-  const lights = theme.lights({tod: TOD[todOf(tod)], cam: theme.cam}), ambient = mixHex(tint(themeId, todOf(tod)), '#ffffff', theme.indoor ? .12 : .26);
+  const lights = theme.lights({tod: paletteAt(tod), cam: theme.cam}), ambient = mixHex(tint(themeId, tod), '#ffffff', theme.indoor ? .12 : .26);
   const draw = t => {
     const c = light.getContext('2d'), w = light.width, h = light.height;
     c.globalCompositeOperation = 'source-over'; c.fillStyle = ambient; c.fillRect(0, 0, w, h); c.globalCompositeOperation = 'lighter';

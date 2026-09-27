@@ -66,3 +66,12 @@ def emit(container: dict, event_type: str, *, seconds: int = 0,
 def view(container: dict) -> dict:
     """Return a safe public clock projection."""
     return copy.deepcopy(ensure(container))
+
+
+def daylight(elapsed_seconds: int | float = 0) -> dict:
+    """Pure saved-clock projection: day one begins at 08:00."""
+    elapsed = max(0, int(elapsed_seconds or 0))
+    total = 8 * 3600 + elapsed
+    minute = (total % 86400) / 60
+    phase = "dawn" if 300 <= minute < 420 else "day" if 420 <= minute < 1020 else "dusk" if 1020 <= minute < 1140 else "night"
+    return {"day": total // 86400 + 1, "minute_of_day": minute, "lighting_phase": phase}

@@ -1965,6 +1965,7 @@ def view(run):
         'currency':d['currency'],'gold':d['currency'],
         'tracking':copy.deepcopy(tracking.ensure(d)),
         'event_clock':clock.view(d),
+        'daylight_offset_seconds':run.context.get('city_world', {}).get('event_clock', {}).get('seconds', 0),
         'components':d['components'],'gems':d['components'],
         'platinum':d['meta_currency'],'inventory':{key:_public_item(item) for key,item in d['inventory'].items()},
         'events':events,

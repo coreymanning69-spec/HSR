@@ -103,7 +103,7 @@ let server,browser;
   await page.locator('[data-action^="load:"]').first().click();
   await page.waitForFunction(()=>HollowStarUI.getStatus().phase==='ready');
   assert(!(await page.locator('.play-header').isVisible()),'session header should start hidden');
-  assert.equal(await page.locator('.global-screen-nav [data-action="tab:journey"]').count(),0,'floating Journey tab removed');
+  assert.equal(await page.locator('.global-screen-nav [data-action="tab:journey"]').count(),1,'Journey has its own tab in the main nav');
   await page.locator('.console-minimize').click();
   await page.locator('.console-compact').waitFor();
   assert.equal(await page.locator('#console-form').count(),0,'compact Host hides the input');

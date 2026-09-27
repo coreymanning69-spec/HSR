@@ -10,7 +10,8 @@ node_modules/
 .local/reliquary_profiles/*
 !.local/reliquary_profiles/.gitkeep
 .pytest_cache/
-.claude/
+.claude/*
+!.claude/skills/
 .agents/
 .gemini_dispatch/
 .mcp.json

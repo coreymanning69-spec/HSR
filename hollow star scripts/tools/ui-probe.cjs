@@ -19,6 +19,16 @@
           hover:<button text> | type:<text> | eval:<js expression>
    Server: HSR_UI_URL, else a live host on 127.0.0.1:8765, else a static
    server over web/ (host calls then fail; menus still render).
+
+   --mock  Fakes /api/host with a small SANDBOX fixture (one party member, one
+   room, one scene) and drives Simulation Mode -> Continue -> load the fake
+   run, landing in phase 'ready' before your --do steps run. Use this in a
+   container where the real Python engine can't boot (location-guard fails
+   closed off the real desktop -- see repo README) but you still need a real
+   gameplay screen, not just the title/menus. `nav:<screen>` then reaches any
+   of the 10 tabs directly. Override the fixture with --view <path-to-json>
+   (same shape as the `view` object tests/ui-browser-check.cjs builds).
+
    Output files: .local/ui-probe/ (disposable run state). Exit 1 on page errors
    or layout defects, so it can gate a change without anyone looking. */
 const {chromium}=require('playwright');
@@ -30,10 +40,42 @@ function parseArgs(argv){
   const a={do:[],select:[],text:800,viewport:'desktop'};
   for(let i=0;i<argv.length;i++){const k=argv[i],v=argv[i+1];
     if(k==='--do'){a.do.push(v);i++;}else if(k==='--select'){a.select.push(v);i++;}
-    else if(['--text','--viewport','--baseline','--diff','--shot','--crop','--url'].includes(k)){a[k.slice(2)]=v;i++;}
-    else if(k==='--full')a.full=true;else if(k==='--help'||k==='-h')a.help=true;
+    else if(['--text','--viewport','--baseline','--diff','--shot','--crop','--url','--view'].includes(k)){a[k.slice(2)]=v;i++;}
+    else if(k==='--full')a.full=true;else if(k==='--mock')a.mock=true;else if(k==='--help'||k==='-h')a.help=true;
     else throw new Error(`unknown arg ${k}`);}
   return a;}
+
+// The same shape tests/ui-browser-check.cjs builds by hand; kept here so a
+// bare `--mock` works without also requiring a fixture file on disk.
+function defaultMockView(root){
+  const preview=JSON.parse(fs.readFileSync(path.join(root,'web','item-preview.json'),'utf8'));
+  return {schema:'hollow-star-public-view-1',run_id:'ui-probe-fixture',mode:'SANDBOX',status:'active',
+    party:[{id:'p0',name:'Probe adventurer',hp:32,max_hp:40,armor_class:16,equipment:preview.equipment}],
+    room:{id:'1:1',name:'Public probe room',description:'A public room description.',law:'Quiet',terrain:'Stone floor',
+      exits:{north:{id:'1:2',name:'North hall'}},visible_tells:['Visible lamp'],objects:{},npcs:{}},
+    scene:{floor_id:'town',phase:'exploration',progress:0.4,background_id:'town-square',direction:'right',
+      visible_entities:[{id:'npc1',name:'Old Man',role:'resident'}]},
+    opposition:[],inventory:[],imprints:{},progression:{gold:24},available_actions:[{id:'inspect',label:'Inspect'}],recent_receipts:[]};}
+
+async function installMock(page,view){
+  const run={run_id:view.run_id,mode:'SANDBOX',context:{host_mode:'SANDBOX'},status:'active'};
+  await page.route('**/api/health',route=>route.fulfill({json:{ok:true,result:{state:'booted'}}}));
+  await page.route('**/api/host',route=>{
+    const request=route.request().postDataJSON();let payload;
+    if(request.command==='health')payload={ok:true};
+    else if(request.command==='list_runs')payload={ok:true,result:{runs:[run]}};
+    else if(request.command==='inspect_run')payload={ok:true,result:{run}};
+    else if(['readout','design_turn'].includes(request.command))payload={ok:true,v:'hollow-star-transfer-capsule-1',view,receipt:{message:'Probe fixture receipt'},run:view.run_id};
+    else payload={ok:true,result:{}};
+    return route.fulfill({json:payload});});}
+
+async function bootToReady(page){
+  await page.getByRole('button',{name:'Simulation Mode',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Simulation Mode',exact:true}).click();
+  await page.locator('[data-action="continue:SANDBOX"]').click();
+  await page.getByRole('heading',{name:'Resume the Simulation'}).waitFor();
+  await page.locator('[data-action^="load:"]').first().click();
+  await page.waitForFunction(()=>globalThis.HollowStarUI?.getStatus?.().phase==='ready');}
 
 const VIEWPORTS={desktop:{width:1440,height:1000},laptop:{width:1280,height:800},tablet:{width:768,height:1024},phone:{width:390,height:844}};
 
@@ -109,9 +151,22 @@ async function pixelDiff(page,aPath,bPath){
   if(args.help){console.log(fs.readFileSync(__filename,'utf8').split('*/')[0]);return;}
   fs.mkdirSync(out,{recursive:true});
   let base=args.url||process.env.HSR_UI_URL,server,source='env';
-  if(!base){if(await probeUrl('http://127.0.0.1:8765/api/health')){base='http://127.0.0.1:8765/';source='live host :8765';}
-    else{({server,base}=await startStatic());source='static web/ (no host)';}}
-  const browser=await chromium.launch({headless:true,channel:process.env.HSR_BROWSER_CHANNEL||undefined});
+  if(!base){
+    // --mock replaces the host with a fixture via page.route, so it always
+    // wants the plain static server underneath -- a live host would still
+    // answer /api/health and get picked here, defeating the point.
+    if(!args.mock&&await probeUrl('http://127.0.0.1:8765/api/health')){base='http://127.0.0.1:8765/';source='live host :8765';}
+    else{({server,base}=await startStatic());source=args.mock?'static web/ + --mock fixture':'static web/ (no host)';}}
+  // Cloud containers pin a pre-fetched Chromium (PLAYWRIGHT_BROWSERS_PATH) whose
+  // revision can trail this repo's @playwright/test pin; channel/revision lookup
+  // then either hangs or reports a missing headless_shell. Point straight at the
+  // bundled binary when one is present -- e.g. Corey's own PC -- fall through to
+  // Playwright's normal channel/revision resolution.
+  const bundledChromium='/opt/pw-browsers/chromium';
+  const launchOpts=process.env.HSR_BROWSER_CHANNEL?{headless:true,channel:process.env.HSR_BROWSER_CHANNEL}
+    :fs.existsSync(bundledChromium)?{headless:true,executablePath:bundledChromium,args:['--no-sandbox']}
+    :{headless:true};
+  const browser=await chromium.launch(launchOpts);
   let code=0;
   try{
     const page=await browser.newPage({viewport:VIEWPORTS[args.viewport]||VIEWPORTS.desktop,reducedMotion:'reduce'});
@@ -122,7 +177,9 @@ async function pixelDiff(page,aPath,bPath){
     page.on('console',m=>{if(m.type()==='error'||m.type()==='warning')errors.push(`CONSOLE.${m.type()} ${m.text().slice(0,200)}`);});
     page.on('requestfailed',r=>failed.push(`${r.method()} ${r.url().replace(/^https?:\/\/[^/]+/,'')} ${r.failure()?.errorText}`));
     page.on('response',r=>{if(r.status()>=400)failed.push(`${r.status()} ${r.request().method()} ${r.url().replace(/^https?:\/\/[^/]+/,'')}`);});
+    if(args.mock)await installMock(page,args.view?JSON.parse(fs.readFileSync(args.view,'utf8')):defaultMockView(root));
     await page.goto(base,{waitUntil:'networkidle'});
+    if(args.mock){try{await bootToReady(page);}catch(e){errors.push(`MOCK-BOOT-FAILED: ${e.message.split('\n')[0]}`);}}
     for(const step of args.do){try{await runStep(page,step);await page.waitForTimeout(120);}catch(e){errors.push(`STEP-FAILED "${step}": ${e.message.split('\n')[0]}`);break;}}
     await page.waitForTimeout(200);
     const r=await page.evaluate(readout,{select:args.select,text:Number(args.text),full:!!args.full});

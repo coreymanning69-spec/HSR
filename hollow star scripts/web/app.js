@@ -451,7 +451,7 @@ function routeTitle() {
 function topNavigation() {
   if (state.phase === 'title') return '';
   if (state.phase === 'ready') {
-    const tabs = screens.filter(tab => tab !== 'journey').map(tab => `<button type="button" role="tab" class="global-nav-tab ${state.selected === tab ? 'active' : ''}" data-action="tab:${E(tab)}" aria-selected="${state.selected === tab}" aria-controls="screen-${E(tab)}" title="${E(gameplayLabels[tab])}"><span class="nav-tab-icon" aria-hidden="true">${SCREEN_ICONS[tab] || '•'}</span><small class="nav-tab-label">${E(gameplayLabels[tab])}</small></button>`).join('');
+    const tabs = screens.map(tab => `<button type="button" role="tab" class="global-nav-tab ${state.selected === tab ? 'active' : ''}" data-action="tab:${E(tab)}" aria-selected="${state.selected === tab}" aria-controls="screen-${E(tab)}" title="${E(gameplayLabels[tab])}"><span class="nav-tab-icon" aria-hidden="true">${SCREEN_ICONS[tab] || '•'}</span><small class="nav-tab-label">${E(gameplayLabels[tab])}</small></button>`).join('');
     return `<nav class="mobile-topbar global-screen-nav" role="tablist" aria-label="Screen navigation">
       <div class="top-nav-brand"><button type="button" class="top-nav-brand-btn" data-action="toggle-system-menu" title="Open Game Menu (Esc)"><span class="top-nav-sigil" aria-hidden="true">✦</span><strong class="top-nav-title">Reliquary</strong></button><small class="top-nav-screen">${E(gameplayLabels[state.selected] || state.selected)}</small></div>
       <div class="top-nav-tabs">${tabs}</div>
@@ -3616,7 +3616,7 @@ function contextMenu() {
 function openCombatRadial(id, x, y) {
   const who = currentCombatant();
   state.focusTarget = id;
-  state.contextMenu = null;
+  dismissContextMenu();
   state.combatRadial = {x, y, target: id,
     items: radialItems(id, state.view?.combat?.contextual_actions || [], {identity: who.identity, playerTurn: myTacticalTurn()})};
   render();
@@ -4340,8 +4340,8 @@ function shellAtmosphereTitle() {
 }
 function shellAtmosphereSubtitle() {
   const subs = {
-    journey: 'Follow the authored route. Social decisions and the descent remain yours.',
-    room: 'Every room is honest about its walls and selective about its motives.',
+    journey: 'Where you’re going: the route ahead, who’s on it, and the way down.',
+    room: 'Where you are: this room’s walls, law, and terrain — nothing beyond it.',
     battle: 'Tactical clarity first; dramatic lighting is merely traditional.',
     equipment: 'A clear armory view of every host-reported item, affix, and visible property.',
     roster: 'Selectable adventurers with readable silhouettes, health, armor, status, and equipment roles.',
@@ -4935,11 +4935,7 @@ function renderNow() {
   const liveArcade = document.querySelector('#app [data-arcade-root]'); liveArcade?.remove();
   if (worldStage?.el.isConnected) worldStage.el.remove();
   if (toolbox?.el.isConnected) toolbox.el.remove();
-<<<<<<< HEAD
-    const nextHtml = `${topNavigation()}${body}${staleSandboxNotice}${activityNotice}${messagePanelHtml}${commandBarHtml}${dockContent && state.preferences.showActionDock !== false ? `<div class="hsr-dock tray-${E(state.trayState)}">${trayHandle()}<div class="tray-content">${dockContent}</div></div>` : ''}${mobileNavigation()}${disconnectOverlay()}${bookbagModal()}${systemMenuModal()}`;
-=======
-    const nextHtml = `${topNavigation()}${body}${staleSandboxNotice}${activityNotice}${messagePanelHtml}${commandBarHtml}${dockContent && state.preferences.showActionDock !== false ? `<div class="hsr-dock tray-${E(state.trayState)}">${trayHandle()}<div class="tray-content">${dockContent}</div></div>` : ''}${mobileNavigation()}${contextMenu()}${combatRadialMenu()}${disconnectOverlay()}${bookbagModal()}${systemMenuModal()}`;
->>>>>>> origin/claude/exciting-maxwell-uy9hmq
+    const nextHtml = `${topNavigation()}${body}${staleSandboxNotice}${activityNotice}${messagePanelHtml}${commandBarHtml}${dockContent && state.preferences.showActionDock !== false ? `<div class="hsr-dock tray-${E(state.trayState)}">${trayHandle()}<div class="tray-content">${dockContent}</div></div>` : ''}${mobileNavigation()}${combatRadialMenu()}${disconnectOverlay()}${bookbagModal()}${systemMenuModal()}`;
   if (app.innerHTML !== nextHtml) {
     const temp = document.createElement('div');
     temp.innerHTML = nextHtml;
@@ -5609,21 +5605,15 @@ function bind() {
       if (target?.primaryTarget) requestAnimationFrame(() => activate(target.primaryTarget));
       return;
     }
-<<<<<<< HEAD
-=======
-    if (state.contextMenu && event.target.closest('.hsr-context-menu')) { event.preventDefault(); state.contextMenu = null; render(); return; }
     // Mouse combat: right-click a foe opens the action wheel; right-click the
-    // ground clears the focus and any open menu.
+    // ground clears the focus and any open radial/context menu.
     if (styleAllows(style(), 'mouse') && tacticalActive() && event.target.closest('#app .combat-stage:not(.demo-stage)')) {
       const figure = event.target.closest('[data-stage-actor]');
       const id = figure?.dataset.stageActor;
       if (id && livingOpponents().some(row => row.id === id)) { event.preventDefault(); openCombatRadial(id, event.clientX, event.clientY); return; }
-      if (!figure) { event.preventDefault(); state.focusTarget = null; state.combatRadial = null; state.contextMenu = null; state.threatWarning = null; render(); return; }
+      if (!figure) { event.preventDefault(); state.focusTarget = null; state.combatRadial = null; state.threatWarning = null; dismissContextMenu(); render(); return; }
     }
-    if (state.combatRadial && !event.target.closest('.combat-radial')) { state.combatRadial = null; }
-    const target = contextTarget(event.target);
-    if (!target) return;
->>>>>>> origin/claude/exciting-maxwell-uy9hmq
+    if (state.combatRadial && !event.target.closest('.combat-radial')) { state.combatRadial = null; render(); }
     event.preventDefault();
     if (event.target.closest('.hsr-context-menu')) { dismissContextMenu(); return; }
     const target = contextTarget(event.target) || {label: 'Workspace', contextKind: 'scene'};
@@ -5660,15 +5650,11 @@ function bind() {
           return;
         }
       }
-<<<<<<< HEAD
       if (state.contextMenu && !event.target.closest('.hsr-context-menu')) dismissContextMenu();
-=======
-      if (state.contextMenu && !event.target.closest('.hsr-context-menu')) { state.contextMenu = null; render(); }
       // A click away from the action wheel only closes it.
       if (state.combatRadial && !event.target.closest('.combat-radial')) {
         state.combatRadial = null; event.preventDefault(); event.stopPropagation(); render();
       }
->>>>>>> origin/claude/exciting-maxwell-uy9hmq
     }, true);
     app.addEventListener('pointerover', event => {
       if (event.pointerType === 'touch') return;

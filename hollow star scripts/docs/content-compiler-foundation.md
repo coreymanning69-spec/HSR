@@ -269,11 +269,11 @@ interactions, source extraction, persistence across browser contexts, conflict
 recovery, and desktop/mobile overflow. Use an isolated server and data root:
 
 ```powershell
-python hollowstar_web_server.py --hostless --port 8767 --data-root .local/content-workbench-check
+python hollowstar_web_server.py --port 8767 --data-root .local/content-workbench-check
 $env:HSR_UI_URL='http://127.0.0.1:8767'
 node tests/ui-content-workbench-check.cjs
 ```
 
-`--hostless` here means the real Python `HSRHost` runs in the web process without
-the watcher; it is not a mocked engine. Browser evidence and test outputs belong
-under `.local`, never in canonical packet files.
+`--data-root` points the real Python `HSRHost` at an isolated save directory
+instead of the real one; it is not a mocked engine. Browser evidence and test
+outputs belong under `.local`, never in canonical packet files.

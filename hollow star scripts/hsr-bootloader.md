@@ -147,14 +147,6 @@ noncanonical timestamps, and timestamps more than five minutes in the future
 are rejected. These are local integrity checks, not signatures or authentication
 against someone who can rewrite both the code and its data.
 
-The phone watcher owns an OS-held per-workspace lock, including direct Python
-launches. It refuses startup without a valid handshake and approved desktop,
-waits for newline-terminated mailbox records, bounds each line to 1.3 MiB (1,363,148 bytes),
-requires nonempty string IDs, and suppresses repeated IDs within a batch and
-across answered records. Keep mailbox access restricted to trusted local users;
-this file transport does not authenticate senders. A crash between executing a
-command and saving its response still requires manual reconciliation before retry.
-
 The handshake is durable routing evidence, not gameplay permission. Forge
 still requires explicit intent and all run commands remain mode-bound; no run
 command may infer permission from the mere existence of the file.
@@ -181,7 +173,7 @@ Hosted requests always receive public-only projections. Shutdown, validation,
 Forge, raw debug, profile administration, and corpus-affecting commands are
 blocked at the relay before reaching the engine.
 
-Three ways in, all landing on the same `HSRHost`:
+Two ways in, all landing on the same `HSRHost`:
 
 1. **Local MCP server.** `hsr_mcp_server.py` is registered on this desktop as
    `hollow-star-reliquary` in the Claude desktop app and as `hollow-star` in
@@ -192,14 +184,13 @@ Three ways in, all landing on the same `HSRHost`:
    direct passthrough to `HSRHost.handle()`. Call
    `hsr_command(command="inspect", params={"target": "capabilities"})` for the
    host's live command list rather than trusting a copy of it.
-2. **Phone-bridge watcher.** `hsr_bridge_watch.py` drains
-   `.local/phone_bridge/inbox.jsonl` and appends correlated responses to
-   `outbox.jsonl`. Start it through `hsr_start_hollow_star.bat`, which refreshes
-   the handshake first and holds a lock so a second copy refuses rather than
-   races it; the desktop shortcut `Start Hollow Star` and the per-user Startup
-   entry both point there. Task Scheduler will not accept an ONLOGON trigger
-   without elevation, hence the Startup folder. One instance per workspace.
-3. **Direct stdio**, as under Local launch above.
+2. **Direct stdio**, as under Local launch above.
+
+For a human at the keyboard rather than a conversational client, the browser
+UI (`hsr_start_hollow_star.bat` -> `hollowstar_app.py` ->
+`hollowstar_web_server.py`, an in-process `HSRHost` behind a loopback HTTP
+server) or Windows Remote Desktop into the same session covers the rest;
+neither needs its own entry here since both just drive the browser client.
 
 The `HSR Handshake Refresh` scheduled task runs `local-check` daily at 18:00 so
 `HSR_HANDSHAKE.json` tracks owner-file changes instead of going stale between

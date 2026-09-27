@@ -134,8 +134,9 @@ class DescentPathTest(unittest.TestCase):
                 self.assertEqual(floors, sorted(floors), "floors walked out of order")
 
     def test_npc_only_auto_combat_refuses_a_player_decision(self) -> None:
-        # The bridge watcher drains with npc_only; without this guard it played
-        # Doran's own turns and the Story threshold resolved itself on entry.
+        # An npc_only caller drains NPC actions one at a time; without this
+        # guard it played Doran's own turns and the Story threshold resolved
+        # itself on entry.
         driver = self.start("descent-guard", ["Doran"])
         for _ in range(STEP_BUDGET):
             combat = driver.view().get("combat") or {}

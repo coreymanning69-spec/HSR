@@ -281,7 +281,7 @@ class HSRHost:
         return self._ok(request, {
             "surface": self.paths.local_location_report(),
             "engine": {"id": "hollow-star", "version": ENGINE_VERSION, "modes": self.paths.modes},
-            "transport": {"stdio": True, "watcher_lock_present": (self.paths.data_root / "phone_bridge" / "watcher.lock").exists()},
+            "transport": {"stdio": True},
             "resume": self._session(),
             "defaults": self._ready_defaults(),
             "invalidated_by": "a later create_run, load_run, or design_turn; this pointer is disposable local state",
@@ -1226,8 +1226,9 @@ class HSRHost:
                     from hollowstar import tactical as _t
                     if "combat" not in run.context or run.context["combat"].get("complete"):
                         return self._error(request, "NOT_IN_COMBAT", "no active combat to auto-resolve")
-                    # npc_only callers (the bridge watcher's drain) must stop at a
-                    # player decision; the client's Auto-turn button omits it.
+                    # npc_only callers stepping one NPC action at a time must stop
+                    # at a player decision; the client's Auto-turn button omits it.
+                    # (design_drain_npc runs its own multi-step loop instead.)
                     if request.get("npc_only"):
                         combat_state = run.context["combat"]
                         decider = combat_state["pending"][0]["reactor"] if combat_state["pending"] else _t.current(run)

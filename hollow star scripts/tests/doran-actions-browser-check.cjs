@@ -20,7 +20,7 @@ try:
 finally:f.tearDown()
 `});assert.equal(seed.status,0,seed.stderr);const original=fs.readFileSync(file);
  const s=net.createServer();s.listen(0,'127.0.0.1');await new Promise(r=>s.once('listening',r));const port=s.address().port;await new Promise(r=>s.close(r));
- const base=`http://127.0.0.1:${port}`;child=spawn(python,['-B',path.join(root,'hollowstar_web_server.py'),'--hostless','--data-root',data,'--port',String(port)],{cwd:root,stdio:['ignore','pipe','pipe'],env:{...process.env,PYTHONIOENCODING:'utf-8'}});child.stdout.on('data',s=>logs+=s);child.stderr.on('data',s=>logs+=s);
+ const base=`http://127.0.0.1:${port}`;child=spawn(python,['-B',path.join(root,'hollowstar_web_server.py'),'--data-root',data,'--port',String(port)],{cwd:root,stdio:['ignore','pipe','pipe'],env:{...process.env,PYTHONIOENCODING:'utf-8'}});child.stdout.on('data',s=>logs+=s);child.stderr.on('data',s=>logs+=s);
  for(let i=0;i<100;i++){if(child.exitCode!==null)throw Error(logs);try{if((await fetch(base+'/api/health')).ok)break;}catch{}await delay(100);}
  browser=await chromium.launch({headless:true,channel:'chrome'});const page=await browser.newPage({viewport:{width:1440,height:1100},reducedMotion:'reduce'}),errors=[];page.on('pageerror',e=>errors.push(e.message));
  async function settled(){await page.waitForFunction(()=>HollowStarUI.getStatus().phase==='ready'&&!HollowStarUI.getStatus().busy);}

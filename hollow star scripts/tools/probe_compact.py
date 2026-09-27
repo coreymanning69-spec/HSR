@@ -53,7 +53,7 @@ def get_paths(data_root: str | Path | None = None) -> tuple[Path, Path]:
         try:
             from hollowstar.paths import resolve_paths
             # No data_root override: the host config decides, so probes see the
-            # same runs as HSRHost.from_options() (MCP server, bridge watcher).
+            # same runs as HSRHost.from_options() (MCP server, web host).
             hp = resolve_paths()
             run_root = hp.run_root
             profile_root = hp.profile_root

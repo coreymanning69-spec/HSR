@@ -1,4 +1,4 @@
-/* Real-host authoring acceptance. Run against an isolated --hostless data root. */
+/* Real-host authoring acceptance. Run against an isolated --data-root. */
 const {chromium} = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

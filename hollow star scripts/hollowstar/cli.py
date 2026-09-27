@@ -41,7 +41,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--query", help="entity query or name for examine")
     parser.add_argument("--entity-type", help="entity type for examine (actor, target, item, object)")
     parser.add_argument("--entity-id", help="entity id for examine")
-    parser.add_argument("--web-url", help="route through the running loopback webhost and watcher")
+    parser.add_argument("--web-url", help="route through the running loopback webhost")
     parser.add_argument("--hosted-url", help="route through the authenticated Hosted Controls relay")
     parser.add_argument("--hosted-client", choices=["claude", "gpt"], help="Hosted Controls client identity")
     parser.add_argument("--hosted-token", help="Hosted Controls token (prefer HSR_HOSTED_TOKEN)")

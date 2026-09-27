@@ -50,7 +50,7 @@ print('Seeded seven isolated host fixtures')
   const saveRoot=path.join(dataRoot,'reliquary_runs');
   const fixtureBytes=new Map(fs.readdirSync(saveRoot).filter(name=>name.endsWith('.json')).map(name=>[name,fs.readFileSync(path.join(saveRoot,name))]));
   const port=await freePort();base=`http://127.0.0.1:${port}`;
-  child=spawn(python,[path.join(root,'hollowstar_web_server.py'),'--hostless','--data-root',dataRoot,'--port',String(port)],{cwd:root,stdio:['ignore','pipe','pipe']});
+  child=spawn(python,[path.join(root,'hollowstar_web_server.py'),'--data-root',dataRoot,'--port',String(port)],{cwd:root,stdio:['ignore','pipe','pipe']});
   child.stdout.on('data',s=>logs+=s);child.stderr.on('data',s=>logs+=s);
   for(let i=0;i<100;i++){if(child.exitCode!==null)throw Error(logs);try{if((await fetch(base+'/api/health')).ok)break;}catch{}await delay(100);}
   browser=await chromium.launch({headless:true,channel:process.env.HSR_BROWSER_CHANNEL||'chrome'});

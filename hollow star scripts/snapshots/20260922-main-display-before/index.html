@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080a10">
+  <meta name="application-name" content="Hollow Star Reliquary">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <title>HSR Interface · Hollow Star Reliquary</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="tokens.css?v=readability-1">
+  <link rel="stylesheet" href="styles.css?v=menu-tweaks-1">
+  <link rel="stylesheet" href="character-creation.css?v=stage-1">
+  <link rel="stylesheet" href="stage.css?v=stage-1">
+  <link rel="stylesheet" href="visual-character-creation.css?v=visual-shell-6">
+  <link rel="stylesheet" href="ui-components.css?v=menu-tweaks-1">
+</head>
+<body>
+  <main id="app" class="app-shell" aria-live="polite"></main>
+  <dialog id="item-dialog"></dialog>
+  <script>
+    (() => {
+      const escapeMessage = (value) => String(value || 'Unknown error').replace(/[&<>"']/g, (character) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+      const seenAt = new Map();
+      let reportCount = 0;
+      const reportToServer = (message, where) => {
+        if (++reportCount > 25) return;  // a tight error loop logs once, not per frame, forever
+        try {
+          fetch('/api/client-log', {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, keepalive: true,
+            body: JSON.stringify({level: 'error', message: String(message || '').slice(0, 500), where: String(where || '').slice(0, 200)}),
+          }).catch(() => {});
+        } catch {}
+      };
+      // Any uncaught error or unhandled rejection lands here for the life of the
+      // page, not just before first render -- a bug mid-game must still be
+      // visible on screen and in the terminal, not silently swallowed.
+      const showStartupError = (value, location = '') => {
+        const message = value instanceof Error ? value.message : value;
+        const key = `${message}|${location}`;
+        const now = Date.now();
+        if (now - (seenAt.get(key) || 0) < 2000) return;  // the same fault repeating in a loop re-renders once, not per frame
+        seenAt.set(key, now);
+        reportToServer(message, location);
+        const app = document.getElementById('app');
+        if (!app) return;
+        const startingUp = !app.childElementCount;
+        const eyebrow = startingUp ? 'Interface recovery' : 'Runtime error';
+        const heading = startingUp ? 'The Reliquary could not open.' : 'Something went wrong.';
+        app.innerHTML = `<section class="startup-error"><p class="eyebrow">${eyebrow}</p><h1>${heading}</h1><p>${escapeMessage(message)}</p>${location ? `<p class="muted">${escapeMessage(location)}</p>` : ''}<button type="button" class="action" onclick="window.location.reload()">Try again</button></section>`;
+      };
+      window.addEventListener('error', (event) => showStartupError(event.error || event.message, `${event.filename || ''}:${event.lineno || ''}:${event.colno || ''}`));
+      window.addEventListener('unhandledrejection', (event) => showStartupError(event.reason, 'unhandled promise rejection'));
+      window.HSRStartupError = showStartupError;
+    })();
+  </script>
+  <script src="ui-components.js"></script>
+  <script type="module" src="hsr-client.js?v=compact-envelope-1"></script>
+  <script type="module">import('./app.js?v=menu-tweaks-1').catch((error) => window.HSRStartupError(error, error.stack || 'app.js'));</script>
+</body>
+</html>

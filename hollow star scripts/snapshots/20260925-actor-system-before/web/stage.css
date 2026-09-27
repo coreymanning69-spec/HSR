@@ -1,0 +1,331 @@
+/* stage.css — the fixed-ratio stage.
+   =========================================================================
+   The creator is authored ONCE at a logical size (default 1600x800, 2:1) and
+   the whole stage is then scaled to fit the real window. That makes "fits on
+   one screen without scrolling" a property we prove once, instead of one we
+   re-verify at every breakpoint and silently lose at most of them.
+
+   Consequence, stated plainly: this ZOOMS rather than reflows. Below
+   --stage-min-width the zoom would make text unreadable, so the stage turns
+   itself off there and the original responsive flow takes over. */
+
+:root{
+  --stage-w:1600;          /* logical authoring width, unitless */
+  --stage-h:800;           /* logical authoring height, unitless */
+  --stage-scale:1;         /* set by JS each resize */
+  --stage-margin:32px;     /* the "slight gap for style" around the stage */
+  /* --stage-frame-bg / --stage-bg / --stage-overlay-bg: per theme, tokens.css */
+}
+
+/* The frame fills the window and centres the stage inside it.  The stage's
+   authored box is deliberately much larger than the viewport and is scaled
+   down.  Grid centring still lays out that unscaled box first, so its visual
+   result can be displaced and clipped.  Coordinate centring makes the
+   transformed result authoritative instead. */
+.hsr-stage-frame{
+  position:fixed; inset:0;
+  padding:var(--stage-margin); overflow:hidden;
+  background:var(--stage-frame-bg);
+}
+.hsr-stage{
+  position:absolute; left:50%; top:50%;
+  width:calc(var(--stage-w) * 1px);
+  height:calc(var(--stage-h) * 1px);
+  flex:none;
+  transform:translate(-50%,-50%) scale(var(--stage-scale));
+  transform-origin:center center;
+  display:grid;
+  border:1px solid var(--gold-a22);
+  border-radius:var(--r-lg);
+  background:var(--stage-bg);
+  box-shadow:var(--e3),0 0 0 1px #0006;
+  overflow:hidden;               /* nothing escapes the stage */
+  container-type:size;
+}
+/* The scaled stage must not also drive page scrollbars unless fixed stage is turned off. */
+body:has(.hsr-stage-frame):not([data-stage="off"]){overflow:hidden}
+
+/* ---- The creator, as a fixed four-row grid --------------------------------
+   header / rail / body / nav. Only `body` flexes; it is the only row allowed
+   to absorb the leftover height, and it may never push the nav off-screen. */
+.hsr-stage .cc-shell{
+  height:100%; min-height:0; margin:0; border:0; border-radius:0;
+  padding:22px 26px 0; background:none; backdrop-filter:none;
+  display:grid; grid-template-rows:auto auto minmax(0,1fr) auto; gap:0;
+}
+.hsr-stage .cc-header{margin:0 0 4px}
+.hsr-stage .cc-lede{max-width:none}
+.hsr-stage .cc-rail{margin:14px 0 14px}
+.hsr-stage .cc-body{min-height:0; height:100%; align-items:stretch; overflow:hidden}
+.hsr-stage .cc-main{
+  min-height:0;
+  height:100%;
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scroll-padding-block:16px;
+  align-content:start;
+}
+.hsr-stage .cc-nav{margin:0 -26px; position:relative}
+
+/* Sticky was a workaround for page scroll; inside the stage it is dead weight. */
+.hsr-stage .cc-detail,.hsr-stage .cc-lead,.hsr-stage .cc-look-stage{position:static}
+
+/* Panels that legitimately hold more rows than fit get their OWN scroll,
+   bounded by the stage. The page itself still never scrolls. */
+.hsr-stage .cc-cards,
+.hsr-stage .cc-detail,
+.hsr-stage .cc-lead{min-height:0; max-height:100%; overflow-y:auto; overscroll-behavior:contain}
+.hsr-stage .cc-cards,
+.hsr-stage .cc-detail,
+.hsr-stage .cc-lead{scrollbar-width:none}
+.hsr-stage .cc-cards::-webkit-scrollbar,
+.hsr-stage .cc-detail::-webkit-scrollbar,
+.hsr-stage .cc-lead::-webkit-scrollbar{width:0;height:0}
+.hsr-stage .cc-split{height:100%; min-height:0; align-items:stretch}
+
+/* ---- Overlays -------------------------------------------------------------
+   Rendered INSIDE the stage so they scale with it and stay visually of a piece.
+   A native <dialog> would sit in the top layer at 1:1 and look pasted on. */
+.cc-overlay{
+  position:absolute; inset:0; z-index:var(--z-modal);
+  display:grid; place-items:center; padding:28px;
+  background:rgba(var(--bg-rgb),.72); backdrop-filter:blur(3px);
+  animation:cc-overlay-in .16s var(--ease) both;
+}
+@keyframes cc-overlay-in{from{opacity:0}to{opacity:1}}
+.reduced-motion .cc-overlay, body.reduced-motion .cc-overlay{animation:none!important}
+.cc-overlay-card{
+  display:grid; grid-template-rows:auto minmax(0,1fr) auto;
+  width:min(100%,1080px); max-height:100%; min-height:0;
+  border:1px solid var(--gold-a40); border-radius:var(--r-md);
+  background:var(--stage-overlay-bg);
+  box-shadow:var(--e3);
+}
+.cc-overlay-head{
+  display:flex; align-items:flex-start; justify-content:space-between; gap:var(--s7);
+  padding:var(--s7) var(--s8); border-bottom:1px solid var(--gold-a18);
+}
+.cc-overlay-head h3{margin:2px 0 4px; font-size:var(--t-h2); font-weight:400}
+.cc-overlay-head p{margin:0; color:var(--muted); font-size:var(--t-body); max-width:64ch}
+.cc-overlay-body{min-height:0; overflow-y:auto; padding:var(--s7) var(--s8); overscroll-behavior:contain;overflow-anchor:none}
+.cc-overlay-foot{
+  display:flex; align-items:center; gap:var(--s4); justify-content:flex-end;
+  padding:var(--s5) var(--s8); border-top:1px solid var(--gold-a18);
+}
+.cc-overlay-foot .cc-overlay-count{margin-right:auto; color:var(--muted); font-size:var(--t-body)}
+.cc-overlay-foot .cc-overlay-count strong{color:var(--gold); font-family:var(--font-mono)}
+.cc-overlay-close{
+  all:unset; cursor:pointer; display:grid; place-items:center;
+  width:32px; height:32px; border:1px solid var(--gold-a22); border-radius:var(--r-pill);
+  color:var(--muted); font-size:var(--t-h3); flex:none;
+}
+.cc-overlay-close:hover{border-color:var(--gold); color:var(--gold)}
+.cc-overlay-close:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+
+/* A button that opens an overlay, used in place of an inline wall of options. */
+.cc-opener{
+  all:unset; box-sizing:border-box; cursor:pointer; display:grid; gap:var(--s1);
+  padding:var(--s5) var(--s6); border:1px solid var(--gold-a22); border-radius:var(--r-sm);
+  background:rgba(var(--surface-rgb),.55); transition:border-color .15s,background .15s;
+}
+.cc-opener:hover{border-color:var(--gold); background:var(--gold-a08)}
+.cc-opener:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+.cc-opener strong{font-size:var(--t-lead); font-weight:400; color:var(--paper)}
+.cc-opener small{color:var(--muted); font-size:var(--t-micro)}
+.cc-opener .cc-opener-value{color:var(--gold); font-size:var(--t-label)}
+
+/* Accessibility: Soft effects & Reduced motion in stage */
+.soft-effects .hsr-stage,
+.soft-effects .cc-overlay-card,
+.soft-effects .cc-opener{box-shadow:none!important}
+.reduced-motion .cc-opener,
+body.reduced-motion .cc-opener{transition:none!important}
+
+/* Below this width or when Fixed Stage is turned off in Options, fall back to the flow layout. */
+body[data-stage="off"] .hsr-stage-frame{position:static; display:block; padding:0; background:none; overflow:visible}
+body[data-stage="off"] .hsr-stage{position:static;left:auto;top:auto;width:auto; height:auto; transform:none; border:0; border-radius:0;
+           background:none; box-shadow:none; overflow:visible; container-type:normal}
+@media(max-width:900px){
+  .hsr-stage-frame{position:static; display:block; padding:0; background:none; overflow:visible}
+  .hsr-stage{position:static;left:auto;top:auto;width:auto; height:auto; transform:none; border:0; border-radius:0;
+             background:none; box-shadow:none; overflow:visible; container-type:normal}
+  html:has(.hsr-stage-frame),body:has(.hsr-stage-frame){overflow:auto;height:auto}
+  body:has(.hsr-stage-frame) #app.app-shell{overflow:visible}
+  .hsr-stage .cc-shell{height:auto; display:block; padding:22px}
+  .hsr-stage .cc-body,.hsr-stage .cc-main{height:auto; overflow:visible}
+  .hsr-stage .cc-cards,.hsr-stage .cc-detail,.hsr-stage .cc-lead{max-height:none; overflow:visible}
+  .cc-overlay{position:fixed}
+}
+
+/* ---- Step 5 Training: the picker moved out, so the step states outcomes ---- */
+.cc-train{display:grid;gap:var(--s7);align-content:start}
+.cc-train-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--s6)}
+.cc-train-none{display:grid;gap:var(--s1);padding:var(--s5) var(--s6);
+  border:1px dashed var(--gold-a22);border-radius:var(--r-sm);background:rgba(var(--surface-rgb),.35)}
+.cc-train-none strong{font-size:var(--t-lead);font-weight:400}
+.cc-train-none small{color:var(--muted);font-size:var(--t-micro)}
+.cc-train-picked{display:grid;gap:var(--s2);align-content:start}
+.cc-train-picked .label{margin:var(--s3) 0 0}
+
+/* ---- Step 6 Appearance: doll left, group openers right --------------------- */
+.hsr-stage .cc-look-layout{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);height:100%;align-items:center}
+.cc-look-openers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s5);margin:var(--s5) 0}
+.cc-look-groups{align-content:center;display:grid;gap:var(--s3)}
+.hsr-stage .cc-look-stage{display:grid;justify-items:center;align-content:center}
+
+/* ---- Step 7 Final sheet: header + abilities + three columns + confirm ------
+   Authored as a fixed five-row grid so the Confirm bar can never be pushed
+   off the stage, which was the whole complaint. */
+.hsr-stage .cc-summary{
+  height:100%;min-height:0;
+  grid-template-rows:auto auto minmax(0,1fr) auto;gap:var(--s5);
+}
+.cc-sum-more{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s4);margin-top:var(--s5)}
+.cc-sum-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s5);min-height:0}
+.cc-sum-cols>.cc-sheet{min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.hsr-stage .cc-sum-head{grid-template-columns:auto minmax(0,1fr);gap:var(--s8);align-items:start}
+.hsr-stage .cc-sheet-abilities{padding-block:var(--s4)}
+.hsr-stage .cc-confirm{margin:0;padding-bottom:var(--s5)}
+
+/* ---- Overlay internals ---------------------------------------------------- */
+.cc-overlay .cc-skill-grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+/* Hover reveals what a skill covers; double-click still pins it open. */
+.cc-overlay .cc-skill .cc-skill-desc{display:none}
+.cc-overlay .cc-skill:hover .cc-skill-desc,
+.cc-overlay .cc-skill:focus-visible .cc-skill-desc,
+.cc-overlay .cc-skill.is-expanded .cc-skill-desc{display:block}
+.cc-overlay .cc-look-group{margin:0 0 var(--s6)}
+.cc-overlay-budget{display:inline-flex;align-items:center;gap:var(--s3);
+  color:var(--muted);font-size:var(--t-micro);letter-spacing:.12em;text-transform:uppercase}
+.cc-overlay-budget input{width:80px;padding:var(--s2) var(--s3);border:1px solid var(--line);
+  background:rgb(var(--surface-rgb));color:var(--paper);font:inherit}
+.cc-receipt-pre{margin:0;font-family:var(--font-mono);font-size:var(--t-micro);
+  line-height:1.5;color:var(--mint);white-space:pre-wrap;word-break:break-word}
+.cc-overlay .cc-notes-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s7)}
+
+@media(max-width:900px){
+  .cc-sum-cols,.cc-look-openers,.cc-sum-more,.cc-overlay .cc-notes-grid{grid-template-columns:minmax(0,1fr)}
+  .cc-sum-cols>.cc-sheet{overflow:visible}
+}
+
+/* The summary paperdoll draws outside its own box, so its measured height was
+   422px against a declared 310 -- enough to starve the three columns to zero.
+   Clip it and scale it down: on this screen the doll is identification, not
+   the subject, and the columns are what the Confirm decision rests on. */
+.hsr-stage .cc-summary{grid-template-rows:auto auto minmax(200px,1fr) auto}
+.hsr-stage .cc-sum-head{align-items:center}
+.hsr-stage .cc-sum-figure .cc-doll.large{width:168px;height:224px;margin:0;overflow:hidden}
+.hsr-stage .cc-sum-figure .cc-doll.large .scene-character.paperdoll-character{
+  transform:translateX(-50%) scale(.33)}
+.hsr-stage .cc-sum-cols{min-height:0}
+.hsr-stage .cc-sum-head .cc-ratings{grid-template-columns:repeat(2,minmax(0,1fr));display:grid;gap:2px var(--s7)}
+
+/* ---- Fitting the final sheet to the stage ---------------------------------
+   Logical budget at a 960-tall stage: 960 - 167 header - 70 rail - 69 nav
+   = ~598px for the sheet. What follows spends that deliberately:
+     head 180 / abilities 100 / columns flex / confirm 64.
+   Nothing the Confirm decision rests on is removed -- the ability breakdown
+   survives as a tooltip and in the receipt, and the ratings move to the
+   Build notes overlay that is one click away. */
+.hsr-stage [data-create-step="summary"] .cc-lede{display:none}
+.hsr-stage [data-create-step="summary"] .cc-header{margin-bottom:0}
+
+.hsr-stage .cc-sum-head{grid-template-columns:168px minmax(0,1fr);gap:var(--s7);max-height:190px}
+.hsr-stage .cc-sum-figure .cc-doll.large{width:140px;height:186px}
+.hsr-stage .cc-sum-figure .cc-doll.large .scene-character.paperdoll-character{
+  transform:translateX(-50%) scale(.27)}
+.hsr-stage .cc-sum-id{min-width:0;align-content:center}
+.hsr-stage .cc-sum-id h2{font-size:var(--t-h2);margin:0}
+.hsr-stage .cc-sum-line{margin:2px 0}
+.hsr-stage .cc-sum-arch{margin:var(--s2) 0 0}
+.hsr-stage .cc-sum-head .cc-ratings{display:none}   /* lives in Build notes */
+.hsr-stage .cc-sum-more{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s4);margin-top:var(--s4)}
+.hsr-stage .cc-sum-more .cc-opener{padding:var(--s3) var(--s5)}
+.hsr-stage .cc-sum-more .cc-opener strong{font-size:var(--t-label)}
+.hsr-stage .cc-sum-more .cc-opener small{display:none}
+
+/* The per-score derivation stays on the tooltip and in the receipt. */
+.hsr-stage .cc-summary .cc-score small{display:none}
+.hsr-stage .cc-summary .cc-score{padding-block:var(--s3)}
+.hsr-stage .cc-sheet-abilities{padding:var(--s4) var(--s6)}
+
+.hsr-stage .cc-confirm{padding:0;gap:var(--s4);display:flex;align-items:center}
+.hsr-stage .cc-confirm small{color:var(--muted);font-size:var(--t-micro)}
+
+/* Final 26px: tighten the row gaps and let the columns give before the page
+   does. The columns scroll internally, so a shorter minimum costs nothing. */
+.hsr-stage .cc-summary{gap:var(--s2);grid-template-rows:auto auto minmax(140px,1fr) auto}
+.hsr-stage .cc-sheet-abilities{padding:var(--s2) var(--s6)}
+.hsr-stage .cc-summary .cc-score{padding-block:var(--s2)}
+
+/* Abilities ran 7px long on its trailing explanation. Tighten it rather than
+   cut it -- it explains where the modifier comes from, which is worth keeping. */
+.hsr-stage [data-create-step="abilities"] .cc-main>.notice{
+  margin:var(--s1) 0 0;font-size:var(--t-micro);line-height:1.4}
+.hsr-stage [data-create-step="abilities"] .cc-main{gap:var(--s4)}
+
+/* ---- Budgeted against the 820 floor, not the 960 I first tuned to ---------
+   STAGE_MIN_HEIGHT is 820, so the sheet has to fit ~514px of main. It spends
+   it as head 170 / abilities 110 / columns flex(>=130) / confirm 64. */
+.hsr-stage .cc-summary{grid-template-rows:auto auto minmax(130px,1fr) auto}
+.hsr-stage .cc-sum-head{max-height:172px}
+.hsr-stage .cc-sum-figure .cc-doll.large{width:124px;height:164px}
+.hsr-stage .cc-sum-figure .cc-doll.large .scene-character.paperdoll-character{
+  transform:translateX(-50%) scale(.24)}
+.hsr-stage .cc-sum-head{grid-template-columns:132px minmax(0,1fr)}
+.hsr-stage .cc-summary .cc-score strong{font-size:var(--t-h2);line-height:1.1}
+.hsr-stage .cc-summary .cc-score{padding-block:var(--s1)}
+.hsr-stage .cc-sheet-abilities{padding:var(--s1) var(--s6)}
+.hsr-stage .cc-confirm .action{padding-block:var(--s3)}
+
+/* 508 needed against 484 at the floor. Take 20 off the head and 12 off the
+   confirm bar; both were padding, not information. */
+.hsr-stage .cc-sum-head{max-height:152px}
+.hsr-stage .cc-sum-figure .cc-doll.large{width:112px;height:148px}
+.hsr-stage .cc-sum-figure .cc-doll.large .scene-character.paperdoll-character{
+  transform:translateX(-50%) scale(.215)}
+.hsr-stage .cc-sum-head{grid-template-columns:118px minmax(0,1fr)}
+.hsr-stage .cc-sum-id h2{font-size:var(--t-h3)}
+.hsr-stage .cc-sum-more{margin-top:var(--s2)}
+.hsr-stage .cc-sum-more .cc-opener{padding:var(--s2) var(--s4)}
+.hsr-stage .cc-confirm{padding:0;gap:var(--s5)}
+.hsr-stage .cc-confirm .action{padding:var(--s3) var(--s7)}
+
+/* max-height was clipping the head, so the two openers bled over the Abilities
+   label. The content is now small enough to size itself -- let it, and take the
+   last few pixels out of the row gaps instead. */
+.hsr-stage .cc-sum-head{max-height:none}
+.hsr-stage .cc-summary{gap:var(--s1)}
+.hsr-stage .cc-sum-id .cc-sum-arch{margin:var(--s1) 0 0;font-size:var(--t-body)}
+.hsr-stage .cc-sum-line{font-size:var(--t-body)}
+
+/* Stacking the two openers UNDER the identity text is what kept pushing the
+   head past its budget. Put them in a third column beside it instead: the head
+   is then as tall as the doll (148px) and nothing has to be clipped to fit. */
+.hsr-stage .cc-sum-head{
+  grid-template-columns:118px minmax(0,1fr) 220px;
+  align-items:center;gap:var(--s7);
+}
+.hsr-stage .cc-sum-more{
+  grid-template-columns:minmax(0,1fr);gap:var(--s3);margin:0;align-self:center;
+}
+
+
+/* Final 28px at the 820 floor: the columns scroll internally, so a lower
+   minimum costs nothing, and the doll is identification at any size. */
+.hsr-stage .cc-summary{grid-template-rows:auto auto minmax(108px,1fr) auto}
+.hsr-stage .cc-sum-figure .cc-doll.large{width:100px;height:132px}
+.hsr-stage .cc-sum-figure .cc-doll.large .scene-character.paperdoll-character{
+  transform:translateX(-50%) scale(.27)}
+.hsr-stage .cc-sum-head{grid-template-columns:106px minmax(0,1fr) 208px}
+
+@media(max-width:640px){
+  .hsr-stage .cc-look-layout{grid-template-columns:minmax(0,1fr);height:auto;align-items:start}
+  .hsr-stage .cc-look-stage{width:100%;min-width:0;align-content:center}
+  .hsr-stage .cc-sum-head{grid-template-columns:72px minmax(0,1fr);gap:var(--s5);align-items:center}
+  .hsr-stage .cc-sum-figure{display:grid;min-width:0}
+  .hsr-stage .cc-sum-figure .cc-doll.large{width:64px;height:96px;margin:0;overflow:visible}
+  .hsr-stage .cc-sum-figure .cc-doll.large .scene-character.paperdoll-character{transform:translateX(-50%) scale(.27)}
+  .hsr-stage .cc-sum-head .cc-sum-more{grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s3);margin:0}
+}

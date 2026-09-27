@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Actor Lab · The Hollow Star Reliquary</title>
+<link rel="icon" href="assets/favicon.svg">
+<style>
+  :root { --bg: #0e121c; --panel: #161c2a; --line: #2b3448; --ink: #e8e1cf; --muted: #9aa3b7; --gold: #d9b56e; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 13px/1.4 system-ui, "Segoe UI", sans-serif; display: grid; grid-template-columns: minmax(0, 1fr) 340px; height: 100vh; overflow: hidden; }
+  main { position: relative; overflow: hidden; }
+  canvas#stage { width: 100%; height: 100%; display: block; }
+  aside { background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; padding: 12px 14px 40px; }
+  h1 { font: 600 15px/1.2 Georgia, serif; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); margin: 2px 0 10px; }
+  h2 { font: 600 11px/1 system-ui; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 16px 0 8px; }
+  label { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; gap: 6px; align-items: center; margin: 4px 0; color: var(--muted); }
+  select, input[type=color], input[type=range] { width: 100%; background: #0f1420; color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 3px 4px; font: inherit; }
+  input[type=color] { width: 34px; height: 24px; padding: 0; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; }
+  button { background: #1d2536; color: var(--ink); border: 1px solid var(--line); border-radius: 7px; padding: 5px 9px; font: inherit; cursor: pointer; }
+  button:hover, button:focus-visible { border-color: var(--gold); color: var(--gold); outline: none; }
+  button[aria-pressed=true] { border-color: var(--gold); color: var(--gold); }
+  #hud { position: absolute; left: 10px; top: 10px; font: 12px/1.45 ui-monospace, Consolas, monospace; background: rgba(8,10,16,.72); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; pointer-events: none; white-space: pre; }
+  #notice { position: absolute; left: 10px; bottom: 10px; right: 10px; color: var(--muted); font-size: 12px; pointer-events: none; }
+  .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .tags span { border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; color: var(--gold); font-size: 11px; }
+</style>
+</head>
+<body>
+<main><canvas id="stage"></canvas><div id="hud"></div><div id="notice">Presentation lab. Nothing here talks to a run: it draws the same rigs the game uses from local sample data.</div></main>
+<aside>
+  <h1>Actor Lab</h1>
+  <h2>Figure</h2>
+  <label>Rig<select id="rig"><option value="hero">Custom hero</option><option value="npc">Resident / foe</option><option value="wren">Wren</option><option value="doran">Doran</option></select><span></span></label>
+  <label>Doran loadout<select id="doranLoadout"><option value="cleaver">Cleaver</option><option value="daggers">Daggers</option><option value="staff">Staff</option><option value="wand">Wand</option></select><span></span></label>
+  <label>Wren loadout<select id="wrenLoadout"><option value="staff">Staff</option><option value="wand">Wand</option></select><span></span></label>
+  <label>Pose<select id="pose"></select><span></span></label>
+  <label>Facing<select id="facing"><option value="1">Right</option><option value="-1">Left</option></select><span></span></label>
+  <label>Zoom<input id="zoom" type="range" min="1" max="6" step=".1" value="3.6"><span></span></label>
+  <label>Motion<select id="motion"><option value="full">Full</option><option value="reduced">Reduced</option></select><span></span></label>
+  <div class="row"><button type="button" id="sockets" aria-pressed="false">Show sockets</button><button type="button" id="compare" aria-pressed="false">Line-up</button><button type="button" id="crowd" aria-pressed="false">Crowd of 10</button><button type="button" id="random">Randomize</button><button type="button" id="sheetBtn" aria-pressed="false">Pose sheet</button></div>
+  <h2>Beats</h2>
+  <div class="row">
+    <button type="button" data-beat="attack">Attack</button><button type="button" data-beat="cast">Cast</button>
+    <button type="button" data-beat="channel">Hold channel</button><button type="button" data-beat="release">Hold release</button><button type="button" data-beat="clear">Clear beat</button>
+    <button type="button" data-beat="hit">Hit</button><button type="button" data-beat="crit">Crit</button>
+    <button type="button" data-beat="dodge">Dodge</button><button type="button" data-beat="guard">Block</button>
+    <button type="button" data-beat="knock">Knockback</button><button type="button" data-beat="death">Death</button>
+    <button type="button" data-beat="walk">Walk across</button>
+  </div>
+  <label>Cast stance<select id="stance"><option>aim</option><option>gather</option><option>overhead</option><option>ward</option><option>mend</option></select><span></span></label>
+  <label>Cast hands<select id="hands"><option value="1">One</option><option value="2">Two</option></select><span></span></label>
+  <label>Cast source<select id="source"><option value="auto">Auto</option><option value="hands">Hands</option><option value="implement">Implement</option></select><span></span></label>
+  <label>Element<select id="element"><option>fire</option><option>cold</option><option>lightning</option><option>radiant</option><option>necrotic</option><option>force</option><option>acid</option><option>psychic</option><option>thunder</option></select><span></span></label>
+  <h2>Equipment</h2>
+  <label>Weapon<select id="weapon"><option>none</option><option selected>sword</option><option>dagger</option><option>axe</option><option>mace</option><option>polearm</option><option>staff</option><option>wand</option><option>bow</option></select><span></span></label>
+  <label>Hands<select id="handedness"><option value="one-handed">One-handed</option><option value="two-handed">Two-handed</option></select><span></span></label>
+  <label>Material<select id="material"><option>steel</option><option>silver</option><option>gold</option><option>bronze</option><option>iron</option><option>obsidian</option><option>wood</option><option>crystal</option><option>bone</option></select><span></span></label>
+  <label>Weapon fx<select id="fx"><option value="">none</option><option>ember</option><option>frost</option><option>tide</option><option>gale</option><option>stone</option><option>arcane</option><option>hallow</option><option>radiant</option><option>wither</option><option>mind</option><option>resonant</option><option>acid</option><option>force</option><option>bleed</option><option>phase</option><option>silver</option></select><span></span></label>
+  <label>Rarity<select id="rarity"><option>mundane</option><option>magical</option><option>artifact</option><option>blessed</option></select><span></span></label>
+  <label>Armour<select id="armor"><option value="">none (outfit)</option><option>plate</option><option>chain</option><option>leather</option><option>robe</option></select><span></span></label>
+  <label>Helm<select id="helm"><option value="">none</option><option value="partial">Half helm</option><option value="full">Enclosed helm</option></select><span></span></label>
+  <label>Shield<select id="shield"><option value="">none</option><option value="shield">Shield</option></select><span></span></label>
+  <label>Off weapon<select id="second"><option value="">none</option><option>dagger</option><option>sword</option><option>axe</option></select><span></span></label>
+  <h2>Look</h2>
+  <label>Race<select id="race"></select><span></span></label>
+  <label>Presentation<select id="gender"><option>female</option><option>male</option><option>other</option></select><span></span></label>
+  <div id="appearance"></div>
+  <div class="tags" id="notice-tags"></div>
+</aside>
+<script>
+  // The shared UI escape helper the paperdoll module expects.
+  globalThis.HSRUI = globalThis.HSRUI || {escape: v => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]))};
+</script>
+<script type="module" src="actor-lab.js"></script>
+</body>
+</html>

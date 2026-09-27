@@ -1,0 +1,1351 @@
+{
+  "schema_version": "hollow-star-party-snapshot-1",
+  "snapshot_version": "2026-09-26+e7827aa27c6c",
+  "source_fingerprint": "e7827aa27c6c",
+  "generated_by": "tools/export_party_snapshot.py",
+  "generated_at": "2026-09-26",
+  "program": "hollow-star-reliquary",
+  "seed_mode": "SIMULATION",
+  "live_state_owners_excluded": [
+    "DM038_L",
+    "DM038_CH",
+    "DM035_0"
+  ],
+  "write_policy": {
+    "corpus_write": "forbidden",
+    "run_saves": ".local/reliquary_runs/<run-id>.json",
+    "note": "DM044_0 section 0: SIMULATION seeds from the explicit full baselines and never reads or writes the live-state family."
+  },
+  "engine_contract": {
+    "min_engine_version": "0.2.0",
+    "generated_against_engine": "0.2.2",
+    "band_ceiling": "CHAMPION",
+    "band_note": "Soliera, Sera, Ember, and Deashi are authors and observers of the Reliquary, not roster entries. No divine character appears in this snapshot and Band deliberately stops at CHAMPION."
+  },
+  "sources": [
+    {
+      "owner": "DM041_A",
+      "role": "doran_source_mechanics",
+      "file": "DM041_A_T_REF_doran-machine-readable-combat-mechanics.md",
+      "sha256": "e3d8ffcd23a9e104691fc9fcf042e6b5b7d6776ec84f9a6932ea083508f2c99e",
+      "updated": "2026-09-06",
+      "source_schema": "dm-combat-source-1"
+    },
+    {
+      "owner": "DM041_A1",
+      "role": "doran_expanded_rules_and_equipment",
+      "file": "DM041_A1_T_REF_doran-expanded-rules-and-equipment-catalog.md",
+      "sha256": "a76fc6243e4caa2720a5bae8ffc4d4b5e444b66d541f7c068b17975004015a34",
+      "updated": "2026-09-07",
+      "source_schema": "prose+frontmatter"
+    },
+    {
+      "owner": "DM041_B",
+      "role": "wren_source_mechanics",
+      "file": "DM041_B_T_REF_wren-machine-readable-combat-and-casting-mechanics.md",
+      "sha256": "9110beb8e7a885afc3bdf113eb1373a945fe85dcd9f7e9b0b7f876161e33be99",
+      "updated": "2026-09-07",
+      "source_schema": "dm-combat-source-1"
+    },
+    {
+      "owner": "DM041_B1",
+      "role": "wren_expanded_spells_and_casting",
+      "file": "DM041_B1_T_REF_wren-expanded-spells-and-casting-catalog.md",
+      "sha256": "f850089df84425154c23d604216fcfd3164c08c85428d019b71d26b6459e5679",
+      "updated": "2026-09-07",
+      "source_schema": "prose+frontmatter"
+    },
+    {
+      "owner": "DM044_0",
+      "role": "derived_runtime_protocol_and_doran",
+      "file": "DM044_0_T_SYS_combat-runtime-protocol-and-doran.md",
+      "sha256": "2c6a09b5bbb96f826379370cf9fa5a2d8de2beda8a5d04c6a6dc96cf4dc2e318",
+      "updated": "2026-09-07",
+      "source_schema": "prose+frontmatter"
+    },
+    {
+      "owner": "DM044_1",
+      "role": "derived_runtime_wren",
+      "file": "DM044_1_T_SYS_combat-runtime-wren.md",
+      "sha256": "b3f14284e04a8edb1076355c12f0ec1c25a568391925e85fe2520f4b7a30175f",
+      "updated": "2026-09-07",
+      "source_schema": "prose+frontmatter"
+    },
+    {
+      "owner": "DM046_0",
+      "role": "reliquary_framework",
+      "file": "DM046_0_T_REF_hollow-star-reliquary-design-runtime-and-promotion-framework.md",
+      "sha256": "25ad4932eef6f24e6979a91a13d06777db270678b229df2fef54a4810ca14783",
+      "updated": "2026-09-09",
+      "source_schema": "prose+frontmatter"
+    },
+    {
+      "owner": "DM047_0",
+      "role": "blessed_tier_framework",
+      "file": "DM047_0_A_REF_the-blessed-permission-tier-framework.md",
+      "sha256": "78158404e1e1d362882c4ab76730ef62ccf9867040a60efc7225798b5c73e63b",
+      "updated": "2026-09-07",
+      "source_schema": "prose+frontmatter"
+    }
+  ],
+  "characters": {
+    "doran": {
+      "certified": {
+        "schema_version": "dm-combat-source-1",
+        "owner": "DM041_A",
+        "character": {
+          "id": "doran",
+          "name": "Doran",
+          "role": "sanctum_steward",
+          "accepted_at": "T537.0",
+          "gender": "male",
+          "pronouns": [
+            "he",
+            "him"
+          ],
+          "ancestry": "human_variant",
+          "classes": [
+            {
+              "class": "fighter",
+              "subclass": "battle_master",
+              "level": 20
+            }
+          ],
+          "effective_campaign_level": 20,
+          "campaign_xp": 165000,
+          "advancement_basis": "divine_uplift",
+          "xp_is_advancement_basis": false
+        },
+        "routing": {
+          "current_state_owner": "DM038_L",
+          "expanded_support": "DM041_A1",
+          "compact_routine": "DM040_0",
+          "derived_combat_runtime": "DM044_0",
+          "automatic_combat_load": false
+        },
+        "stats": {
+          "hp_max": 370,
+          "hit_dice": "20d10",
+          "proficiency_bonus": 6,
+          "speed_ft": {
+            "armored": 30,
+            "unarmored": 40,
+            "flight_conversion_max": 20
+          },
+          "size": "large",
+          "space_ft": 10,
+          "initiative": 21,
+          "initiative_basis": {
+            "insight": 16,
+            "alert": 5
+          },
+          "passive_perception": 20,
+          "abilities": {
+            "str": 27,
+            "dex": 16,
+            "con": 18,
+            "int": 16,
+            "wis": 18,
+            "cha": 16
+          },
+          "future_growth": {
+            "str_28": "banked_not_current"
+          },
+          "saves": {
+            "str": 15,
+            "dex": 4,
+            "con": 11,
+            "int": 10,
+            "wis": 11,
+            "cha": 4
+          },
+          "save_proficiencies": [
+            "str",
+            "con",
+            "wis",
+            "int"
+          ],
+          "skills": {
+            "insight": 16,
+            "athletics": 14,
+            "perception": 10,
+            "survival": 10,
+            "persuasion": 9
+          }
+        },
+        "defenses": {
+          "ac": {
+            "standing": 25,
+            "planted": 25,
+            "both_daggers": 25,
+            "kite_deployed": 21
+          },
+          "ac_locked_flat": true,
+          "ac_riders_retired": [
+            "planted_plus_2",
+            "dual_wielder_plus_1",
+            "haste_plus_2"
+          ],
+          "haste_overlay": {
+            "ac_bonus": 0,
+            "speed_multiplier": 2,
+            "dex_save_advantage": true,
+            "restricted_extra_action": true
+          },
+          "thermal_immunity": true,
+          "armor_emits_light": false,
+          "regeneration": {
+            "per_round": 16,
+            "requires_hp_at_least": 1
+          },
+          "healing_received": "maximized"
+        },
+        "senses": {
+          "helm_vision": {
+            "mode": "normal_sight",
+            "range_ft": 120,
+            "works_in": [
+              "magical_darkness",
+              "nonmagical_darkness"
+            ],
+            "always_on": true,
+            "attunement_required": false,
+            "truesight": false,
+            "grantor": "soliera_t537_remake",
+            "filters": [
+              "air",
+              "water",
+              "poison"
+            ]
+          }
+        },
+        "resources": {
+          "superiority_dice": {
+            "maximum": 16,
+            "die": "d12",
+            "save_dc": 22,
+            "recovery": [
+              "short_rest",
+              "long_rest",
+              "one_on_critical_hit_max_once_per_round"
+            ]
+          },
+          "action_surge": {
+            "maximum": 2,
+            "recovery": "short_rest"
+          },
+          "second_wind": {
+            "maximum": 1,
+            "healing": 30,
+            "recovery": "short_rest"
+          },
+          "indomitable": {
+            "maximum": 3,
+            "recovery": "long_rest"
+          },
+          "relentless": {
+            "initiative_with_zero_superiority_dice_regains": 1
+          }
+        },
+        "action_economy": {
+          "action": [
+            "attack_4",
+            "action_surge",
+            "dodge",
+            "grapple",
+            "shove"
+          ],
+          "bonus_action": [
+            "read_the_seam",
+            "quick_toss",
+            "two_weapon_dagger",
+            "second_wind",
+            "ring_regeneration"
+          ],
+          "reaction": [
+            "deft_answer",
+            "riposte",
+            "opportunity_attack"
+          ],
+          "movement_rider": [
+            "bait_and_switch"
+          ],
+          "free": [
+            "summon_or_dismiss_either_obsidian_dagger",
+            "ordinary_object_interaction"
+          ]
+        },
+        "attacks": {
+          "attacks_per_attack_action": 4,
+          "obsidian_dagger": {
+            "attack_bonus": 16,
+            "damage": "1d8+10",
+            "range_ft": [
+              30,
+              70
+            ],
+            "summon_action": "none",
+            "resistance_bypass": true,
+            "measured_edge": true
+          },
+          "giant_cleaver": {
+            "attack_bonus": 16,
+            "damage_fixed": 40,
+            "critical_damage_fixed": 80,
+            "reach_ft": 10,
+            "hands": [
+              1,
+              2
+            ],
+            "carry_through": "parts_targets_at_or_below_actual_damage_and_stops_at_first_survivor"
+          },
+          "giant_cleaver_enclosed": {
+            "attack_bonus": 14,
+            "damage_fixed": 40,
+            "critical_damage_fixed": 80,
+            "reach_ft": 5,
+            "room_pays": true
+          },
+          "grand_cleave": {
+            "attack_bonus": 19,
+            "damage": "120+4d20",
+            "critical": "double_final_total",
+            "arc_degrees": 180,
+            "reach_ft": 15,
+            "medium_unit_capacity": 7,
+            "large_unit_cost": 2,
+            "medium_large_auto_parted": true,
+            "huge_plus": "takes_damage_and_stops_blade",
+            "whole_turn": true,
+            "movement_allowed": false,
+            "bonus_action_allowed": false,
+            "both_hands": true,
+            "reaction_available": true,
+            "ally_safe": false,
+            "action_surge_repeat": false
+          },
+          "peak_attacks": {
+            "normal": 13,
+            "ring_hasted": 14,
+            "composition": "attack_4 + action_surge_4 + action_surge_4 + quick_toss_1"
+          }
+        },
+        "signature_features": {
+          "read_the_seam": {
+            "activation": "bonus_action",
+            "check": "insight_plus_16_vs_target_ac",
+            "success_critical_range": "16-20",
+            "ends_when": "target_hits_doran"
+          },
+          "deft_answer": {
+            "activation": "reaction_when_creature_misses_doran",
+            "attack": "one_free_dagger_attack",
+            "superiority_die_cost": 0
+          },
+          "grand_cleave": {
+            "mode_swap": true,
+            "expanded_rule": "DM041_A1#grand-cleave"
+          }
+        },
+        "advancement_16_to_20": {
+          "basis": "divine_uplift",
+          "l16_feat": "resilient_int",
+          "l17": [
+            "action_surge_second_use",
+            "indomitable_third_use",
+            "proficiency_bonus_6"
+          ],
+          "l18": "improved_combat_superiority_d12",
+          "l19_uplift": {
+            "type": "across_the_board_ability_boost",
+            "amount": 2,
+            "scope": "all_six_abilities",
+            "replaces_feat": true
+          },
+          "l20": "extra_attack_3_fourth_attack",
+          "feat_package": [
+            "resilient_wis",
+            "skill_expert",
+            "alert",
+            "dual_wielder",
+            "mobile",
+            "sentinel",
+            "resilient_int"
+          ],
+          "feat_count": 7
+        },
+        "reaction_economy": {
+          "reactions_per_round": 1,
+          "competing_options": [
+            "opportunity_attack_sentinel",
+            "deft_answer",
+            "riposte"
+          ],
+          "note": "deft_answer and riposte share the on-miss trigger; action economy scaled to 13 attacks while reaction economy stayed flat. Known asymmetry, intentionally unpatched."
+        },
+        "equipment_ids": [
+          "ITEM-OBSIDIAN-DAGGERS",
+          "ITEM-GIANT-CLEAVER",
+          "ITEM-HELM",
+          "divine_plate",
+          "gauntlet_shield",
+          "deployable_kite",
+          "ring_of_regeneration",
+          "cloak_of_protection"
+        ],
+        "rule_ids": [
+          "RULE-DAGGER-SUMMONING",
+          "RULE-DAGGER-RESISTANCE-BYPASS",
+          "RULE-DAGGER-WARD-BYPASS",
+          "RULE-GRAND-CLEAVE",
+          "RULE-ENCLOSED-SPACE",
+          "RULE-CLEAVER-HAND-GATE",
+          "RULE-CONFIGURATION-COMPETENCE-GATE",
+          "RULE-DIVINE-PLATE",
+          "RULE-THERMAL-EXEMPTION",
+          "RULE-VISION",
+          "RULE-GLARE"
+        ],
+        "glare": {
+          "rule_id": "RULE-GLARE",
+          "save_dc": 22,
+          "dc_basis": "wrens_spell_save_dc",
+          "daylight_is_sunlight": false,
+          "armor_emits_light": false,
+          "trigger": "external_bright_light_reflected_by_mirror_white_armor",
+          "wren_route": "DM041_B"
+        },
+        "open_gates": [
+          "str_28_growth_beat",
+          "gameplay_discovered_residuals"
+        ],
+        "retired_gates": [
+          "helm_grantor_resolved_to_soliera_t537_remake",
+          "int_save_seam_closed_by_resilient_int_at_plus_10",
+          "later_mastery_details_resolved_at_fighter_20"
+        ]
+      },
+      "engine": {
+        "name": "Doran",
+        "band": "STEWARD",
+        "controller": "player",
+        "max_hp": 370,
+        "armor_class": 25,
+        "initiative_bonus": 21,
+        "speed": 30,
+        "attacks_per_action": 4,
+        "reactions": 1,
+        "natural_tags": [],
+        "gate": "none",
+        "equipment": [
+          {
+            "name": "obsidian dagger",
+            "slot": "hand",
+            "tier": "BLESSED",
+            "base_damage": 14,
+            "damage_expression": "1d8+10",
+            "attack_bonus": 16,
+            "tags": [
+              "PHYSICAL",
+              "PIERCING"
+            ],
+            "density": 1.0,
+            "utility_uses": [
+              "summon or dismiss in an open hand with no action, mid-motion",
+              "measured edge: lethal or nonlethal depth by choice, no penalty",
+              "unbreakable by any means in play (Soliera's material)"
+            ],
+            "flavor": "Soliera's obsidian. Appears in the hand at the instant it is needed and leaves no evidence when dismissed."
+          }
+        ],
+        "alternate_loadouts": [
+          {
+            "mode": "cleaver",
+            "name": "Giant Cleaver",
+            "tier": "BLESSED",
+            "base_damage": 40,
+            "damage_expression": "40",
+            "attack_bonus": 16,
+            "reach_ft": 10,
+            "tags": [
+              "PHYSICAL",
+              "SLASHING",
+              "HEAVY"
+            ],
+            "note": "Mithral +2 greatsword, 6 ft, 208 lb. Universal rider applies to every target, not only giants (DM041_A CLEAVER MASTERY LOCK)."
+          },
+          {
+            "mode": "grand_cleave",
+            "name": "Grand Cleave",
+            "base_damage": null,
+            "damage_expression": "120+4d20",
+            "attack_bonus": 19,
+            "tags": [
+              "PHYSICAL",
+              "SLASHING",
+              "HEAVY"
+            ],
+            "note": "Whole-turn mode swap: 180 degree arc, carry-through until the first survivor, first Huge-or-larger body stops it. No movement, bonus action, dagger, Quick Toss, or Deft Answer that turn."
+          }
+        ],
+        "inherent": [
+          {
+            "name": "divine plate (piercing)",
+            "phase": "MAGNITUDE",
+            "direction": "MODIFY",
+            "tier": "BLESSED",
+            "scope": "RUN",
+            "specificity": 3,
+            "multiplier": 0.25,
+            "applies_to_tags": [
+              "PIERCING"
+            ],
+            "tell": "The point goes in and stops, like the plate closed around it.",
+            "description": "RULE-DIVINE-PLATE net transmission, piercing."
+          },
+          {
+            "name": "divine plate (slashing)",
+            "phase": "MAGNITUDE",
+            "direction": "MODIFY",
+            "tier": "BLESSED",
+            "scope": "RUN",
+            "specificity": 3,
+            "multiplier": 0.375,
+            "applies_to_tags": [
+              "SLASHING"
+            ],
+            "tell": "The edge turns into a flat blow partway through the cut.",
+            "description": "RULE-DIVINE-PLATE net transmission, slashing."
+          },
+          {
+            "name": "divine plate (bludgeoning)",
+            "phase": "MAGNITUDE",
+            "direction": "MODIFY",
+            "tier": "BLESSED",
+            "scope": "RUN",
+            "specificity": 3,
+            "multiplier": 0.75,
+            "applies_to_tags": [
+              "BLUDGEONING"
+            ],
+            "tell": "He takes it standing, and the sound is wrong for the size of the swing.",
+            "description": "RULE-DIVINE-PLATE net transmission, bludgeoning."
+          },
+          {
+            "name": "thermal exemption",
+            "phase": "MAGNITUDE",
+            "direction": "DENY",
+            "tier": "BLESSED",
+            "scope": "RUN",
+            "specificity": 2,
+            "multiplier": 0.0,
+            "applies_to_tags": [
+              "FIRE",
+              "ICE"
+            ],
+            "tell": "He walks through the burn line without changing pace and the white plate is not even discoloured.",
+            "description": "Heat, fire, cold, and freezing deal no damage and cannot numb him. Carried matter may still burn; ice may still restrain."
+          }
+        ],
+        "resources": {
+          "superiority_dice": 16,
+          "action_surge": 2,
+          "second_wind": 1,
+          "indomitable": 3
+        }
+      },
+      "deferred": [],
+      "provenance": {
+        "owner_file": "DM041_A",
+        "support_files": [
+          "DM041_A1",
+          "DM044_0",
+          "DM044_1"
+        ],
+        "note": "Battle Master Fighter 20 by divine uplift at T537.0, Tier-3 Sanctum field Steward. DM041_A wins on any standing-mechanics conflict."
+      }
+    },
+    "wren": {
+      "certified": {
+        "schema_version": "dm-combat-source-1",
+        "owner": "DM041_B",
+        "character": {
+          "id": "wren",
+          "name": "Wren",
+          "role": "sanctum_steward",
+          "accepted_at": "T537.0",
+          "gender": "female",
+          "pronouns": [
+            "she",
+            "her"
+          ],
+          "ancestry": "half_elf",
+          "classes": [
+            {
+              "class": "cleric",
+              "level": 20
+            },
+            {
+              "class": "sorcerer",
+              "subclass": "divine_soul",
+              "level": 20
+            }
+          ],
+          "effective_campaign_level": 20,
+          "campaign_xp": 165000,
+          "advancement_basis": "divine_uplift",
+          "xp_is_advancement_basis": false
+        },
+        "routing": {
+          "current_state_owner": "DM038_L",
+          "expanded_support": "DM041_B1",
+          "compact_routine": "DM040_0",
+          "derived_combat_runtime": "DM044_1",
+          "paired_runtime": "DM044_0",
+          "automatic_combat_load": false
+        },
+        "stats": {
+          "hp_max": 220,
+          "hit_dice": [
+            "20d8",
+            "20d6"
+          ],
+          "proficiency_bonus": 6,
+          "speed_ft": {
+            "walk": 30,
+            "otherworldly_wings_fly": 60
+          },
+          "initiative": 6,
+          "initiative_basis": {
+            "dex": 1,
+            "alert": 5
+          },
+          "passive_perception": 19,
+          "spell_save_dc": 22,
+          "spell_attack_bonus": 14,
+          "abilities": {
+            "str": 10,
+            "dex": 13,
+            "con": 16,
+            "int": 16,
+            "wis": 17,
+            "cha": 20
+          },
+          "saves": {
+            "str": 3,
+            "dex": 10,
+            "con": 12,
+            "int": 12,
+            "wis": 18,
+            "cha": 14
+          },
+          "save_proficiencies": [
+            "wis",
+            "cha",
+            "con",
+            "dex"
+          ],
+          "save_advantage_vs": "spells_and_magical_effects_from_robe_of_the_archmagi",
+          "skills": {
+            "arcana": 9,
+            "history": 9,
+            "investigation": 9,
+            "nature": 9,
+            "perception": 9,
+            "insight": 7,
+            "survival": 9,
+            "persuasion": 11,
+            "stealth": 7
+          },
+          "skill_proficiencies_retained": true,
+          "tools": [
+            "calligraphers_supplies"
+          ],
+          "languages": [
+            "common",
+            "draconic",
+            "elvish",
+            "gnomish",
+            "infernal",
+            "orc",
+            "undercommon"
+          ]
+        },
+        "defenses": {
+          "ac": {
+            "robe_of_the_archmagi": 18,
+            "with_shield_spell": 23
+          },
+          "mage_armor_redundant": true,
+          "ward": {
+            "maximum": 75,
+            "damage_types": "all",
+            "overflow_rule": "if_damage_exceeds_remaining_ward_nullify_entire_instance_and_riders_then_set_zero",
+            "recharge": "end_of_combat"
+          },
+          "mind_altering_immunity": {
+            "permanent": true,
+            "cannot_be_suppressed": true,
+            "scope": "all_effects_that_alter_suppress_override_control_rewrite_disable_enter_read_or_involuntarily_access_mind"
+          },
+          "spatial_effects_resolve_normally": true,
+          "concentration_save_advantage": true
+        },
+        "resources": {
+          "sorcery_points": {
+            "maximum": 50,
+            "recovery_short_rest": 4,
+            "recovery_source": "sorcerous_restoration_sorcerer_20"
+          },
+          "spell_slots": {
+            "general": {
+              "1": 20,
+              "2": 16,
+              "3": 16,
+              "4": 16,
+              "5": 20,
+              "6": 12,
+              "7": 10,
+              "8": 14,
+              "9": 8
+            },
+            "domain_only": {
+              "1": 2,
+              "2": 2,
+              "3": 2,
+              "4": 2,
+              "5": 2,
+              "6": 2,
+              "7": 2,
+              "8": 2,
+              "9": 2
+            },
+            "general_total": 132,
+            "domain_total": 18,
+            "total": 150
+          },
+          "channel_divinity": {
+            "maximum": 3,
+            "recovery": "rest"
+          },
+          "favored_by_the_gods": {
+            "maximum": 1,
+            "recovery": "rest"
+          },
+          "portal_shear": {
+            "maximum": 1,
+            "recovery": "long_rest"
+          },
+          "sealed_imprisonment": {
+            "maximum": 1,
+            "recovery": "long_rest"
+          },
+          "sigil_force_lane": {
+            "maximum_each": 1,
+            "recovery": "long_rest",
+            "spells": [
+              "wall_of_force",
+              "bigbys_hand",
+              "otilukes_resilient_sphere",
+              "mordenkainens_private_sanctum",
+              "forcecage",
+              "otilukes_freezing_sphere"
+            ]
+          },
+          "crown_of_stars": {
+            "maximum": 7,
+            "permanently_active": true,
+            "no_slot_required": true
+          },
+          "staff_of_the_magi": {
+            "charges": 50,
+            "daily_regain": "4d6+2",
+            "grants_spell_attack_bonus": false
+          },
+          "robe_stars": {
+            "maximum": 6,
+            "recharge": "daily_at_dusk"
+          },
+          "unearthly_recovery": {
+            "maximum": 1,
+            "recovery": "long_rest",
+            "effect": "bonus_action_below_half_hp_regain_110"
+          },
+          "portal_anchor_return": {
+            "maximum": 1,
+            "recovery": "long_rest"
+          },
+          "aura_of_the_unbound_save_conversion": {
+            "maximum": 1,
+            "recovery": "long_rest"
+          }
+        },
+        "spell_access": {
+          "normal_published": [
+            "cleric",
+            "sorcerer",
+            "divine_soul"
+          ],
+          "known": "every_normal_published_spell",
+          "named_rows": "examples_not_closed_list"
+        },
+        "settled_added_spells": {
+          "3": [
+            "fireball"
+          ],
+          "7": [
+            "simulacrum"
+          ],
+          "8": [
+            "demiplane",
+            "sunburst",
+            "feeblemind"
+          ]
+        },
+        "ninth_level_spells": [
+          "gate",
+          "time_stop",
+          "mass_heal",
+          "true_resurrection",
+          "meteor_swarm"
+        ],
+        "ninth_level_spell_list_role": "examples only; spell_access governs the complete list",
+        "excluded_spells": {
+          "wish": "excluded",
+          "karsus_origin_magic": "excluded",
+          "individually_npc_exclusive_spells": "excluded"
+        },
+        "action_economy": {
+          "action": [
+            "cast_spell",
+            "channel_divinity",
+            "robe_star",
+            "astral_entry_or_return",
+            "staff_of_the_magi",
+            "dodge",
+            "help",
+            "use_object"
+          ],
+          "bonus_action": [
+            "quickened_spell",
+            "crown_of_stars_mote",
+            "healing_word",
+            "spiritual_weapon",
+            "font_of_magic",
+            "portal_misty_step",
+            "unearthly_recovery"
+          ],
+          "reaction": [
+            "shield",
+            "absorb_elements",
+            "counterspell",
+            "war_caster_opportunity_spell",
+            "staff_spell_absorption",
+            "portal_anchor_return",
+            "aura_of_the_unbound_save_conversion"
+          ],
+          "free": [
+            "manifest_or_dismiss_otherworldly_wings"
+          ],
+          "movement": [
+            "walk_30",
+            "fly_60_with_otherworldly_wings"
+          ]
+        },
+        "casting": {
+          "ability": "charisma",
+          "cleric_list": "fully_live_without_preparation",
+          "edition_permission": "2e_or_5e_version_of_any_spell_may_be_used_chosen_at_the_table",
+          "material_components_required": false,
+          "costly_components_required": false,
+          "focus_required": false,
+          "silent_still": {
+            "elective": true,
+            "cost": 0,
+            "source": "left_ring",
+            "excluded_from_turn_tax": true
+          },
+          "personal_concentration_max": 1,
+          "ring_concentration": {
+            "independent": true,
+            "default_spell": "haste_on_doran",
+            "swap": "long_rest_or_explicit_safe_equivalent",
+            "damage_checks": false,
+            "printed_duration_applies": false
+          },
+          "doran_only_healing_maximization": true
+        },
+        "domains": {
+          "portal": {
+            "channel_divinity": "dimensional_shift",
+            "dimensional_shift": {
+              "activation": "action",
+              "targets": "self_plus_6_willing_within_30ft",
+              "destination": "any_visible_point_or_any_place_physically_stood_within_24h",
+              "range_miles": 1,
+              "concentration": false,
+              "provokes": false
+            },
+            "l14_unbarred": {
+              "teleport_cannot_be_blocked_below_spell_level": 9,
+              "detects_teleport_wards": true,
+              "free_misty_step_per_long_rest": 5,
+              "misty_step_activation": "bonus_action"
+            },
+            "l17_the_open_door": {
+              "anchor": {
+                "set": "end_of_long_rest_at_current_location",
+                "window_hours": 24,
+                "activation": "reaction",
+                "usable_while": [
+                  "restrained",
+                  "grappled",
+                  "incapacitated",
+                  "at_0_hp"
+                ],
+                "requires": "wren_alive",
+                "carries": "self_plus_willing_within_30ft",
+                "uses_per_long_rest": 1
+              },
+              "toll": {
+                "radius_ft": 60,
+                "save": "cha_vs_spell_save_dc",
+                "on_fail": "teleport_fails_and_is_wasted",
+                "applies_to": "entry_and_exit",
+                "wren_chooses_exemptions": true
+              }
+            },
+            "signature": "portal_shear"
+          },
+          "liberation": {
+            "channel_divinity": "indomitable_spirit",
+            "indomitable_spirit": {
+              "activation": "action",
+              "radius_ft": 30,
+              "ends_and_blocks": [
+                "charmed",
+                "frightened",
+                "paralyzed",
+                "restrained",
+                "stunned",
+                "grappled",
+                "incapacitated",
+                "petrified"
+              ],
+              "duration_minutes": 1,
+              "forced_movement_fails": true
+            },
+            "l14_unshackled_host": {
+              "freedom_of_movement_aura_ft": 30,
+              "concentration": false,
+              "slot_cost": 0,
+              "ally_at_zero_hp_reaction_move": "full_speed_without_provoking"
+            },
+            "l17_aura_of_the_unbound": {
+              "radius_ft": 30,
+              "allies_gain": "advantage_on_all_saving_throws",
+              "save_conversion": {
+                "activation": "reaction",
+                "effect": "ally_failed_save_becomes_success",
+                "includes_save_or_die": true,
+                "uses_per_long_rest": 1
+              }
+            }
+          }
+        },
+        "signature_features": {
+          "portal_shear": {
+            "nickname": "the_eraser",
+            "activation": "entire_turn",
+            "range_ft": 50,
+            "distant_range_ft": 100,
+            "line_radius_cm": 1,
+            "save": "con_dc_22_binary",
+            "damage": "8d20_force_teleportation_per_crossed_target",
+            "pierces_intervening_matter": true,
+            "threshold_death": {
+              "damage_fraction_current_hp": 0.65,
+              "flat_con_dc": 25,
+              "modifiers": false
+            },
+            "level_10_capstone": {
+              "status": "specified_not_acquired_not_runtime_available",
+              "shape": "one_4cm_by_200ft_wave",
+              "save": "one_con_dc_22_zero_on_success",
+              "damage_on_failure": 960,
+              "metamagics": [
+                "split_ray",
+                "twin",
+                "enhanced",
+                "maximize",
+                "empower",
+                "extend",
+                "careful",
+                "distant"
+              ],
+              "cost": "40_sp_plus_the_days_portal_shear",
+              "ordinary_portal_shear_recovery": "long_rest"
+            }
+          },
+          "portal_slash": {
+            "nickname": "slash",
+            "lane": "own_top_level_lane_not_a_shear_mode_and_not_the_capstone; supersedes nanowire_whip",
+            "status": "specified_not_acquired_not_runtime_available",
+            "learn_gate": "narrative_unlock_no_level_or_mechanical_trigger",
+            "activation": "action",
+            "shape": "facing_dependent_cone_horizontal_whip_arc",
+            "geometry": {
+              "ranks_in_squares": [
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ],
+              "total_squares": 35,
+              "widest_at": "far_end",
+              "narrow_at_origin": true
+            },
+            "cut_height": "uncontrolled",
+            "architecture_capable": true,
+            "save": "dex_dc_22_binary",
+            "damage": "8d20_force_teleportation_per_crossed_target",
+            "inherits_from_base": [
+              "pierces_intervening_matter",
+              "teleportation_immunity_or_resistance_is_the_only_block",
+              "threshold_death_check_65pct_current_hp_flat_con_dc_25"
+            ],
+            "cost": "spends_the_days_portal_shear"
+          },
+          "nivs_descent": {
+            "spell_level": 5,
+            "activation": "full_turn",
+            "control_radius_ft": 20,
+            "wave_radius_ft": 30,
+            "damage_or_healing": "8d6_elemental"
+          },
+          "crown_of_stars": {
+            "permanently_active": true,
+            "motes": 7,
+            "activation": "bonus_action",
+            "attack_bonus": 14,
+            "damage": "4d12_radiant",
+            "mote_spent_hit_or_miss": true,
+            "narrative_note": "visible_always_showy"
+          },
+          "simulacrum": {
+            "spell_level": 7,
+            "activation": "entire_turn",
+            "uses_per_long_rest": 1,
+            "copy": "autonomous_exact_wren_except_hp_spell_slots_and_sorcery_points_halve_round_down_per_tier_each_generation",
+            "initiative": "independent",
+            "reaction_economy": "independent",
+            "creation_state": "copies_current_ward_channel_divinity_portal_shear_and_working_gear_resources; born_flying_if_wren_is_flying",
+            "sustained_per_body": 1,
+            "global_active_copy_cap": 4,
+            "persists_through_long_rest": true,
+            "survives_parent_death": true,
+            "death_awareness": "original_wren_feels_each_descendant_copy_death_without_last_thoughts_moments_cause_replay_sensory_transfer_or_forensic_detail",
+            "cascade": {
+              "generation_1": {
+                "hp": 110,
+                "slots_total": 75,
+                "sorcery_points": 25
+              },
+              "generation_2": {
+                "hp": 55,
+                "slots_total": 32,
+                "sorcery_points": 12
+              },
+              "generation_3": {
+                "hp": 27,
+                "slots_total": 14,
+                "sorcery_points": 6
+              },
+              "generation_4": {
+                "hp": 13,
+                "slots_total": 5,
+                "sorcery_points": 3,
+                "seventh_level_slots": 0
+              }
+            }
+          }
+        },
+        "divine_damage": {
+          "scope": "every_spell_and_every_attack",
+          "mode": "rides_alongside_printed_type_never_replaces_it",
+          "cleric_source": "embers_ability",
+          "divine_soul_source": "soliera_herself",
+          "runtime_tag": "DamageTag.DIVINE in addition to the printed tag",
+          "theology_route": [
+            "DM042_0",
+            "DM047_0"
+          ]
+        },
+        "metamagic": {
+          "turn_tax": {
+            "one": "sorcery_points_only",
+            "two": "sorcery_points_plus_bonus_action",
+            "three_or_more": "sorcery_points_plus_entire_turn_no_movement_bonus_action_or_reaction"
+          },
+          "quicken": {
+            "cost": 4,
+            "maximum_per_round": 1,
+            "exclusive": true,
+            "permits_action_and_bonus_action_leveled_spells": true
+          },
+          "catalog_owner": "DM041_B1"
+        },
+        "feats": [
+          "war_caster",
+          "skilled",
+          "alert",
+          "resilient_dex"
+        ],
+        "advancement_16_to_20": {
+          "basis": "divine_uplift",
+          "cleric_18": "channel_divinity_third_use",
+          "cleric_20": "divine_intervention_improved_excluded_by_canon",
+          "cleric_14_and_17": [
+            "portal_unbarred",
+            "portal_the_open_door",
+            "liberation_unshackled_host",
+            "liberation_aura_of_the_unbound"
+          ],
+          "sorcerer_18": "unearthly_recovery",
+          "sorcerer_20": "sorcerous_restoration",
+          "sorcerer_16_and_19_feats": [
+            "alert",
+            "resilient_dex"
+          ],
+          "new_tier": "ninth_level_slots_and_spells"
+        },
+        "equipment_ids": [
+          "ITEM-SANCTUM-BLACK-BIRD-SIGIL",
+          "ITEM-RING-OF-CONCENTRATION",
+          "ITEM-ROBE-OF-THE-ARCHMAGI",
+          "ITEM-STAFF-OF-THE-MAGI",
+          "elective_silent_still_ring",
+          "weave_sight_glasses",
+          "cloak_of_protection"
+        ],
+        "retired_equipment_ids": [
+          "ITEM-ROBE-OF-STARS",
+          "wand_of_fireball"
+        ],
+        "items": {
+          "robe_of_the_archmagi": {
+            "color": "brilliant_white_and_gold",
+            "ac_formula": "15_plus_dex_when_unarmored",
+            "spell_save_dc_bonus": 2,
+            "spell_attack_bonus": 2,
+            "save_advantage_vs_spells_and_magical_effects": true,
+            "absorbed_from_robe_of_stars": [
+              "six_stars_per_day_at_seven_darts",
+              "solo_astral_entry_and_return",
+              "plus_1_all_saves"
+            ],
+            "also_grants": "crown_of_stars_permanently_active"
+          },
+          "staff_of_the_magi": {
+            "material": "divine_white_wood",
+            "finial": "black_bird_on_a_metal_perch",
+            "indestructible": true,
+            "cannot_bend_break_or_shatter": true,
+            "sole_exception": "retributive_strike_by_wren_choice",
+            "charges": 50,
+            "daily_regain": "4d6+2",
+            "spell_attack_bonus_granted": 0,
+            "spell_attack_bonus_declined_by_design": true,
+            "spell_absorption": {
+              "activation": "reaction",
+              "scope": "spell_targeting_only_wren",
+              "gains_charges": true
+            },
+            "retributive_strike": {
+              "damage": "16d6",
+              "radius_ft": 30,
+              "destroys_staff": true,
+              "requires_wren_intent": true
+            },
+            "physical_utility_and_interposition": "prop, jam, lever, brace, interpose; table adjudication -- prose owner DM041_B2 / DM044_1"
+          }
+        },
+        "rule_ids": [
+          "RULE-WREN-TURN-TAX",
+          "RULE-WREN-QUICKEN",
+          "RULE-WREN-SIMULACRUM",
+          "RULE-NIVS-DESCENT",
+          "RULE-PORTAL-SHEAR",
+          "RULE-PORTAL-SLASH",
+          "RULE-WREN-DIVINE-DAMAGE",
+          "RULE-IRON-FLASK-DIVINATION",
+          "RULE-GLARE",
+          "RULE-WREN-EDITION-CHOICE",
+          "RULE-PORTAL-TOLL",
+          "RULE-UNBOUND-AURA",
+          "THREAD-SOLIERA-TELEPORT"
+        ],
+        "senses": {
+          "weave_sight": {
+            "extended_darkvision": true,
+            "truesight": false,
+            "magical_darkness": "reads_shapes_but_does_not_see_normally",
+            "invisibility": "shape_location_and_count_without_identity"
+          }
+        },
+        "glare_route": {
+          "rule_owner": "DM041_A",
+          "rule_id": "RULE-GLARE",
+          "daylight_is_sunlight": false,
+          "doran_armor_emits_light": false,
+          "save_dc": 22,
+          "dc_basis": "wrens_spell_save_dc",
+          "interaction": "daylight_or_other_bright_light_can_trigger_reflected_glare_only_under_RULE_GLARE"
+        },
+        "pair_doctrine": {
+          "doran_holds": true,
+          "wren_leaves_and_is_hurt": true,
+          "simulacrum": "second_soft_body_and_extraction_asset_with_its_own_reactions",
+          "wren_is_dorans_exit": "gate_demiplane_time_stop_dimensional_shift_and_staff_plane_shift_answer_the_no_exit_lane_only_as_a_pair"
+        },
+        "open_gates": [
+          "upper_tier_spell_grants",
+          "gameplay_discovered_residuals"
+        ],
+        "retired_gates": [
+          "dimensional_shift_first_use_now_defined",
+          "indomitable_spirit_first_use_now_defined"
+        ]
+      },
+      "engine": {
+        "name": "Wren",
+        "band": "STEWARD",
+        "controller": "player",
+        "max_hp": 220,
+        "armor_class": 18,
+        "initiative_bonus": 6,
+        "speed": 30,
+        "attacks_per_action": 1,
+        "reactions": 1,
+        "natural_tags": [
+          "DIVINE"
+        ],
+        "gate": "none",
+        "equipment": [
+          {
+            "name": "Crown of Stars",
+            "slot": "hand",
+            "tier": "BLESSED",
+            "base_damage": 26,
+            "damage_expression": "4d12_radiant",
+            "attack_bonus": 14,
+            "tags": [
+              "RADIANT",
+              "DIVINE"
+            ],
+            "utility_uses": [
+              "permanently active and permanently visible; she has no deniable field mode"
+            ],
+            "flavor": "Seven motes above her head. A mote is spent whether it hits or misses."
+          },
+          {
+            "name": "Robe of the Archmagi",
+            "slot": "armor",
+            "tier": "BLESSED",
+            "base_ac": 18,
+            "tags": [],
+            "utility_uses": [
+              "advantage on saves against spells and magical effects",
+              "carries the six robe stars, the solo Astral door, and the permanent crown of stars"
+            ],
+            "flavor": "Brilliant white and gold. Soliera remade it forward from the Robe of Stars at T537.0."
+          },
+          {
+            "name": "Staff of the Magi",
+            "slot": "carried",
+            "tier": "BLESSED",
+            "tags": [],
+            "utility_uses": [
+              "indestructible: cannot bend, break, or shatter by any force in play",
+              "prop a gate or door, jam under a giant's foot, lever for Doran, unbreakable brace or span",
+              "interpose crosswise to stop a weapon edge in a described moment -- the force still transfers and may drive her back, knock her prone, numb her hands, or crack ribs; this is table adjudication and grants no standing AC"
+            ],
+            "flavor": "Divine white wood, black bird on a metal perch. Its printed +2 spell attack is declined by design."
+          }
+        ],
+        "inherent": [
+          {
+            "name": "mind lock",
+            "phase": "CONSEQUENCE",
+            "direction": "DENY",
+            "tier": "BLESSED",
+            "scope": "RUN",
+            "specificity": 5,
+            "blocks_statuses": [
+              "CHARMED",
+              "FRIGHTENED",
+              "DOMINATED",
+              "COMPELLED",
+              "CONFUSED",
+              "POSSESSED",
+              "FEEBLEMINDED",
+              "MENTALLY_STUNNED",
+              "MENTALLY_PARALYZED",
+              "MEMORY_EDITED",
+              "THOUGHT_READ"
+            ],
+            "tell": "The working lands on her and finds nothing to hold. She notices it arrive and keeps talking.",
+            "description": "Categorically immune to all mind-altering effects: nothing may alter, suppress, override, control, rewrite, disable, enter, read, or involuntarily access her mind. Permanent and cannot be suppressed."
+          }
+        ],
+        "resources": {
+          "ward": 75,
+          "sorcery_points": 50,
+          "channel_divinity": 3,
+          "crown_motes": 7,
+          "robe_stars": 6,
+          "staff_charges": 50,
+          "portal_shear": 1,
+          "sealed_imprisonment": 1,
+          "forcecage": 1,
+          "unearthly_recovery": 1,
+          "portal_anchor_return": 1,
+          "unbound_save_conversion": 1,
+          "favored_by_the_gods": 1,
+          "spell_slots_total": 150,
+          "slot_1_general": 20,
+          "slot_2_general": 16,
+          "slot_3_general": 16,
+          "slot_4_general": 16,
+          "slot_5_general": 20,
+          "slot_6_general": 12,
+          "slot_7_general": 10,
+          "slot_8_general": 14,
+          "slot_9_general": 8,
+          "slot_1_domain": 2,
+          "slot_2_domain": 2,
+          "slot_3_domain": 2,
+          "slot_4_domain": 2,
+          "slot_5_domain": 2,
+          "slot_6_domain": 2,
+          "slot_7_domain": 2,
+          "slot_8_domain": 2,
+          "slot_9_domain": 2
+        }
+      },
+      "deferred": [],
+      "provenance": {
+        "owner_file": "DM041_B",
+        "support_files": [
+          "DM041_B1",
+          "DM044_1",
+          "DM044_0"
+        ],
+        "note": "Cleric 20 / Sorcerer 20 stacked by divine uplift at T537.0, Tier-3 Sanctum field Steward. DM041_B wins on any standing-mechanics conflict."
+      }
+    }
+  }
+}

@@ -1,0 +1,1515 @@
+{
+  "schema": "hollow-star-character-creation-1",
+  "version": "2026-09-15",
+  "ability_method": "4d6-drop-lowest",
+  "default_level": 1,
+  "level_range": [
+    1,
+    20
+  ],
+  "advancement_levels": [
+    4,
+    8,
+    12,
+    16,
+    19
+  ],
+  "creation_score_cap": 20,
+  "skills": {
+    "Acrobatics": {
+      "ability": "DEX",
+      "description": "Balance, tumbling, and moving through tight spaces. Use this to keep your footing on slippery surfaces, squeeze through narrow passages, or perform flips and dodges in combat."
+    },
+    "Animal Handling": {
+      "ability": "WIS",
+      "description": "Understand and interact with animals. Calm frightened beasts, read their body language, predict their behavior, or convince a mount to obey your commands."
+    },
+    "Arcana": {
+      "ability": "INT",
+      "description": "Knowledge of magic, spells, and magical creatures. Identify magical effects, decode magical runes, understand spell mechanics, or recall lore about arcane phenomena."
+    },
+    "Athletics": {
+      "ability": "STR",
+      "description": "Physical feats of strength and endurance. Climb surfaces, jump distances, swim through water, break objects, or push/drag heavy loads."
+    },
+    "Deception": {
+      "ability": "CHA",
+      "description": "Lie convincingly and hide your true intentions. Disguise yourself, bluff your way through situations, or create false impressions to manipulate others."
+    },
+    "History": {
+      "ability": "INT",
+      "description": "Recall historical facts and events. Remember details about past kingdoms, famous battles, legendary figures, or dead civilizations relevant to your situation."
+    },
+    "Insight": {
+      "ability": "WIS",
+      "description": "Read people's emotional states and intentions. Detect lies, sense someone's mood, understand motivations beneath their words, or gain insight into someone's character."
+    },
+    "Intimidation": {
+      "ability": "CHA",
+      "description": "Frighten or threaten others into compliance. Use force of personality, deadly confidence, or implied violence to coerce someone to your will."
+    },
+    "Investigation": {
+      "ability": "INT",
+      "description": "Search for clues and uncover hidden information. Find secret doors, examine evidence, piece together mysteries, or analyze complex mechanisms."
+    },
+    "Medicine": {
+      "ability": "WIS",
+      "description": "Diagnose and treat injuries and illnesses. Stabilize a dying person, identify poisons or diseases, perform emergency surgery, or understand the effects of wounds."
+    },
+    "Nature": {
+      "ability": "INT",
+      "description": "Identify plants, animals, and natural phenomena. Understand ecosystems, predict weather patterns, identify plants for food or medicine, or track creatures through wilderness."
+    },
+    "Perception": {
+      "ability": "WIS",
+      "description": "Notice details others miss. Spot hidden enemies, detect traps, hear conversations from a distance, or notice subtle changes in your environment."
+    },
+    "Performance": {
+      "ability": "CHA",
+      "description": "Entertain and captivate an audience. Play instruments, sing, act, dance, or give speeches that inspire emotional responses and hold attention."
+    },
+    "Persuasion": {
+      "ability": "CHA",
+      "description": "Convince others through charm and reason. Negotiate deals, gain favors, sway opinions, or inspire people with compelling arguments and genuine sincerity."
+    },
+    "Religion": {
+      "ability": "INT",
+      "description": "Knowledge of deities, religious practices, and holy relics. Identify religious symbols, recall religious lore, or understand the beliefs and customs of different faiths."
+    },
+    "Sleight of Hand": {
+      "ability": "DEX",
+      "description": "Perform precise manual manipulations without being noticed. Pickpocket items, palming objects, sleight with cards and coins, or pick locks and disarm traps."
+    },
+    "Stealth": {
+      "ability": "DEX",
+      "description": "Move silently and avoid detection. Hide in shadows, sneak past enemies, move without sound, or stay concealed in your environment."
+    },
+    "Survival": {
+      "ability": "WIS",
+      "description": "Survive in the wilderness and track prey. Navigate without maps, find food and water, predict weather, identify tracks, or camp safely in dangerous terrain."
+    }
+  },
+  "races": {
+    "human": {
+      "name": "Human",
+      "bonuses": {
+        "STR": 1,
+        "DEX": 1,
+        "CON": 1,
+        "INT": 1,
+        "WIS": 1,
+        "CHA": 1
+      },
+      "traits": [
+        "versatile",
+        "common_ground"
+      ],
+      "interaction_tags": [
+        "human",
+        "common_ground"
+      ],
+      "extra_skills": 1,
+      "size": "medium",
+      "speed": 30
+    },
+    "elf": {
+      "name": "Elf",
+      "bonuses": {
+        "DEX": 2,
+        "INT": 1
+      },
+      "traits": [
+        "darkvision",
+        "keen_senses",
+        "old_magic"
+      ],
+      "interaction_tags": [
+        "elf",
+        "old_magic"
+      ],
+      "skill_bonuses": {
+        "Perception": 2
+      },
+      "size": "medium",
+      "speed": 30
+    },
+    "half-elf": {
+      "name": "Half-Elf",
+      "bonuses": {
+        "CHA": 2
+      },
+      "floating_bonus": {
+        "count": 2,
+        "amount": 1,
+        "exclude": [
+          "CHA"
+        ]
+      },
+      "traits": [
+        "darkvision",
+        "bridge_kin"
+      ],
+      "interaction_tags": [
+        "human",
+        "elf",
+        "bridge_kin"
+      ],
+      "size": "medium",
+      "speed": 30
+    },
+    "orc": {
+      "name": "Orc",
+      "bonuses": {
+        "STR": 2,
+        "CON": 2
+      },
+      "traits": [
+        "powerful_build",
+        "force_route",
+        "orc_kin"
+      ],
+      "interaction_tags": [
+        "orc",
+        "force_route",
+        "martial_respect"
+      ],
+      "size": "medium",
+      "speed": 30
+    },
+    "goblin": {
+      "name": "Goblin",
+      "bonuses": {
+        "DEX": 2
+      },
+      "traits": [
+        "darkvision",
+        "small",
+        "monster_kin",
+        "lucky"
+      ],
+      "interaction_tags": [
+        "goblin",
+        "monster_kin",
+        "scrapwise"
+      ],
+      "skill_bonuses": {
+        "Luck": 5
+      },
+      "size": "small",
+      "speed": 30
+    }
+  },
+  "appearance": {
+    "note": "Cosmetic only. Nothing in this block affects ability scores, AC, rolls, saves, or canon.",
+    "fields": {
+      "skin_tone": {
+        "label": "Skin tone",
+        "options": [
+          {
+            "id": "fair",
+            "name": "Fair",
+            "hex": "#ecd2bd",
+            "races": [
+              "human",
+              "elf",
+              "half-elf"
+            ]
+          },
+          {
+            "id": "pale",
+            "name": "Pale",
+            "hex": "#efdac6",
+            "races": [
+              "human",
+              "elf",
+              "half-elf"
+            ]
+          },
+          {
+            "id": "olive",
+            "name": "Olive",
+            "hex": "#d6b394",
+            "races": [
+              "human",
+              "elf",
+              "half-elf"
+            ]
+          },
+          {
+            "id": "tan",
+            "name": "Tan",
+            "hex": "#c2996f",
+            "races": [
+              "human",
+              "elf",
+              "half-elf"
+            ]
+          },
+          {
+            "id": "brown",
+            "name": "Brown",
+            "hex": "#9a6b47",
+            "races": [
+              "human",
+              "elf",
+              "half-elf"
+            ]
+          },
+          {
+            "id": "deep",
+            "name": "Deep",
+            "hex": "#6f4630",
+            "races": [
+              "human",
+              "elf",
+              "half-elf"
+            ]
+          },
+          {
+            "id": "ash-green",
+            "name": "Ash Green",
+            "hex": "#8d9a76",
+            "races": [
+              "orc"
+            ]
+          },
+          {
+            "id": "slate-grey",
+            "name": "Slate Grey",
+            "hex": "#77887e",
+            "races": [
+              "orc"
+            ]
+          },
+          {
+            "id": "iron-green",
+            "name": "Iron Green",
+            "hex": "#6f8064",
+            "races": [
+              "orc"
+            ]
+          },
+          {
+            "id": "moss",
+            "name": "Moss",
+            "hex": "#94a36d",
+            "races": [
+              "goblin"
+            ]
+          },
+          {
+            "id": "bile",
+            "name": "Bile",
+            "hex": "#a8b46a",
+            "races": [
+              "goblin"
+            ]
+          },
+          {
+            "id": "bark",
+            "name": "Bark",
+            "hex": "#7d8355",
+            "races": [
+              "goblin"
+            ]
+          }
+        ],
+        "custom": true
+      },
+      "hair_style": {
+        "label": "Hair style",
+        "options": [
+          {
+            "id": "short",
+            "name": "Short"
+          },
+          {
+            "id": "cropped",
+            "name": "Cropped"
+          },
+          {
+            "id": "tousled",
+            "name": "Tousled"
+          },
+          {
+            "id": "long",
+            "name": "Long"
+          },
+          {
+            "id": "braided",
+            "name": "Braided"
+          },
+          {
+            "id": "topknot",
+            "name": "Topknot"
+          },
+          {
+            "id": "shaved",
+            "name": "Shaved"
+          }
+        ]
+      },
+      "hair_color": {
+        "label": "Hair colour",
+        "options": [
+          {
+            "id": "silver",
+            "name": "Silver",
+            "hex": "#ddd6d1"
+          },
+          {
+            "id": "black",
+            "name": "Black",
+            "hex": "#0f1418"
+          },
+          {
+            "id": "brown",
+            "name": "Brown",
+            "hex": "#3b2a1d"
+          },
+          {
+            "id": "ash",
+            "name": "Ash",
+            "hex": "#8b7355"
+          },
+          {
+            "id": "auburn",
+            "name": "Auburn",
+            "hex": "#7d3b2e"
+          },
+          {
+            "id": "gold",
+            "name": "Gold",
+            "hex": "#c9a961"
+          },
+          {
+            "id": "steel",
+            "name": "Steel",
+            "hex": "#959aa6"
+          },
+          {
+            "id": "lilac",
+            "name": "Lilac",
+            "hex": "#b9afc5"
+          }
+        ],
+        "custom": true
+      },
+      "eye_color": {
+        "label": "Eye colour",
+        "options": [
+          {
+            "id": "violet-grey",
+            "name": "Violet Grey",
+            "hex": "#777096"
+          },
+          {
+            "id": "blue",
+            "name": "Blue",
+            "hex": "#4a8fb0"
+          },
+          {
+            "id": "deep-blue",
+            "name": "Deep Blue",
+            "hex": "#3a6f8a"
+          },
+          {
+            "id": "green",
+            "name": "Green",
+            "hex": "#5b7a52"
+          },
+          {
+            "id": "brown",
+            "name": "Brown",
+            "hex": "#6b5334"
+          },
+          {
+            "id": "amber",
+            "name": "Amber",
+            "hex": "#b08a3e"
+          },
+          {
+            "id": "pale-grey",
+            "name": "Pale Grey",
+            "hex": "#8d9aa6"
+          },
+          {
+            "id": "near-black",
+            "name": "Near Black",
+            "hex": "#2b2f3a"
+          }
+        ],
+        "custom": true
+      },
+      "body_type": {
+        "label": "Build",
+        "options": [
+          {
+            "id": "average",
+            "name": "Average",
+            "scale": 1.0
+          },
+          {
+            "id": "slight",
+            "name": "Slight",
+            "scale": 0.94
+          },
+          {
+            "id": "lean",
+            "name": "Lean",
+            "scale": 0.97
+          },
+          {
+            "id": "sturdy",
+            "name": "Sturdy",
+            "scale": 1.04
+          },
+          {
+            "id": "broad",
+            "name": "Broad",
+            "scale": 1.08
+          }
+        ]
+      },
+      "face_shape": {
+        "label": "Face shape",
+        "options": [
+          {
+            "id": "balanced",
+            "name": "Balanced"
+          },
+          {
+            "id": "angular",
+            "name": "Angular"
+          },
+          {
+            "id": "round",
+            "name": "Round"
+          },
+          {
+            "id": "narrow",
+            "name": "Narrow"
+          },
+          {
+            "id": "soft",
+            "name": "Soft"
+          }
+        ]
+      },
+      "facial_marks": {
+        "label": "Facial marks",
+        "options": [
+          {
+            "id": "none",
+            "name": "None"
+          },
+          {
+            "id": "freckles",
+            "name": "Freckles"
+          },
+          {
+            "id": "cheek-scar",
+            "name": "Cheek scar"
+          },
+          {
+            "id": "war-paint",
+            "name": "War paint"
+          },
+          {
+            "id": "temple-mark",
+            "name": "Temple mark"
+          }
+        ]
+      },
+      "ear_shape": {
+        "label": "Ear shape",
+        "options": [
+          {
+            "id": "standard",
+            "name": "Standard"
+          },
+          {
+            "id": "pointed",
+            "name": "Pointed"
+          },
+          {
+            "id": "swept",
+            "name": "Swept"
+          },
+          {
+            "id": "notched",
+            "name": "Notched"
+          }
+        ]
+      },
+      "outfit": {
+        "label": "Everyday clothing",
+        "note": "Base clothing shown when no armour covers it; equipped armour overrides the coat treatment.",
+        "options": [
+          {
+            "id": "travel",
+            "name": "Travel Leathers",
+            "hex": "#6d594e"
+          },
+          {
+            "id": "tunic",
+            "name": "Plain Tunic",
+            "hex": "#6b7383"
+          },
+          {
+            "id": "coat",
+            "name": "Long Coat",
+            "hex": "#3f4a63"
+          },
+          {
+            "id": "robe",
+            "name": "Robe",
+            "hex": "#76628f"
+          },
+          {
+            "id": "vest",
+            "name": "Quilted Vest",
+            "hex": "#7a6a4f"
+          },
+          {
+            "id": "uniform",
+            "name": "Uniform",
+            "hex": "#4a5a5f"
+          }
+        ]
+      },
+      "cloth_color": {
+        "label": "Clothing dye",
+        "note": "Recolours the everyday clothing, tabards, surcoats, cloaks and shield faces. 'As outfit' keeps the outfit's own colour. Any colour may be chosen with the picker.",
+        "custom": true,
+        "options": [
+          {
+            "id": "as-outfit",
+            "name": "As outfit"
+          },
+          {
+            "id": "charcoal",
+            "name": "Charcoal",
+            "hex": "#2b2d33"
+          },
+          {
+            "id": "ivory",
+            "name": "Ivory",
+            "hex": "#e8e2d0"
+          },
+          {
+            "id": "crimson",
+            "name": "Crimson",
+            "hex": "#7a2f3a"
+          },
+          {
+            "id": "forest",
+            "name": "Forest",
+            "hex": "#3f5e45"
+          },
+          {
+            "id": "navy",
+            "name": "Navy",
+            "hex": "#2f3a5a"
+          },
+          {
+            "id": "plum",
+            "name": "Plum",
+            "hex": "#5e3f6b"
+          },
+          {
+            "id": "ochre",
+            "name": "Ochre",
+            "hex": "#a8762e"
+          },
+          {
+            "id": "slate",
+            "name": "Slate",
+            "hex": "#4a5a5f"
+          }
+        ]
+      },
+      "accent_color": {
+        "label": "Accent colour",
+        "note": "Trim, clasps, embroidery, helm crests and shield devices. Any colour may be chosen with the picker.",
+        "custom": true,
+        "options": [
+          {
+            "id": "gold",
+            "name": "Gold",
+            "hex": "#d9b56e"
+          },
+          {
+            "id": "silver",
+            "name": "Silver",
+            "hex": "#c9d1d9"
+          },
+          {
+            "id": "bronze",
+            "name": "Bronze",
+            "hex": "#b0824a"
+          },
+          {
+            "id": "crimson",
+            "name": "Crimson",
+            "hex": "#b33a3a"
+          },
+          {
+            "id": "azure",
+            "name": "Azure",
+            "hex": "#4a8fd0"
+          },
+          {
+            "id": "emerald",
+            "name": "Emerald",
+            "hex": "#3fa36b"
+          },
+          {
+            "id": "violet",
+            "name": "Violet",
+            "hex": "#8a5fd0"
+          },
+          {
+            "id": "bone",
+            "name": "Bone",
+            "hex": "#e8dfc8"
+          }
+        ]
+      },
+      "cloak_style": {
+        "label": "Cloak style",
+        "options": [
+          {
+            "id": "none",
+            "name": "None"
+          },
+          {
+            "id": "travel-cape",
+            "name": "Travel cape",
+            "visual": {
+              "layer_ids": [
+                "item:cloak"
+              ]
+            }
+          },
+          {
+            "id": "shoulder-mantle",
+            "name": "Shoulder mantle",
+            "visual": {
+              "layer_ids": [
+                "item:cloak"
+              ]
+            }
+          },
+          {
+            "id": "long-mantle",
+            "name": "Long mantle",
+            "visual": {
+              "layer_ids": [
+                "item:cloak"
+              ]
+            }
+          },
+          {
+            "id": "hooded-cloak",
+            "name": "Hooded cloak",
+            "visual": {
+              "layer_ids": [
+                "item:cloak",
+                "item:headgear"
+              ]
+            }
+          }
+        ]
+      },
+      "headgear_style": {
+        "label": "Headgear",
+        "options": [
+          {
+            "id": "none",
+            "name": "None"
+          },
+          {
+            "id": "hood",
+            "name": "Soft hood",
+            "visual": {
+              "layer_ids": [
+                "item:headgear"
+              ]
+            }
+          },
+          {
+            "id": "circlet",
+            "name": "Star circlet",
+            "visual": {
+              "layer_ids": [
+                "item:headgear"
+              ]
+            }
+          },
+          {
+            "id": "half-helm",
+            "name": "Half helm",
+            "visual": {
+              "layer_ids": [
+                "item:headgear"
+              ]
+            }
+          },
+          {
+            "id": "full-helm",
+            "name": "Full helm",
+            "visual": {
+              "layer_ids": [
+                "item:full-helm"
+              ]
+            }
+          }
+        ]
+      },
+      "weapon_style": {
+        "label": "Weapon style",
+        "options": [
+          {
+            "id": "plain",
+            "name": "Plain finish"
+          },
+          {
+            "id": "runed",
+            "name": "Rune-etched"
+          },
+          {
+            "id": "weathered",
+            "name": "Weathered"
+          },
+          {
+            "id": "ceremonial",
+            "name": "Ceremonial"
+          },
+          {
+            "id": "heavy",
+            "name": "Heavy guard"
+          }
+        ]
+      },
+      "offhand_style": {
+        "label": "Off-hand style",
+        "options": [
+          {
+            "id": "none",
+            "name": "None"
+          },
+          {
+            "id": "buckler",
+            "name": "Buckler"
+          },
+          {
+            "id": "kite-shield",
+            "name": "Kite shield"
+          },
+          {
+            "id": "tome",
+            "name": "Spell tome"
+          },
+          {
+            "id": "lantern",
+            "name": "Lantern"
+          }
+        ]
+      },
+      "trinket_style": {
+        "label": "Trinket style",
+        "options": [
+          {
+            "id": "none",
+            "name": "None"
+          },
+          {
+            "id": "pendant",
+            "name": "Pendant",
+            "visual": {
+              "layer_ids": [
+                "item:trinket"
+              ]
+            }
+          },
+          {
+            "id": "medal",
+            "name": "Medal",
+            "visual": {
+              "layer_ids": [
+                "item:trinket"
+              ]
+            }
+          },
+          {
+            "id": "talisman",
+            "name": "Talisman",
+            "visual": {
+              "layer_ids": [
+                "item:trinket"
+              ]
+            }
+          },
+          {
+            "id": "satchel",
+            "name": "Small satchel",
+            "visual": {
+              "layer_ids": [
+                "item:trinket"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "backgrounds": {
+    "veteran": {
+      "name": "Veteran",
+      "ability": "STR",
+      "gold": {
+        "dice": 2,
+        "sides": 6,
+        "bonus": 8
+      },
+      "gear": [
+        {
+          "name": "field medal",
+          "slot": "neck",
+          "flavor": "A mundane record of hard service."
+        },
+        {
+          "name": "whetstone",
+          "slot": "ring",
+          "flavor": "A mundane tool for maintaining a blade."
+        }
+      ]
+    },
+    "scout": {
+      "name": "Scout",
+      "ability": "DEX",
+      "gold": {
+        "dice": 2,
+        "sides": 4,
+        "bonus": 10
+      },
+      "gear": [
+        {
+          "name": "trail cloak",
+          "slot": "cloak",
+          "flavor": "A weathered but mundane travel cloak."
+        },
+        {
+          "name": "grapnel",
+          "slot": "hand",
+          "flavor": "A mundane climbing tool; it grants no combat attack."
+        }
+      ]
+    },
+    "laborer": {
+      "name": "Laborer",
+      "ability": "CON",
+      "gold": {
+        "dice": 1,
+        "sides": 10,
+        "bonus": 10
+      },
+      "gear": [
+        {
+          "name": "work gloves",
+          "slot": "hand",
+          "flavor": "Mundane gloves worn through honest work.",
+          "sprite_id": "wayfarer-scale-gloves"
+        },
+        {
+          "name": "canvas satchel",
+          "slot": "cloak",
+          "flavor": "A mundane satchel for personal effects.",
+          "sprite_id": "backpack"
+        }
+      ]
+    },
+    "scholar": {
+      "name": "Scholar",
+      "ability": "INT",
+      "gold": {
+        "dice": 2,
+        "sides": 8,
+        "bonus": 8
+      },
+      "gear": [
+        {
+          "name": "annotated folio",
+          "slot": "hand",
+          "flavor": "A personal folio full of private annotations.",
+          "sprite_id": "route-key"
+        },
+        {
+          "name": "ink vial",
+          "slot": "ring",
+          "flavor": "A sealed, mundane ink vial.",
+          "sprite_id": "prismatic-prism"
+        }
+      ]
+    },
+    "acolyte": {
+      "name": "Acolyte",
+      "ability": "WIS",
+      "gold": {
+        "dice": 3,
+        "sides": 4,
+        "bonus": 8
+      },
+      "gear": [
+        {
+          "name": "prayer beads",
+          "slot": "neck",
+          "flavor": "A personal devotional token with no mechanical effect.",
+          "sprite_id": "prayer-beads"
+        },
+        {
+          "name": "herb sachet",
+          "slot": "cloak",
+          "flavor": "A mundane bundle of dried herbs.",
+          "sprite_id": "herb-sachet"
+        }
+      ]
+    },
+    "envoy": {
+      "name": "Envoy",
+      "ability": "CHA",
+      "gold": {
+        "dice": 2,
+        "sides": 10,
+        "bonus": 8
+      },
+      "gear": [
+        {
+          "name": "signet ring",
+          "slot": "ring",
+          "flavor": "A personal signet with no mechanical effect.",
+          "sprite_id": "signet-ring"
+        },
+        {
+          "name": "formal scarf",
+          "slot": "cloak",
+          "flavor": "A well-kept but mundane formal scarf.",
+          "sprite_id": "cloak"
+        }
+      ]
+    }
+  },
+  "classes": {
+    "warrior": {
+      "name": "Warrior",
+      "hit_die": 10,
+      "primary": [
+        "STR",
+        "CON"
+      ],
+      "saves": [
+        "STR",
+        "CON"
+      ],
+      "skills": [
+        "Athletics",
+        "Intimidation",
+        "Perception",
+        "Survival"
+      ],
+      "skill_count": 2,
+      "features": [
+        "Second Wind",
+        "Extra Attack"
+      ],
+      "equipment": [
+        {
+          "name": "longsword",
+          "slot": "hand",
+          "damage_dice": "1d8",
+          "attack_ability": "STR",
+          "damage_type": "SLASHING",
+          "silhouette": "sword",
+          "sprite_id": "longsword"
+        },
+        {
+          "name": "chain mail",
+          "slot": "armor",
+          "base_ac": 16,
+          "dex_cap": 0,
+          "silhouette": "armor",
+          "material": "chain",
+          "sprite_id": "chain-shirt"
+        },
+        {
+          "name": "shield",
+          "slot": "hand",
+          "shield_bonus": 2,
+          "silhouette": "shield",
+          "sprite_id": "shield"
+        }
+      ]
+    },
+    "magician": {
+      "name": "Magician",
+      "hit_die": 6,
+      "primary": [
+        "INT",
+        "DEX"
+      ],
+      "saves": [
+        "INT",
+        "WIS"
+      ],
+      "skills": [
+        "Arcana",
+        "History",
+        "Insight",
+        "Investigation"
+      ],
+      "skill_count": 2,
+      "features": [
+        "Spellcasting",
+        "Arcane Bolt",
+        "Arcane Recovery"
+      ],
+      "spells": [
+        "Arcane Bolt@HSR",
+        "Light@5e",
+        "Mending@5e",
+        "Magic Missile@5e",
+        "Mage Armor@5e",
+        "Sleep@5e",
+        "Misty Step@5e",
+        "Scorching Ray@5e",
+        "Fireball@5e",
+        "Counterspell@5e",
+        "Hold Monster@5e",
+        "Forcecage@5e",
+        "Time Stop@5e",
+        "Gate@5e"
+      ],
+      "equipment": [
+        {
+          "name": "quarterstaff",
+          "slot": "hand",
+          "damage_dice": "1d6",
+          "attack_ability": "STR",
+          "damage_type": "BLUDGEONING",
+          "silhouette": "staff",
+          "sprite_id": "glaive"
+        },
+        {
+          "name": "traveler's robes",
+          "slot": "armor",
+          "base_ac": 10,
+          "silhouette": "armor",
+          "material": "robe",
+          "sprite_id": "voidborne-shroud"
+        },
+        {
+          "name": "arcane focus",
+          "slot": "neck",
+          "flavor": "A focus for Magician spellcasting.",
+          "silhouette": "trinket",
+          "sprite_id": "prismatic-prism"
+        }
+      ]
+    },
+    "archer": {
+      "name": "Archer",
+      "hit_die": 8,
+      "primary": [
+        "DEX",
+        "WIS"
+      ],
+      "saves": [
+        "DEX",
+        "WIS"
+      ],
+      "skills": [
+        "Acrobatics",
+        "Perception",
+        "Stealth",
+        "Survival"
+      ],
+      "skill_count": 2,
+      "features": [
+        "Aim",
+        "Extra Attack"
+      ],
+      "equipment": [
+        {
+          "name": "longbow",
+          "slot": "hand",
+          "damage_dice": "1d8",
+          "attack_ability": "DEX",
+          "damage_type": "PIERCING",
+          "range_normal": 150,
+          "range_long": 600,
+          "silhouette": "bow",
+          "sprite_id": "hunting-bow"
+        },
+        {
+          "name": "leather armor",
+          "slot": "armor",
+          "base_ac": 11,
+          "silhouette": "armor",
+          "material": "leather",
+          "sprite_id": "ashen-guard-cuirass"
+        }
+      ]
+    },
+    "rogue": {
+      "name": "Rogue",
+      "hit_die": 8,
+      "primary": [
+        "DEX",
+        "INT"
+      ],
+      "saves": [
+        "DEX",
+        "INT"
+      ],
+      "skills": [
+        "Acrobatics",
+        "Deception",
+        "Investigation",
+        "Perception",
+        "Sleight of Hand",
+        "Stealth"
+      ],
+      "skill_count": 2,
+      "features": [
+        "Sneak Attack",
+        "Expertise",
+        "Cunning Action"
+      ],
+      "equipment": [
+        {
+          "name": "shortsword",
+          "slot": "hand",
+          "damage_dice": "1d6",
+          "attack_ability": "DEX",
+          "damage_type": "PIERCING",
+          "silhouette": "sword",
+          "sprite_id": "rapier"
+        },
+        {
+          "name": "dagger",
+          "slot": "hand",
+          "damage_dice": "1d4",
+          "attack_ability": "DEX",
+          "damage_type": "PIERCING",
+          "range_normal": 20,
+          "range_long": 60,
+          "silhouette": "dagger",
+          "sprite_id": "silvered-dagger"
+        },
+        {
+          "name": "leather armor",
+          "slot": "armor",
+          "base_ac": 11,
+          "silhouette": "armor",
+          "material": "leather",
+          "sprite_id": "ashen-guard-cuirass"
+        },
+        {
+          "name": "thieves' tools",
+          "slot": "ring",
+          "flavor": "Tools for locks, mechanisms, and traps.",
+          "silhouette": "trinket",
+          "sprite_id": "fallback-tool"
+        }
+      ]
+    },
+    "cleric": {
+      "name": "Cleric",
+      "hit_die": 8,
+      "primary": [
+        "WIS",
+        "CON"
+      ],
+      "saves": [
+        "WIS",
+        "CHA"
+      ],
+      "skills": [
+        "History",
+        "Insight",
+        "Medicine",
+        "Persuasion",
+        "Religion"
+      ],
+      "skill_count": 2,
+      "features": [
+        "Spellcasting",
+        "Channel Grace"
+      ],
+      "spells": [
+        "Guidance@5e",
+        "Light@5e",
+        "Mending@5e",
+        "Resistance@5e",
+        "Sacred Flame@5e",
+        "Spare the Dying@5e",
+        "Thaumaturgy@5e",
+        "Bless@5e",
+        "Cure Wounds@5e",
+        "Detect Magic@5e",
+        "Guiding Bolt@5e",
+        "Healing Word@5e",
+        "Sanctuary@5e",
+        "Shield of Faith@5e",
+        "Aid@5e",
+        "Lesser Restoration@5e",
+        "Spiritual Weapon@5e",
+        "Zone of Truth@5e",
+        "Revivify@5e",
+        "Spirit Guardians@5e",
+        "Dispel Magic@5e",
+        "Banishment@5e",
+        "Greater Restoration@5e",
+        "Heal@5e",
+        "Resurrection@5e",
+        "Holy Aura@5e",
+        "Mass Heal@5e",
+        "True Resurrection@5e",
+        "Gate@5e"
+      ],
+      "equipment": [
+        {
+          "name": "mace",
+          "slot": "hand",
+          "damage_dice": "1d6",
+          "attack_ability": "STR",
+          "damage_type": "BLUDGEONING",
+          "silhouette": "mace",
+          "sprite_id": "mace"
+        },
+        {
+          "name": "scale mail",
+          "slot": "armor",
+          "base_ac": 14,
+          "dex_cap": 2,
+          "silhouette": "armor",
+          "material": "chain",
+          "sprite_id": "scale-mail"
+        },
+        {
+          "name": "shield",
+          "slot": "hand",
+          "shield_bonus": 2,
+          "silhouette": "shield",
+          "sprite_id": "shield"
+        },
+        {
+          "name": "holy focus",
+          "slot": "neck",
+          "flavor": "A focus for Cleric spellcasting.",
+          "silhouette": "trinket",
+          "sprite_id": "holy-focus"
+        }
+      ]
+    }
+  },
+  "origin_table": [
+    {
+      "id": "family-letter",
+      "name": "family letter",
+      "category": "keepsake",
+      "weight": 9,
+      "slot": "cloak",
+      "flavor": "+1 when an authored social connection recognizes its names.",
+      "hook": "family_connection_1",
+      "sprite_id": "route-key"
+    },
+    {
+      "id": "weathered-map",
+      "name": "weathered map",
+      "category": "keepsake",
+      "weight": 9,
+      "slot": "cloak",
+      "flavor": "+1 to investigate or avoid a mapped route.",
+      "hook": "route_clue_1",
+      "sprite_id": "route-key"
+    },
+    {
+      "id": "old-lantern",
+      "name": "old lantern",
+      "category": "keepsake",
+      "weight": 9,
+      "slot": "hand",
+      "flavor": "+1 to investigate a dark or hazardous room.",
+      "hook": "light_source_1",
+      "sprite_id": "old-lantern"
+    },
+    {
+      "id": "memory-ribbon",
+      "name": "memory ribbon",
+      "category": "keepsake",
+      "weight": 9,
+      "slot": "cloak",
+      "flavor": "+1 to a negotiation grounded in home or kin.",
+      "hook": "family_connection_1",
+      "sprite_id": "cloak"
+    },
+    {
+      "id": "trade-token",
+      "name": "old trade token",
+      "category": "keepsake",
+      "weight": 9,
+      "slot": "ring",
+      "flavor": "+1 when negotiating in a shop or market.",
+      "hook": "trade_token_1",
+      "sprite_id": "coin-pouch"
+    },
+    {
+      "id": "balanced-tools",
+      "name": "balanced tools",
+      "category": "tool",
+      "weight": 6,
+      "slot": "ring",
+      "flavor": "+2 on an explicitly tagged mechanism check.",
+      "hook": "tool_mechanism_2",
+      "sprite_id": "fallback-tool"
+    },
+    {
+      "id": "climber-kit",
+      "name": "climber's kit",
+      "category": "tool",
+      "weight": 6,
+      "slot": "cloak",
+      "flavor": "+2 on an avoidance or escape route.",
+      "hook": "tool_climb_2",
+      "sprite_id": "fallback-tool"
+    },
+    {
+      "id": "field-kit",
+      "name": "field medic's kit",
+      "category": "tool",
+      "weight": 6,
+      "slot": "cloak",
+      "flavor": "+2 while investigating a hazard for injuries or safe handling.",
+      "hook": "tool_medicine_2",
+      "sprite_id": "fallback-tool"
+    },
+    {
+      "id": "survey-lens",
+      "name": "survey lens",
+      "category": "tool",
+      "weight": 6,
+      "slot": "head",
+      "flavor": "+2 while investigating a room's construction.",
+      "hook": "tool_scout_2",
+      "sprite_id": "survey-lens"
+    },
+    {
+      "id": "marked-cards",
+      "name": "marked cards",
+      "category": "tool",
+      "weight": 6,
+      "slot": "ring",
+      "flavor": "+2 to one negotiation that permits misdirection.",
+      "hook": "tool_deception_2",
+      "sprite_id": "route-key"
+    },
+    {
+      "id": "wayfinder-amulet",
+      "name": "Wayfinder Amulet",
+      "category": "heirloom",
+      "weight": 4,
+      "slot": "neck",
+      "flavor": "After a failed trap check, a visible 25% roll can negate that trap trigger once.",
+      "hook": "wayfinder_25",
+      "sprite_id": "holy-focus"
+    },
+    {
+      "id": "ancestor-ring",
+      "name": "ancestor ring",
+      "category": "heirloom",
+      "weight": 4,
+      "slot": "ring",
+      "flavor": "+1 to an authored kinship or legacy check.",
+      "hook": "legacy_1",
+      "sprite_id": "signet-ring"
+    },
+    {
+      "id": "guard-clasp",
+      "name": "old guard clasp",
+      "category": "heirloom",
+      "weight": 4,
+      "slot": "cloak",
+      "flavor": "+1 to avoid a physical hazard or forced route.",
+      "hook": "brace_1",
+      "sprite_id": "cloak"
+    },
+    {
+      "id": "ward-thread",
+      "name": "grandmother's ward thread",
+      "category": "heirloom",
+      "weight": 4,
+      "slot": "cloak",
+      "flavor": "+1 when disarming a hazard.",
+      "hook": "ward_thread_1",
+      "sprite_id": "cloak"
+    },
+    {
+      "id": "pilgrim-cup",
+      "name": "pilgrim's cup",
+      "category": "heirloom",
+      "weight": 4,
+      "slot": "ring",
+      "flavor": "+1 when investigating the safety of a rest site.",
+      "hook": "safe_rest_1",
+      "sprite_id": "goblet"
+    },
+    {
+      "id": "whisper-coin",
+      "name": "whisper coin",
+      "category": "oddity",
+      "weight": 1,
+      "slot": "ring",
+      "flavor": "+2 while investigating a secret room or passage.",
+      "hook": "passage_warmth_2",
+      "sprite_id": "coin-pouch"
+    },
+    {
+      "id": "ember-glass",
+      "name": "ember glass",
+      "category": "oddity",
+      "weight": 1,
+      "slot": "neck",
+      "flavor": "+1 while investigating a dark or hazardous room.",
+      "hook": "ember_light_1"
+    },
+    {
+      "id": "echo-key",
+      "name": "echo key",
+      "category": "oddity",
+      "weight": 1,
+      "slot": "ring",
+      "flavor": "+1 while investigating a mechanical or enclosed room.",
+      "hook": "echo_tone_1"
+    },
+    {
+      "id": "truth-glint",
+      "name": "truth glint",
+      "category": "oddity",
+      "weight": 1,
+      "slot": "neck",
+      "flavor": "+1 during a negotiation with a visible resident.",
+      "hook": "truth_glint_1"
+    },
+    {
+      "id": "salvage-tug",
+      "name": "salvage tug",
+      "category": "oddity",
+      "weight": 1,
+      "slot": "ring",
+      "flavor": "+1 when avoiding a hazard or searching a scrap field.",
+      "hook": "salvage_luck_1"
+    }
+  ]
+}

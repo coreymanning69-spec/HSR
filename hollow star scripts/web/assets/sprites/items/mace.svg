@@ -1,0 +1,17 @@
+<svg viewBox="0 0 24 96" xmlns="http://www.w3.org/2000/svg">
+  <!-- Haft -->
+  <rect x="10" y="24" width="4" height="66" fill="#5c4033"/>
+  <rect x="10" y="24" width="2" height="66" fill="#8b7355"/>
+  <rect x="9" y="70" width="6" height="16" fill="#423024"/>
+  <!-- Pommel -->
+  <circle cx="12" cy="91" r="3" fill="#6b7280"/>
+  <!-- Flanges & Core -->
+  <rect x="8" y="10" width="8" height="18" rx="2" fill="#52575e"/>
+  <polygon points="12,6 16,14 16,24 12,28 8,24 8,14" fill="#9ca3af"/>
+  <polygon points="12,6 8,14 8,24 12,28" fill="#6b7280"/>
+  <!-- Side flanges -->
+  <polygon points="4,13 8,15 8,23 4,21" fill="#4b5563"/>
+  <polygon points="20,13 16,15 16,23 20,21" fill="#9ca3af"/>
+  <!-- Top spike -->
+  <polygon points="12,2 14,7 10,7" fill="#d1d5db"/>
+</svg>

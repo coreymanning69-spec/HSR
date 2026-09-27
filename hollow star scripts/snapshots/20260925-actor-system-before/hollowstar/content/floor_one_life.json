@@ -1,0 +1,1628 @@
+{
+  "schema": "hollow-star-floor-one-life-1",
+  "catalog_version": "2026-09-08",
+  "status": "editable DESIGN fixture; non-canon persistent-world population. Merged 2026-09-09 with the richer eight-resident metadata fixture (residents.json, now superseded) per the Hollow Star terminal-runs and social-depth spec: all eighteen named residents now carry tier, species, class, disposition_base, stances, traits, relationships, offers, tells, possessions, child, and tier_scaling. The ten residents outside the original eight carry modest authored defaults rather than a full relationship web -- that depth is an open authoring item.",
+  "locations": [
+    {
+      "id": "market",
+      "name": "Market Square",
+      "description": "Stalls crowd the well-road beneath shuttered windows.",
+      "tells": [
+        "Copper clasps flash when locals close ranks."
+      ],
+      "exits": [
+        "well",
+        "tavern",
+        "guardhouse",
+        "alley"
+      ],
+      "objects": {
+        "stall-ledger": {
+          "name": "merchant ledger",
+          "fixed": true
+        },
+        "apple-crate": {
+          "name": "apple crate",
+          "container": true,
+          "open": false
+        }
+      },
+      "bodies": []
+    },
+    {
+      "id": "well",
+      "name": "The Old Well",
+      "description": "A rope, weighted platform, and old waterwheel dominate the square.",
+      "tells": [
+        "The rope is newer than the stonework."
+      ],
+      "exits": [
+        "market",
+        "waterwheel",
+        "shrine"
+      ],
+      "objects": {
+        "well-rope": {
+          "name": "well rope",
+          "fixed": true
+        },
+        "sealed-chest": {
+          "name": "sealed chest",
+          "container": true,
+          "open": false
+        }
+      },
+      "bodies": []
+    },
+    {
+      "id": "waterwheel",
+      "name": "Waterwheel Yard",
+      "description": "Wet boards lead behind a locked, groaning wheel.",
+      "tells": [
+        "The wheel stops briefly at the top of every hour."
+      ],
+      "exits": [
+        "well",
+        "warehouse"
+      ],
+      "objects": {
+        "old-waterwheel": {
+          "name": "old waterwheel",
+          "fixed": true
+        },
+        "toolbox": {
+          "name": "toolbox",
+          "container": true,
+          "open": false
+        }
+      },
+      "bodies": []
+    },
+    {
+      "id": "tavern",
+      "name": "The Crooked Crown",
+      "description": "A low tavern full of heat, gossip, and eyes on the door.",
+      "tells": [
+        "The bar has been repaired after a recent fire."
+      ],
+      "exits": [
+        "market",
+        "rooms"
+      ],
+      "objects": {
+        "bar": {
+          "name": "bar",
+          "fixed": true
+        },
+        "lost-purse": {
+          "name": "lost purse",
+          "container": true,
+          "open": false
+        }
+      },
+      "bodies": []
+    },
+    {
+      "id": "rooms",
+      "name": "Tavern Rooms",
+      "description": "Narrow rented rooms and a creaking back stair.",
+      "tells": [
+        "Someone has scratched route marks beneath the banister."
+      ],
+      "exits": [
+        "tavern",
+        "alley"
+      ],
+      "objects": {
+        "wardrobe": {
+          "name": "wardrobe",
+          "container": true,
+          "open": false
+        }
+      },
+      "bodies": []
+    },
+    {
+      "id": "guardhouse",
+      "name": "Guardhouse",
+      "description": "A bell rack, weapon pegs, and a public charge board face the square.",
+      "tells": [
+        "The bell rope is within arm's reach of the front desk."
+      ],
+      "exits": [
+        "market",
+        "shrine"
+      ],
+      "objects": {
+        "alarm-bell": {
+          "name": "alarm bell",
+          "fixed": true
+        },
+        "evidence-locker": {
+          "name": "evidence locker",
+          "container": true,
+          "open": false
+        }
+      },
+      "bodies": []
+    },
+    {
+      "id": "alley",
+      "name": "Cinder Alley",
+      "description": "Back doors, ash bins, and two routes nobody watches at once.",
+      "tells": [
+        "Fresh boot marks stop beside a bricked window."
+      ],
+      "exits": [
+        "market",
+        "tavern",
+        "rooms",
+        "warehouse",
+        "homes"
+      ],
+      "objects": {
+        "ash-bin": {
+          "name": "ash bin",
+          "container": true,
+          "open": false
+        }
+      },
+      "bodies": []
+    },
+    {
+      "id": "warehouse",
+      "name": "North Warehouse",
+      "description": "Ropes, crates, and damp grain rise into a dark loft.",
+      "tells": [
+        "A ledger nail has been driven through a shipping seal."
+      ],
+      "exits": [
+        "alley",
+        "waterwheel",
+        "docks"
+      ],
+      "objects": {
+        "relic-crate": {
+          "name": "relic crate",
+          "container": true,
+          "open": false
+        },
+        "grain-stack": {
+          "name": "grain stack",
+          "fixed": true
+        }
+      },
+      "bodies": []
+    },
+    {
+      "id": "shrine",
+      "name": "Roadside Shrine",
+      "description": "Small offerings sit beneath a lamp that is never allowed to go out.",
+      "tells": [
+        "The wax drips uphill."
+      ],
+      "exits": [
+        "well",
+        "guardhouse",
+        "homes"
+      ],
+      "objects": {
+        "bronze-altar": {
+          "name": "bronze altar",
+          "fixed": true
+        },
+        "offering-bowl": {
+          "name": "offering bowl",
+          "container": true,
+          "open": false
+        }
+      },
+      "bodies": []
+    },
+    {
+      "id": "homes",
+      "name": "Workers' Homes",
+      "description": "Close-set homes share wash lines, vegetable plots, and watchful neighbors.",
+      "tells": [
+        "Every back gate opens inward except one."
+      ],
+      "exits": [
+        "alley",
+        "shrine",
+        "docks"
+      ],
+      "objects": {
+        "wash-line": {
+          "name": "wash line",
+          "fixed": true
+        },
+        "coal-shed": {
+          "name": "coal shed",
+          "container": true,
+          "open": false
+        }
+      },
+      "bodies": []
+    },
+    {
+      "id": "docks",
+      "name": "Canal Docks",
+      "description": "Flatboats, tied cargo, and black water sit beyond the market noise.",
+      "tells": [
+        "One mooring rope is cut halfway through."
+      ],
+      "exits": [
+        "homes",
+        "warehouse",
+        "camp"
+      ],
+      "objects": {
+        "tied-skiff": {
+          "name": "tied skiff",
+          "fixed": true
+        },
+        "smuggler-chest": {
+          "name": "smuggler chest",
+          "container": true,
+          "open": false
+        }
+      },
+      "bodies": []
+    },
+    {
+      "id": "camp",
+      "name": "Bandit Camp",
+      "description": "A rough camp lies beyond the town patrol's comfortable reach.",
+      "tells": [
+        "The sentry watches the town, not the road."
+      ],
+      "exits": [
+        "docks"
+      ],
+      "objects": {
+        "campfire": {
+          "name": "campfire",
+          "fixed": true
+        },
+        "bandit-cache": {
+          "name": "bandit cache",
+          "container": true,
+          "open": false
+        }
+      },
+      "bodies": []
+    }
+  ],
+  "classes": [
+    "townsfolk",
+    "trader",
+    "guard",
+    "bandit",
+    "dancer",
+    "noble",
+    "clergy",
+    "labourer",
+    "child",
+    "goblin",
+    "beast"
+  ],
+  "species": {
+    "human": {
+      "traits": [
+        "SPEAKS_COMMON",
+        "HANDS",
+        "BIPED"
+      ],
+      "size": "medium",
+      "reads_as": "townsfolk",
+      "reaction_bias": {},
+      "denies": []
+    },
+    "goblin": {
+      "traits": [
+        "SPEAKS_COMMON",
+        "SPEAKS_GOBLIN",
+        "HANDS",
+        "BIPED",
+        "SMALL",
+        "DARKVISION"
+      ],
+      "size": "small",
+      "reads_as": "goblin",
+      "reaction_bias": {
+        "townsfolk": -3,
+        "guard": -4,
+        "trader": -2,
+        "clergy": -3,
+        "noble": -4,
+        "bandit": 1,
+        "goblin": 4,
+        "child": -1,
+        "labourer": -2,
+        "dancer": -1,
+        "beast": 0
+      },
+      "denies": []
+    },
+    "wolf": {
+      "traits": [
+        "BEAST",
+        "QUADRUPED",
+        "SCENT",
+        "FAST",
+        "NO_SPEECH"
+      ],
+      "size": "medium",
+      "reads_as": "beast",
+      "reaction_bias": {
+        "townsfolk": -5,
+        "guard": -5,
+        "trader": -4,
+        "clergy": -4,
+        "noble": -5,
+        "bandit": -2,
+        "goblin": -1,
+        "child": -3,
+        "labourer": -4,
+        "dancer": -3,
+        "beast": 4
+      },
+      "denies": [
+        "wield",
+        "open_object",
+        "buy",
+        "identify",
+        "combine",
+        "negotiate"
+      ],
+      "grants": [
+        "scent_track",
+        "silent_move",
+        "panic_livestock"
+      ]
+    }
+  },
+  "time_of_day": {
+    "morning": {
+      "order": 0,
+      "modifier": 0
+    },
+    "day": {
+      "order": 1,
+      "modifier": 1
+    },
+    "evening": {
+      "order": 2,
+      "modifier": 0
+    },
+    "night": {
+      "order": 3,
+      "modifier": -2
+    }
+  },
+  "reaction_bands": [
+    {
+      "id": "hostile",
+      "max": 2,
+      "label": "hostile"
+    },
+    {
+      "id": "wary",
+      "max": 5,
+      "label": "wary"
+    },
+    {
+      "id": "neutral",
+      "max": 8,
+      "label": "neutral"
+    },
+    {
+      "id": "warm",
+      "max": 11,
+      "label": "warm"
+    },
+    {
+      "id": "helpful",
+      "max": 99,
+      "label": "helpful"
+    }
+  ],
+  "filler_pool": [
+    {
+      "id": "labourer",
+      "class": "labourer",
+      "weight": 5,
+      "condition": [
+        "tired",
+        "soot-stained",
+        "sober"
+      ]
+    },
+    {
+      "id": "drinker",
+      "class": "townsfolk",
+      "weight": 4,
+      "condition": [
+        "drunk",
+        "loud",
+        "maudlin"
+      ]
+    },
+    {
+      "id": "elder",
+      "class": "townsfolk",
+      "weight": 3,
+      "condition": [
+        "frail",
+        "watchful",
+        "coughing"
+      ]
+    },
+    {
+      "id": "street_kid",
+      "class": "child",
+      "weight": 3,
+      "condition": [
+        "hungry",
+        "cold",
+        "underfoot",
+        "quick"
+      ]
+    },
+    {
+      "id": "beggar",
+      "class": "townsfolk",
+      "weight": 3,
+      "condition": [
+        "ignored",
+        "sick",
+        "persistent"
+      ]
+    },
+    {
+      "id": "porter",
+      "class": "labourer",
+      "weight": 3,
+      "condition": [
+        "overloaded",
+        "hurried"
+      ]
+    },
+    {
+      "id": "hedge_priest",
+      "class": "clergy",
+      "weight": 2,
+      "condition": [
+        "threadbare",
+        "earnest"
+      ]
+    },
+    {
+      "id": "off_guard",
+      "class": "guard",
+      "weight": 2,
+      "condition": [
+        "off-duty",
+        "half-armoured"
+      ]
+    },
+    {
+      "id": "hawker",
+      "class": "trader",
+      "weight": 2,
+      "condition": [
+        "insistent",
+        "cheerful"
+      ]
+    },
+    {
+      "id": "cutpurse",
+      "class": "bandit",
+      "weight": 2,
+      "condition": [
+        "idle",
+        "watching hands"
+      ]
+    }
+  ],
+  "memory_policy": {
+    "across_runs": "none",
+    "note": "Identity recurs, memory does not. A resident is the same person every run and meets the party as strangers each time. Disposition accumulates within a run only."
+  },
+  "residents": [
+    {
+      "id": "marta-vell",
+      "name": "Marta Vell",
+      "role": "Wellkeeper",
+      "faction": "town",
+      "location": "well",
+      "schedule": [
+        "well",
+        "well",
+        "market",
+        "homes"
+      ],
+      "hp": 9,
+      "tell": "She counts the room before she counts your coin.",
+      "tier": "known",
+      "species": "human",
+      "class": "townsfolk",
+      "disposition_base": 1,
+      "stances": {
+        "bandit": -4,
+        "guard": 1,
+        "goblin": -3,
+        "beast": -5,
+        "child": 3,
+        "trader": 1,
+        "clergy": 2,
+        "noble": -1,
+        "labourer": 1,
+        "dancer": 0,
+        "townsfolk": 2
+      },
+      "traits": [
+        "watchful",
+        "closes-ranks",
+        "fire-shy"
+      ],
+      "relationships": [
+        {
+          "target": "wick",
+          "kind": "protects",
+          "weight": 3
+        },
+        {
+          "target": "oben-sarkey",
+          "kind": "owes",
+          "weight": 2
+        },
+        {
+          "target": "corvin-hask",
+          "kind": "fears",
+          "weight": 3
+        }
+      ],
+      "offers": {
+        "quest": true,
+        "shop": false,
+        "identify": true
+      },
+      "anchor": {
+        "floors": [
+          1
+        ],
+        "room_kinds": [
+          "social"
+        ],
+        "certainty": 1.0
+      },
+      "presence": {
+        "morning": 1.0,
+        "day": 1.0,
+        "evening": 0.9,
+        "night": 0.3
+      },
+      "tells": [
+        "She counts the room before she counts your coin.",
+        "Her hand stays on the well-rope the whole time she talks."
+      ],
+      "possessions": [
+        "a ledger of who owes the well",
+        "a bronze well-key"
+      ],
+      "child": false,
+      "tier_scaling": {
+        "power_class": "civilian",
+        "gear_budget": 1,
+        "hostility_floor": "hostile"
+      }
+    },
+    {
+      "id": "oben-sarkey",
+      "name": "Oben Sarkey",
+      "role": "Traveling merchant",
+      "faction": "traders",
+      "location": "market",
+      "schedule": [
+        "market",
+        "market",
+        "tavern",
+        "rooms"
+      ],
+      "hp": 8,
+      "tell": "He prices you before he greets you.",
+      "tier": "known",
+      "species": "human",
+      "class": "trader",
+      "disposition_base": 2,
+      "stances": {
+        "bandit": -2,
+        "guard": 0,
+        "goblin": 1,
+        "beast": -3,
+        "child": 0,
+        "trader": 2,
+        "clergy": 0,
+        "noble": 2,
+        "labourer": 1,
+        "dancer": 1,
+        "townsfolk": 1
+      },
+      "traits": [
+        "greedy",
+        "unshockable",
+        "well-travelled"
+      ],
+      "relationships": [
+        {
+          "target": "skarn",
+          "kind": "trades-with",
+          "weight": 2
+        },
+        {
+          "target": "marta-vell",
+          "kind": "owed-by",
+          "weight": 2
+        }
+      ],
+      "offers": {
+        "quest": false,
+        "shop": true,
+        "identify": true
+      },
+      "anchor": {
+        "floors": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "room_kinds": [
+          "shop"
+        ],
+        "certainty": 0.95
+      },
+      "presence": {
+        "morning": 0.8,
+        "day": 1.0,
+        "evening": 1.0,
+        "night": 0.4
+      },
+      "tells": [
+        "He prices you before he greets you, and does not hide it.",
+        "Nothing you are carrying surprises him, which is its own information."
+      ],
+      "possessions": [
+        "a locked sample case",
+        "a counterfeit-catching loupe"
+      ],
+      "child": false,
+      "tier_scaling": {
+        "power_class": "skilled",
+        "gear_budget": 2,
+        "hostility_floor": "hostile"
+      }
+    },
+    {
+      "id": "halgrim-tosk",
+      "name": "Halgrim Tosk",
+      "role": "Works foreman",
+      "faction": "town",
+      "location": "warehouse",
+      "schedule": [
+        "warehouse",
+        "waterwheel",
+        "warehouse",
+        "tavern"
+      ],
+      "hp": 10,
+      "tell": "He looks at the door more than he looks at you.",
+      "tier": "known",
+      "species": "human",
+      "class": "labourer",
+      "disposition_base": 0,
+      "stances": {
+        "bandit": -3,
+        "guard": -1,
+        "goblin": -2,
+        "beast": -4,
+        "child": 1,
+        "trader": 0,
+        "clergy": -1,
+        "noble": -3,
+        "labourer": 3,
+        "dancer": -1,
+        "townsfolk": 1
+      },
+      "traits": [
+        "blunt",
+        "exhausted",
+        "protective-of-crew"
+      ],
+      "relationships": [
+        {
+          "target": "bren-aldis",
+          "kind": "protects",
+          "weight": 2
+        },
+        {
+          "target": "nessa-quill",
+          "kind": "resents",
+          "weight": 2
+        }
+      ],
+      "offers": {
+        "quest": true,
+        "shop": false,
+        "identify": false
+      },
+      "anchor": {
+        "floors": [
+          2
+        ],
+        "room_kinds": [
+          "social",
+          "shop"
+        ],
+        "certainty": 0.9
+      },
+      "presence": {
+        "morning": 1.0,
+        "day": 1.0,
+        "evening": 0.6,
+        "night": 0.1
+      },
+      "tells": [
+        "He answers with his hands still working.",
+        "He looks at the door more than he looks at you."
+      ],
+      "possessions": [
+        "a foreman's tally-board",
+        "a crew roster with names crossed out"
+      ],
+      "child": false,
+      "tier_scaling": {
+        "power_class": "civilian",
+        "gear_budget": 1,
+        "hostility_floor": "hostile"
+      }
+    },
+    {
+      "id": "nessa-quill",
+      "name": "Nessa Quill",
+      "role": "Ledger scribe",
+      "faction": "town",
+      "location": "market",
+      "schedule": [
+        "market",
+        "guardhouse",
+        "tavern",
+        "homes"
+      ],
+      "hp": 7,
+      "tell": "She writes while you are still speaking.",
+      "tier": "familiar",
+      "species": "human",
+      "class": "clergy",
+      "disposition_base": 1,
+      "stances": {
+        "bandit": -3,
+        "guard": 2,
+        "goblin": -1,
+        "beast": -3,
+        "child": 1,
+        "trader": 1,
+        "clergy": 2,
+        "noble": 2,
+        "labourer": -1,
+        "dancer": -1,
+        "townsfolk": 0
+      },
+      "traits": [
+        "precise",
+        "incurious-by-training",
+        "indebted"
+      ],
+      "relationships": [
+        {
+          "target": "halgrim-tosk",
+          "kind": "resented-by",
+          "weight": 2
+        },
+        {
+          "target": "corvin-hask",
+          "kind": "owes",
+          "weight": 3
+        }
+      ],
+      "offers": {
+        "quest": true,
+        "shop": false,
+        "identify": true
+      },
+      "floor_affinity": {
+        "1": 0.6,
+        "2": 0.9,
+        "3": 0.7,
+        "4": 0.3,
+        "5": 0.1
+      },
+      "presence": {
+        "morning": 0.9,
+        "day": 1.0,
+        "evening": 0.5,
+        "night": 0.2
+      },
+      "tells": [
+        "She writes down what you say while you are still saying it.",
+        "She will not meet the eye of anyone she has written about."
+      ],
+      "possessions": [
+        "a satchel of sealed ledgers",
+        "a debt-marker owed to Corvin Hask"
+      ],
+      "child": false,
+      "tier_scaling": {
+        "power_class": "skilled",
+        "gear_budget": 2,
+        "hostility_floor": "hostile"
+      }
+    },
+    {
+      "id": "bren-aldis",
+      "name": "Bren Aldis",
+      "role": "Smith apprentice",
+      "faction": "town",
+      "location": "waterwheel",
+      "schedule": [
+        "waterwheel",
+        "warehouse",
+        "market",
+        "tavern"
+      ],
+      "hp": 8,
+      "tell": "His sleeves are burned through at the forearm.",
+      "tier": "familiar",
+      "species": "human",
+      "class": "labourer",
+      "disposition_base": 2,
+      "stances": {
+        "bandit": -2,
+        "guard": 0,
+        "goblin": 0,
+        "beast": -2,
+        "child": 2,
+        "trader": 1,
+        "clergy": 0,
+        "noble": -1,
+        "labourer": 2,
+        "dancer": 2,
+        "townsfolk": 2
+      },
+      "traits": [
+        "eager",
+        "talks-too-much",
+        "underfed"
+      ],
+      "relationships": [
+        {
+          "target": "halgrim-tosk",
+          "kind": "protected-by",
+          "weight": 2
+        },
+        {
+          "target": "wick",
+          "kind": "feeds",
+          "weight": 2
+        }
+      ],
+      "offers": {
+        "quest": false,
+        "shop": true,
+        "identify": false
+      },
+      "floor_affinity": {
+        "1": 0.8,
+        "2": 0.9,
+        "3": 0.4,
+        "4": 0.2,
+        "5": 0.05
+      },
+      "presence": {
+        "morning": 0.7,
+        "day": 1.0,
+        "evening": 0.9,
+        "night": 0.3
+      },
+      "tells": [
+        "He tells you three things you did not ask for before he answers the one you did.",
+        "His sleeves are burned through at the forearm and he has stopped noticing."
+      ],
+      "possessions": [
+        "a half-finished blade",
+        "a burn-scarred apron"
+      ],
+      "child": false,
+      "tier_scaling": {
+        "power_class": "civilian",
+        "gear_budget": 1,
+        "hostility_floor": "hostile"
+      }
+    },
+    {
+      "id": "skarn",
+      "name": "Skarn",
+      "role": "Goblin tinker",
+      "faction": "traders",
+      "location": "alley",
+      "schedule": [
+        "rooms",
+        "market",
+        "alley",
+        "warehouse"
+      ],
+      "hp": 7,
+      "tell": "He is already looking at exits when you notice him.",
+      "tier": "familiar",
+      "species": "goblin",
+      "class": "goblin",
+      "disposition_base": 0,
+      "stances": {
+        "bandit": 0,
+        "guard": -4,
+        "goblin": 4,
+        "beast": 1,
+        "child": 2,
+        "trader": 2,
+        "clergy": -2,
+        "noble": -3,
+        "labourer": 1,
+        "dancer": 0,
+        "townsfolk": -1
+      },
+      "traits": [
+        "nocturnal",
+        "hoards-scrap",
+        "reads-rooms-fast"
+      ],
+      "relationships": [
+        {
+          "target": "oben-sarkey",
+          "kind": "trades-with",
+          "weight": 2
+        },
+        {
+          "target": "corvin-hask",
+          "kind": "avoids",
+          "weight": 2
+        }
+      ],
+      "offers": {
+        "quest": true,
+        "shop": true,
+        "identify": true
+      },
+      "floor_affinity": {
+        "1": 0.5,
+        "2": 0.9,
+        "3": 0.8,
+        "4": 0.5,
+        "5": 0.2
+      },
+      "presence": {
+        "morning": 0.3,
+        "day": 0.6,
+        "evening": 0.9,
+        "night": 1.0
+      },
+      "tells": [
+        "He is already looking at the exits when you notice him.",
+        "He speaks Common carefully, like it costs him something."
+      ],
+      "possessions": [
+        "a hoard of sorted scrap",
+        "a device nobody else can identify"
+      ],
+      "child": false,
+      "tier_scaling": {
+        "power_class": "skilled",
+        "gear_budget": 2,
+        "hostility_floor": "hostile"
+      }
+    },
+    {
+      "id": "wick",
+      "name": "Wick",
+      "role": "Runner",
+      "faction": "town",
+      "location": "market",
+      "schedule": [
+        "homes",
+        "market",
+        "well",
+        "tavern"
+      ],
+      "hp": 4,
+      "tell": "He knows which doors are unlocked.",
+      "tier": "familiar",
+      "species": "human",
+      "class": "child",
+      "disposition_base": 1,
+      "stances": {
+        "bandit": -1,
+        "guard": -3,
+        "goblin": 1,
+        "beast": -1,
+        "child": 3,
+        "trader": 1,
+        "clergy": 0,
+        "noble": 0,
+        "labourer": 2,
+        "dancer": 2,
+        "townsfolk": 1
+      },
+      "traits": [
+        "hungry",
+        "fast",
+        "knows-every-door"
+      ],
+      "relationships": [
+        {
+          "target": "marta-vell",
+          "kind": "protected-by",
+          "weight": 3
+        },
+        {
+          "target": "bren-aldis",
+          "kind": "fed-by",
+          "weight": 2
+        }
+      ],
+      "offers": {
+        "quest": true,
+        "shop": false,
+        "identify": false
+      },
+      "floor_affinity": {
+        "1": 1.0,
+        "2": 0.7,
+        "3": 0.3,
+        "4": 0.1,
+        "5": 0.0
+      },
+      "presence": {
+        "morning": 0.8,
+        "day": 1.0,
+        "evening": 0.7,
+        "night": 0.4
+      },
+      "tells": [
+        "He is thinner than the other children and faster than all of them.",
+        "He knows which doors are unlocked and will sell you that for bread."
+      ],
+      "possessions": [
+        "a stub of chalk for marking doors",
+        "a stale heel of bread saved for later"
+      ],
+      "child": true,
+      "tier_scaling": {
+        "power_class": "civilian",
+        "gear_budget": 1,
+        "hostility_floor": "hostile"
+      }
+    },
+    {
+      "id": "corvin-hask",
+      "name": "Corvin Hask",
+      "role": "Debt collector",
+      "faction": "bandits",
+      "location": "tavern",
+      "schedule": [
+        "rooms",
+        "market",
+        "tavern",
+        "alley"
+      ],
+      "hp": 9,
+      "tell": "The room quiets before you learn why.",
+      "tier": "familiar",
+      "species": "human",
+      "class": "bandit",
+      "disposition_base": -2,
+      "stances": {
+        "bandit": 3,
+        "guard": -4,
+        "goblin": -1,
+        "beast": -2,
+        "child": -1,
+        "trader": 1,
+        "clergy": -1,
+        "noble": 1,
+        "labourer": -1,
+        "dancer": 1,
+        "townsfolk": -1
+      },
+      "traits": [
+        "patient",
+        "counts-exits",
+        "collects-on-schedule"
+      ],
+      "relationships": [
+        {
+          "target": "nessa-quill",
+          "kind": "owed-by",
+          "weight": 3
+        },
+        {
+          "target": "marta-vell",
+          "kind": "feared-by",
+          "weight": 3
+        }
+      ],
+      "offers": {
+        "quest": true,
+        "shop": false,
+        "identify": false
+      },
+      "floor_affinity": {
+        "1": 0.6,
+        "2": 0.7,
+        "3": 0.8,
+        "4": 0.7,
+        "5": 0.3
+      },
+      "presence": {
+        "morning": 0.3,
+        "day": 0.6,
+        "evening": 1.0,
+        "night": 0.9
+      },
+      "tells": [
+        "The room got quieter a beat before you worked out why.",
+        "He is the only person here who has not looked at your weapon."
+      ],
+      "possessions": [
+        "a collector's ledger of debts",
+        "a concealed cudgel"
+      ],
+      "child": false,
+      "tier_scaling": {
+        "power_class": "armed",
+        "gear_budget": 3,
+        "hostility_floor": "hostile"
+      }
+    },
+    {
+      "id": "mara-vale",
+      "name": "Mara Vale",
+      "role": "Tavern keeper",
+      "faction": "town",
+      "location": "tavern",
+      "schedule": [
+        "tavern",
+        "tavern",
+        "tavern",
+        "rooms"
+      ],
+      "hp": 8,
+      "tell": "She wipes the same glass when nervous.",
+      "tier": "known",
+      "species": "human",
+      "class": "townsfolk",
+      "disposition_base": 1,
+      "stances": {},
+      "traits": [
+        "keeps-the-peace",
+        "misses-nothing-said-at-the-bar"
+      ],
+      "relationships": [],
+      "offers": {
+        "quest": false,
+        "shop": true,
+        "identify": false
+      },
+      "tells": [
+        "She wipes the same glass when nervous."
+      ],
+      "possessions": [
+        "a cudgel kept under the bar",
+        "a locked cashbox"
+      ],
+      "child": false,
+      "tier_scaling": {
+        "power_class": "civilian",
+        "gear_budget": 1,
+        "hostility_floor": "hostile"
+      }
+    },
+    {
+      "id": "orrin-pike",
+      "name": "Orrin Pike",
+      "role": "Watch captain",
+      "faction": "guard",
+      "location": "guardhouse",
+      "schedule": [
+        "guardhouse",
+        "market",
+        "guardhouse",
+        "tavern"
+      ],
+      "hp": 12,
+      "tell": "His hand never leaves bell range.",
+      "tier": "known",
+      "species": "human",
+      "class": "guard",
+      "disposition_base": 1,
+      "stances": {},
+      "traits": [
+        "by-the-book",
+        "tired-of-covering-for-corvin-hask"
+      ],
+      "relationships": [],
+      "offers": {
+        "quest": true,
+        "shop": false,
+        "identify": false
+      },
+      "tells": [
+        "His hand never leaves bell range."
+      ],
+      "possessions": [
+        "a watch captain's baton",
+        "a dented town-seal signet"
+      ],
+      "child": false,
+      "tier_scaling": {
+        "power_class": "armed",
+        "gear_budget": 3,
+        "hostility_floor": "hostile"
+      }
+    },
+    {
+      "id": "sela-penn",
+      "name": "Sela Penn",
+      "role": "Shrine tender",
+      "faction": "town",
+      "location": "shrine",
+      "schedule": [
+        "shrine",
+        "market",
+        "shrine",
+        "homes"
+      ],
+      "hp": 6,
+      "tell": "She hears arguments before they become loud.",
+      "tier": "known",
+      "species": "human",
+      "class": "townsfolk",
+      "disposition_base": 2,
+      "stances": {},
+      "traits": [
+        "unhurried",
+        "remembers-every-name"
+      ],
+      "relationships": [],
+      "offers": {
+        "quest": true,
+        "shop": false,
+        "identify": true
+      },
+      "tells": [
+        "She hears arguments before they become loud."
+      ],
+      "possessions": [
+        "a bundle of vigil candles",
+        "a chipped prayer bowl"
+      ],
+      "child": false,
+      "tier_scaling": {
+        "power_class": "civilian",
+        "gear_budget": 1,
+        "hostility_floor": "hostile"
+      }
+    },
+    {
+      "id": "davin-rusk",
+      "name": "Davin Rusk",
+      "role": "Canal pilot",
+      "faction": "traders",
+      "location": "docks",
+      "schedule": [
+        "docks",
+        "market",
+        "docks",
+        "tavern"
+      ],
+      "hp": 9,
+      "tell": "He never turns his back on black water.",
+      "tier": "known",
+      "species": "human",
+      "class": "trader",
+      "disposition_base": 0,
+      "stances": {},
+      "traits": [
+        "keeps-to-the-canal",
+        "trades-news-for-passage"
+      ],
+      "relationships": [],
+      "offers": {
+        "quest": false,
+        "shop": true,
+        "identify": false
+      },
+      "tells": [
+        "He never turns his back on black water."
+      ],
+      "possessions": [
+        "a coil of waxed rope",
+        "a hidden flask of duty-free spirits"
+      ],
+      "child": false,
+      "tier_scaling": {
+        "power_class": "skilled",
+        "gear_budget": 2,
+        "hostility_floor": "hostile"
+      }
+    },
+    {
+      "id": "ila-morn",
+      "name": "Ila Morn",
+      "role": "Midwife",
+      "faction": "town",
+      "location": "homes",
+      "schedule": [
+        "homes",
+        "market",
+        "homes",
+        "tavern"
+      ],
+      "hp": 6,
+      "tell": "Her satchel is always packed.",
+      "tier": "known",
+      "species": "human",
+      "class": "townsfolk",
+      "disposition_base": 2,
+      "stances": {},
+      "traits": [
+        "steady-handed",
+        "owed-favours-by-half-the-town"
+      ],
+      "relationships": [],
+      "offers": {
+        "quest": true,
+        "shop": false,
+        "identify": false
+      },
+      "tells": [
+        "Her satchel is always packed."
+      ],
+      "possessions": [
+        "a satchel of clean linens",
+        "a small kit of midwife's tools"
+      ],
+      "child": false,
+      "tier_scaling": {
+        "power_class": "civilian",
+        "gear_budget": 1,
+        "hostility_floor": "hostile"
+      }
+    },
+    {
+      "id": "tob-ken",
+      "name": "Tob Ken",
+      "role": "Night porter",
+      "faction": "town",
+      "location": "warehouse",
+      "schedule": [
+        "rooms",
+        "market",
+        "warehouse",
+        "docks"
+      ],
+      "hp": 8,
+      "tell": "He keeps keys on a cord beneath his shirt.",
+      "tier": "known",
+      "species": "human",
+      "class": "townsfolk",
+      "disposition_base": 0,
+      "stances": {},
+      "traits": [
+        "half-asleep-by-design",
+        "notices-more-than-he-lets-on"
+      ],
+      "relationships": [],
+      "offers": {
+        "quest": false,
+        "shop": false,
+        "identify": false
+      },
+      "tells": [
+        "He keeps keys on a cord beneath his shirt."
+      ],
+      "possessions": [
+        "a ring of warehouse keys",
+        "a battered lantern"
+      ],
+      "child": false,
+      "tier_scaling": {
+        "power_class": "civilian",
+        "gear_budget": 1,
+        "hostility_floor": "hostile"
+      }
+    },
+    {
+      "id": "vesh",
+      "name": "Vesh",
+      "role": "Bandit scout",
+      "faction": "bandits",
+      "location": "camp",
+      "schedule": [
+        "camp",
+        "docks",
+        "alley",
+        "camp"
+      ],
+      "hp": 8,
+      "tell": "He watches hands, never faces.",
+      "tier": "known",
+      "species": "human",
+      "class": "bandit",
+      "disposition_base": -2,
+      "stances": {},
+      "traits": [
+        "counts-the-take-twice",
+        "loyal-to-corvin-hask"
+      ],
+      "relationships": [],
+      "offers": {
+        "quest": false,
+        "shop": false,
+        "identify": false
+      },
+      "tells": [
+        "He watches hands, never faces."
+      ],
+      "possessions": [
+        "a curved skinning knife",
+        "a stolen guard-cloak"
+      ],
+      "child": false,
+      "tier_scaling": {
+        "power_class": "armed",
+        "gear_budget": 3,
+        "hostility_floor": "hostile"
+      }
+    },
+    {
+      "id": "pella-reed",
+      "name": "Pella Reed",
+      "role": "Market hawker",
+      "faction": "traders",
+      "location": "market",
+      "schedule": [
+        "market",
+        "market",
+        "tavern",
+        "homes"
+      ],
+      "hp": 7,
+      "tell": "She remembers every unpaid coin.",
+      "tier": "known",
+      "species": "human",
+      "class": "trader",
+      "disposition_base": 1,
+      "stances": {},
+      "traits": [
+        "loud-in-a-friendly-way",
+        "undersells-on-purpose"
+      ],
+      "relationships": [],
+      "offers": {
+        "quest": false,
+        "shop": true,
+        "identify": false
+      },
+      "tells": [
+        "She remembers every unpaid coin."
+      ],
+      "possessions": [
+        "a hawker's tray of trinkets",
+        "a hidden pouch of good coin"
+      ],
+      "child": false,
+      "tier_scaling": {
+        "power_class": "skilled",
+        "gear_budget": 2,
+        "hostility_floor": "hostile"
+      }
+    },
+    {
+      "id": "garran-holt",
+      "name": "Garran Holt",
+      "role": "Retired guard",
+      "faction": "guard",
+      "location": "homes",
+      "schedule": [
+        "homes",
+        "market",
+        "tavern",
+        "homes"
+      ],
+      "hp": 10,
+      "tell": "His bad knee decides where he sits.",
+      "tier": "known",
+      "species": "human",
+      "class": "guard",
+      "disposition_base": 1,
+      "stances": {},
+      "traits": [
+        "old-injury-old-stories",
+        "still-drills-in-the-yard"
+      ],
+      "relationships": [],
+      "offers": {
+        "quest": true,
+        "shop": false,
+        "identify": false
+      },
+      "tells": [
+        "His bad knee decides where he sits."
+      ],
+      "possessions": [
+        "a retired guard's shortsword",
+        "a medal he pretends not to value"
+      ],
+      "child": false,
+      "tier_scaling": {
+        "power_class": "armed",
+        "gear_budget": 3,
+        "hostility_floor": "hostile"
+      }
+    },
+    {
+      "id": "nix",
+      "name": "Nix",
+      "role": "Goblin courier",
+      "faction": "traders",
+      "location": "alley",
+      "schedule": [
+        "rooms",
+        "market",
+        "docks",
+        "alley"
+      ],
+      "hp": 5,
+      "tell": "She keeps a second message in her boot.",
+      "tier": "known",
+      "species": "goblin",
+      "class": "goblin",
+      "disposition_base": 0,
+      "stances": {},
+      "traits": [
+        "fast-talker",
+        "knows-every-shortcut"
+      ],
+      "relationships": [],
+      "offers": {
+        "quest": false,
+        "shop": false,
+        "identify": false
+      },
+      "tells": [
+        "She keeps a second message in her boot."
+      ],
+      "possessions": [
+        "a courier's satchel",
+        "a fistful of unopened messages"
+      ],
+      "child": false,
+      "tier_scaling": {
+        "power_class": "skilled",
+        "gear_budget": 2,
+        "hostility_floor": "hostile"
+      }
+    }
+  ]
+}

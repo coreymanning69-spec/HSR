@@ -1,0 +1,76 @@
+/* tokens.css — the HSR design system, extracted from the styles that already
+   existed rather than imported from anywhere. Loaded FIRST, before styles.css.
+
+   Rule of thumb for future edits: chrome (panels, rails, cards, labels, forms)
+   uses tokens. Illustration (.scene-*, .char-*, .intro-art, sprite layers) keeps
+   its literal colors — those are drawings, not UI, and tokenizing them would
+   make them harder to read, not easier. */
+
+:root{
+  /* ---- Gold, at the opacities the UI actually uses -----------------------
+     --gold is #c9a86a === rgb(201,168,106). Before these tokens existed that
+     triple was typed out longhand 87 times across two sheets.
+
+     KNOWN, PRE-EXISTING: these stay warm gold when the player picks the Moon
+     or Ember accent, because --gold is re-pointed by body[data-accent] but
+     these literals are not. That was equally true of the 87 hardcoded rgba()
+     calls they replaced, so nothing regressed — but the fix is now a
+     six-line change here (redeclare --gold-a* per accent) instead of a
+     find-and-replace across 178 KB. Deliberately left alone for now so this
+     pass changes nothing on screen. */
+  --gold-a03:rgba(201,168,106,.03);
+  --gold-a04:rgba(201,168,106,.04);
+  --gold-a05:rgba(201,168,106,.05);
+  --gold-a06:rgba(201,168,106,.06);
+  --gold-a07:rgba(201,168,106,.07);
+  --gold-a08:rgba(201,168,106,.08);
+  --gold-a10:rgba(201,168,106,.1);
+  --gold-a12:rgba(201,168,106,.12);
+  --gold-a14:rgba(201,168,106,.14);
+  --gold-a15:rgba(201,168,106,.15);
+  --gold-a16:rgba(201,168,106,.16);
+  --gold-a18:rgba(201,168,106,.18);
+  --gold-a20:rgba(201,168,106,.2);
+  --gold-a22:rgba(201,168,106,.22);
+  --gold-a25:rgba(201,168,106,.25);
+  --gold-a30:rgba(201,168,106,.3);
+  --gold-a32:rgba(201,168,106,.32);
+  --gold-a35:rgba(201,168,106,.35);
+  --gold-a40:rgba(201,168,106,.4);
+  --gold-a55:rgba(201,168,106,.55);
+  --gold-a60:rgba(201,168,106,.6);
+  --gold-a70:rgba(201,168,106,.7);
+
+  /* ---- Spacing ----------------------------------------------------------
+     The sheets held 197 distinct px values. Chrome should reach for these. */
+  --s1:4px; --s2:6px;  --s3:8px;  --s4:10px; --s5:12px;
+  --s6:14px; --s7:16px; --s8:20px; --s9:24px; --s10:32px; --s11:40px;
+
+  /* ---- Type scale -------------------------------------------------------
+     --t-micro is the FLOOR. Nothing in the chrome goes below it. The old
+     sheets had 21 declarations at 9px and 55 at 10px, most of them carrying
+     information the player needs to read. Uppercase eyebrow labels keep their
+     wide letter-spacing — that is the house voice — they just stop being tiny. */
+  --t-micro:11px;
+  --t-label:12px;
+  --t-body:13px;
+  --t-lead:15px;
+  --t-h3:18px;
+  --t-h2:24px;
+  --t-display:clamp(26px,4vw,40px);
+
+  /* ---- Radius ---- */
+  --r-sm:2px; --r-md:8px; --r-lg:12px; --r-pill:999px;
+
+  /* ---- Elevation ---- */
+  --e1:0 8px 16px #0008;
+  --e2:0 16px 40px #0006;
+  --e3:0 22px 55px #0008;
+  --e-dock:0 -8px 25px #0007;
+
+  /* ---- Layers -----------------------------------------------------------
+     For chrome that stacks against the page. Sprite and scene layering keeps
+     its own small local integers inside an `isolation:isolate` context; those
+     are relative to their siblings and must not be replaced with these. */
+  --z-scene:1; --z-overlay:2; --z-sticky:5; --z-dock:20; --z-modal:1000;
+}

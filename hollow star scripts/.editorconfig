@@ -1,0 +1,13 @@
+# Hollow Star text contract: UTF-8, LF, no BOM (tests/test_hygiene.py).
+# Repair: python tools/hsr_line_endings.py --write (run by tools/check.py --fix).
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+
+[*.{png,jpg,jpeg,webp,gif,ico,woff,woff2,ttf,pdf}]
+charset = unset
+end_of_line = unset
+insert_final_newline = unset

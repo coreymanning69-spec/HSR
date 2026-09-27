@@ -1,0 +1,347 @@
+{
+  "schema": "hsr-ui-art-1",
+  "design_system": "ui-design-system.json",
+  "generated": "2026-09-12",
+  "method": "built-in image generation",
+  "usage": "Presentation illustrations; no mechanical or canon authority.",
+  "assets": [
+    {
+      "asset": "sprites/layers/headgear.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Custom-character presentation only; helmet or hood overlay."
+    },
+    {
+      "asset": "sprites/layers/cloak.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Custom-character presentation only; cloak or mantle overlay."
+    },
+    {
+      "asset": "sprites/layers/shield.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Custom-character presentation only; off-hand shield overlay."
+    },
+    {
+      "asset": "sprites/layers/trinket.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Custom-character presentation only; ring, amulet, or signet overlay."
+    },
+    {
+      "asset": "sprites/layers/equipment-art-sheet-v1.png",
+      "provenance": "built-in-image-generation",
+      "usage": "Source sheet for custom-character equipment overlays; presentation-only."
+    },
+    {
+      "asset": "sprites/layers/headgear-v1.png",
+      "provenance": "built-in-image-generation",
+      "usage": "Custom-character helmet overlay; presentation-only."
+    },
+    {
+      "asset": "sprites/layers/cloak-v1.png",
+      "provenance": "built-in-image-generation",
+      "usage": "Custom-character cloak overlay; presentation-only."
+    },
+    {
+      "asset": "sprites/layers/shield-v1.png",
+      "provenance": "built-in-image-generation",
+      "usage": "Custom-character shield overlay; presentation-only."
+    },
+    {
+      "asset": "sprites/layers/trinket-v1.png",
+      "provenance": "built-in-image-generation",
+      "usage": "Custom-character trinket overlay; presentation-only."
+    },
+    {
+      "asset": "art-references/custom-character-layers-abstract-v1.png",
+      "provenance": "built-in-image-generation",
+      "usage": "Cutting reference for abstract custom-character layer art; not runtime art."
+    },
+    {
+      "asset": "art-references/custom-character-layers-detailed-v1.png",
+      "provenance": "built-in-image-generation",
+      "usage": "Detailed cutting reference for custom-character parts; item/reference surface only."
+    },
+    {
+      "asset": "art-references/equipment-items-detailed-v1.png",
+      "provenance": "built-in-image-generation",
+      "usage": "Detailed item-picture reference sheet; never used as actor layers."
+    },
+    {
+      "asset": "art-references/armor-and-accessories-detailed-v1.png",
+      "provenance": "built-in-image-generation",
+      "usage": "Detailed equipment-picture reference sheet; never used as actor layers."
+    },
+    {
+      "asset": "townsperson.png",
+      "provenance": "role-study",
+      "physical_description": "Adult human town craftswoman, chest-up, weathered kind face, dark tied-back hair, practical muted teal wool cloak over brown work clothes, three-quarter pose.",
+      "prompt": "Use case: stylized-concept. Asset type: fantasy RPG unnamed NPC role portrait, square. An adult town craftswoman in a practical muted teal wool cloak over brown work clothes, chest-up, weathered kind face, dark tied-back hair, facing three-quarter toward viewer. Painterly anime-inspired fantasy illustration, detailed brushwork, warm gold rim lighting, dark navy plain background, restrained palette suitable for a dark gold-and-navy game UI. No text, border, icons, weapons, or named canon character. This is illustrative role-study art."
+    },
+    {
+      "asset": "longsword.png",
+      "prompt": "Use case: stylized-concept. Asset type: fantasy RPG inventory illustration, square. One ordinary steel longsword, complete blade and leather-wrapped hilt visible diagonally from bottom left to top right, graceful simple steel crossguard, realistic forged metal wear. Painterly anime-inspired fantasy item illustration, excellent small-card readability, gold rim light, deep navy plain background. No text, hands, character, frame, magic glow, frost, fire, or extra objects. Mundane base weapon art; magical affixes will be labeled separately by the game."
+    },
+    {
+      "asset": "chain-shirt.png",
+      "prompt": "Use case: stylized-concept. Asset type: fantasy RPG inventory illustration, square. One ordinary steel chain shirt with short sleeves, hanging naturally with no wearer, complete silhouette centered, fine interlocked chainmail rings, modest leather edging, believable medieval armor construction. Painterly anime-inspired fantasy item illustration, excellent small-card readability, warm gold rim light, deep navy plain background. No text, frame, body, face, magic, symbols, or extra objects."
+    },
+    {
+      "asset": "unidentified-rune.png",
+      "prompt": "Use case: stylized-concept. Asset type: fantasy RPG inventory illustration, square. A mysterious small neutral gray stone seal with an indistinct unrecognizable carved mark, hovering slightly, subdued pale edge lighting. Painterly anime-inspired fantasy illustration with delicate material detail, centered complete object on deep navy plain background. Must communicate an unidentified object without revealing any elemental power, rarity, identity or special property. No readable text, border, fire, ice, colored magical aura, or extra objects."
+    },
+    {
+      "asset": "sprites/items/route-key.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/snuff-tin.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/tinderbox.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/stewards-coat.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/ashen-guard-cuirass.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/wayfarer-scale-coat.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/ashen-guard-helm.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/wayfarer-scale-helm.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/ashen-guard-gauntlets.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/wayfarer-scale-gloves.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/ashen-guard-boots.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/wayfarer-scale-boots.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/watchblade.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/silvered-dagger.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/warhammer.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/glaive.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/rapier.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/hand-crossbow.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/battleaxe.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/hunting-bow.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/war-pick.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/prismatic-prism.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/voidborne-shroud.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/unyielding-stance.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/aegis-of-first-light.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/royal-arrogance.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/heralds-haste.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/greatsword.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/chain-shirt.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/stewards-signet.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Placeholder item sprite; prepared for socket rigging."
+    },
+    {
+      "asset": "sprites/items/mace.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Core equipment sprite."
+    },
+    {
+      "asset": "sprites/items/scale-mail.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Core equipment sprite."
+    },
+    {
+      "asset": "sprites/items/shield.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Core equipment sprite."
+    },
+    {
+      "asset": "sprites/items/holy-focus.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Core equipment sprite."
+    },
+    {
+      "asset": "sprites/items/signet-ring.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Core equipment sprite."
+    },
+    {
+      "asset": "sprites/items/cloak.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Core equipment sprite."
+    },
+    {
+      "asset": "sprites/items/prayer-beads.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Background gear sprite."
+    },
+    {
+      "asset": "sprites/items/herb-sachet.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Background gear sprite."
+    },
+    {
+      "asset": "sprites/items/survey-lens.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Tool origin item sprite."
+    },
+    {
+      "asset": "sprites/items/old-lantern.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Tool origin item sprite."
+    },
+    {
+      "asset": "sprites/items/fork.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Mundane tableware item sprite."
+    },
+    {
+      "asset": "sprites/items/plate.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Mundane tableware item sprite."
+    },
+    {
+      "asset": "sprites/items/spoon.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Mundane tableware item sprite."
+    },
+    {
+      "asset": "sprites/items/knife-table.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Mundane tableware item sprite."
+    },
+    {
+      "asset": "sprites/items/tankard.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Mundane drinkware item sprite."
+    },
+    {
+      "asset": "sprites/items/goblet.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Mundane drinkware item sprite."
+    },
+    {
+      "asset": "sprites/items/torch.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Dungeon light source item sprite."
+    },
+    {
+      "asset": "sprites/items/rations.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Consumable food item sprite."
+    },
+    {
+      "asset": "sprites/items/backpack.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Container item sprite."
+    },
+    {
+      "asset": "sprites/items/bedroll.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Camp gear item sprite."
+    },
+    {
+      "asset": "sprites/items/coin-pouch.svg",
+      "provenance": "project-local-layer-art",
+      "usage": "Treasure pouch item sprite."
+    }
+  ]
+}

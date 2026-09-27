@@ -1,0 +1,10 @@
+<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+  <!-- Ring band -->
+  <circle cx="20" cy="22" r="12" fill="none" stroke="#d4af37" stroke-width="3.5"/>
+  <circle cx="20" cy="22" r="9" fill="none" stroke="#92400e" stroke-width="1"/>
+  <!-- Bezel -->
+  <rect x="13" y="8" width="14" height="10" rx="3" fill="#b45309"/>
+  <rect x="14" y="9" width="12" height="8" rx="2" fill="#f59e0b"/>
+  <!-- Intaglio heraldic star -->
+  <polygon points="20,10 21,12.5 24,13 21.5,14.5 22,17 20,15.5 18,17 18.5,14.5 16,13 19,12.5" fill="#78350f"/>
+</svg>

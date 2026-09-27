@@ -1,0 +1,4 @@
+# Optional local presentation and developer tooling.
+# The Web backend and HSRHost use the Python standard library.
+pygame-ce>=2.5,<3
+pytest>=8,<9

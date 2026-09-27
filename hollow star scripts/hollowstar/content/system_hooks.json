@@ -1,0 +1,16 @@
+{
+  "schema": "hollow-star-system-hooks-1",
+  "rows": [
+    {"id": "weapon", "action": "acquire_weapon", "next": "armor", "status": "open"},
+    {"id": "armor", "action": "acquire_armor", "next": "rune_imprint", "status": "open"},
+    {"id": "rune_imprint", "action": "imprint_rune", "next": "currency", "status": "open"},
+    {"id": "currency", "action": "readout", "next": "npc", "status": "open"},
+    {"id": "npc", "action": "npc_list", "next": "conversation", "status": "open"},
+    {"id": "conversation", "action": "conversation", "next": "idle_preparation", "status": "open"},
+    {"id": "idle_preparation", "action": "prepare_idle", "next": "auto_battle", "status": "open"},
+    {"id": "auto_battle", "action": "auto_battle", "next": "salvage", "status": "open"},
+    {"id": "salvage", "action": "salvage", "next": "trade", "status": "open"},
+    {"id": "trade", "action": "trade", "next": "shop", "status": "open"},
+    {"id": "shop", "action": "buy", "next": null, "status": "open"}
+  ]
+}

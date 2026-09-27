@@ -1,0 +1,99 @@
+{
+  "_note": "Prefixes and suffixes. Each is a bundle of phase-tagged effects. The first three are ports of the original sera affixes to prove backward compatibility.",
+  "affixes": [
+    {
+      "name": "Petty",
+      "affix_type": "prefix",
+      "description": "Hits harder when they haven't suffered yet.",
+      "effects": [
+        {"name": "petty bonus", "phase": "MAGNITUDE", "direction": "MODIFY",
+         "condition": "enemy_full_hp", "flat_bonus": 2}
+      ]
+    },
+    {
+      "name": "of Silence",
+      "affix_type": "suffix",
+      "description": "Shut up. Double damage to anything mid-cast.",
+      "effects": [
+        {"name": "silence spike", "phase": "MAGNITUDE", "direction": "MODIFY",
+         "condition": "enemy_casting", "multiplier": 2.0},
+        {"name": "silence rider", "phase": "CONSEQUENCE", "direction": "GRANT",
+         "inflicts_status": "SILENCED", "status_duration": 2}
+      ]
+    },
+    {
+      "name": "of Frostbite",
+      "affix_type": "suffix",
+      "description": "Slow them, then break them.",
+      "effects": [
+        {"name": "frost edge", "phase": "MAGNITUDE", "direction": "MODIFY",
+         "condition": "enemy_full_hp", "flat_bonus": 1, "grants_tags": ["ICE"]},
+        {"name": "frost rider", "phase": "CONSEQUENCE", "direction": "GRANT",
+         "inflicts_status": "SLOWED", "status_duration": 3}
+      ]
+    },
+    {
+      "name": "of Ice",
+      "affix_type": "suffix",
+      "description": "Permanent material state. A sheen that never melts.",
+      "effects": [
+        {"name": "iced material", "phase": "PERSISTENCE", "direction": "GRANT",
+         "grants_tags": ["ICE"], "scope": "RUN",
+         "tell": "Frost beads along the edge and does not run off."}
+      ]
+    },
+    {
+      "name": "Consecrated",
+      "affix_type": "prefix",
+      "description": "Blessed metal. Threatens what steel cannot.",
+      "effects": [
+        {"name": "consecration", "phase": "PERMISSION", "direction": "GRANT",
+         "tier": "BLESSED", "grants_tags": ["DIVINE"],
+         "opens_gate": "requires_divine", "charges": 3,
+         "tell": "The blade throws a light that casts no shadow."}
+      ]
+    },
+    {
+      "name": "of the Unseen Step",
+      "affix_type": "suffix",
+      "description": "You cannot be chosen as a target while it holds.",
+      "effects": [
+        {"name": "untargetable", "phase": "TARGETING", "direction": "DENY",
+         "tier": "ARTIFACT", "scope": "ENCOUNTER", "charges": 1, "specificity": 5,
+         "tell": "Attention slides off the wearer like water off glass."}
+      ]
+    },
+    {
+      "name": "Keen",
+      "affix_type": "prefix",
+      "description": "Balanced and honed for a decisive first opening.",
+      "effects": [
+        {"name": "keen edge", "phase": "MAGNITUDE", "direction": "MODIFY", "condition": "enemy_full_hp", "flat_bonus": 1}
+      ]
+    },
+    {
+      "name": "Ironroot",
+      "affix_type": "prefix",
+      "description": "Dense metal that carries the weight of old stone.",
+      "effects": [
+        {"name": "ironroot material", "phase": "PERSISTENCE", "direction": "GRANT", "grants_tags": ["HEAVY"], "scope": "RUN"}
+      ]
+    },
+    {
+      "name": "of Embers",
+      "affix_type": "suffix",
+      "description": "Warm sparks crawl across the surface without consuming it.",
+      "effects": [
+        {"name": "ember material", "phase": "PERSISTENCE", "direction": "GRANT", "grants_tags": ["FIRE"], "scope": "RUN", "tell": "Tiny coals pulse along the edge."}
+      ]
+    },
+    {
+      "name": "of the Watcher",
+      "affix_type": "suffix",
+      "description": "It notices movement before its bearer does.",
+      "effects": [
+        {"name": "watcher tell", "phase": "PERSISTENCE", "direction": "GRANT", "grants_tags": ["ARCANE"], "scope": "RUN", "tell": "The surface turns toward the nearest motion."}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,894 @@
+{
+  "schema": "hollow-star-procedural-generation-1",
+  "version": "2026-09-26",
+  "note": "Declarative procedural generation pools for Hollow Star: cultural names, personality matrices, behavioral tells, core motives, and monster affix power systems.",
+  "naming_pools": {
+    "imperial": {
+      "first_male": [
+        "Alden",
+        "Garrick",
+        "Theron",
+        "Bran",
+        "Calder",
+        "Lucan",
+        "Vane",
+        "Corin",
+        "Daven",
+        "Edric",
+        "Merrick",
+        "Roran",
+        "Harlan",
+        "Caelen",
+        "Titus",
+        "Kendrick",
+        "Willem",
+        "Joran",
+        "Derrick",
+        "Silas"
+      ],
+      "first_female": [
+        "Morwen",
+        "Elena",
+        "Valerie",
+        "Sela",
+        "Tessa",
+        "Lyra",
+        "Kaelen",
+        "Brynn",
+        "Maren",
+        "Isolde",
+        "Rowan",
+        "Althea",
+        "Corrine",
+        "Brenna",
+        "Vesper",
+        "Catrin",
+        "Seraphina",
+        "Lilian",
+        "Briony",
+        "Yvaine"
+      ],
+      "first_neutral": [
+        "Rowan",
+        "Morgan",
+        "Kael",
+        "Dorian",
+        "Shiloh",
+        "Vesper",
+        "Lior",
+        "Bryn",
+        "Cael",
+        "Valen",
+        "Avery",
+        "Reeve",
+        "Wren",
+        "Corin"
+      ],
+      "surnames": [
+        "Vell",
+        "Sarkey",
+        "Tosk",
+        "Quill",
+        "Aldis",
+        "Hask",
+        "Vale",
+        "Pike",
+        "Penn",
+        "Rusk",
+        "Morn",
+        "Ken",
+        "Reed",
+        "Holt",
+        "Blackwood",
+        "Ashford",
+        "Cinder",
+        "Ironwood",
+        "Greyfall",
+        "Miller",
+        "Vance",
+        "Crane",
+        "Garrick",
+        "Cross",
+        "Fletcher",
+        "Weaver",
+        "Mason",
+        "Barrow",
+        "Steward",
+        "Caskey"
+      ],
+      "epithets": [
+        "the Watcher",
+        "of the Well",
+        "Ironbound",
+        "the Miller",
+        "Grey-Cloak",
+        "the Cooper",
+        "Lantern-Bearer",
+        "the Cinder-Keeper",
+        "the Honest",
+        "the Wary",
+        "Old Gate",
+        "the Unspoken",
+        "the Silent",
+        "the Steadfast"
+      ]
+    },
+    "frontier_goblin": {
+      "first_names": [
+        "Skarn",
+        "Nix",
+        "Vesh",
+        "Grix",
+        "Kroll",
+        "Vrax",
+        "Murk",
+        "Snark",
+        "Rattle",
+        "Clink",
+        "Zul",
+        "Grin",
+        "Grit",
+        "Pox",
+        "Tink",
+        "Brak",
+        "Kraz",
+        "Skulker",
+        "Glint",
+        "Fang",
+        "Scrap",
+        "Chitter",
+        "Slag",
+        "Bog",
+        "Mire"
+      ],
+      "clan_monikers": [
+        "Iron-Scrap",
+        "Bone-Gnawer",
+        "Mud-Drifter",
+        "Ash-Stalker",
+        "Copper-Snatcher",
+        "Gutter-Runner",
+        "Tunnel-Rat",
+        "Rust-Biter",
+        "Night-Skulk",
+        "Cinder-Claw",
+        "Grave-Picker",
+        "Foul-Water"
+      ],
+      "epithets": [
+        "the Cunning",
+        "One-Eye",
+        "Sharp-Tooth",
+        "the Quick",
+        "the Greedy",
+        "the Scavenger",
+        "Trip-Wire",
+        "Quick-Blade",
+        "the Unseen",
+        "Lock-Biter",
+        "Twitch-Nose"
+      ]
+    },
+    "arcane_elven": {
+      "first_names": [
+        "Sylas",
+        "Ilyen",
+        "Faen",
+        "Elyria",
+        "Vael",
+        "Solan",
+        "Kaeril",
+        "Thalor",
+        "Aeris",
+        "Miriel",
+        "Ilian",
+        "Aeloria",
+        "Zephyr",
+        "Seran",
+        "Kaelith",
+        "Vireo",
+        "Elandra",
+        "Theron",
+        "Llyra",
+        "Valenor"
+      ],
+      "house_names": [
+        "Moon-Weaver",
+        "Sun-Singer",
+        "Silver-Vein",
+        "Star-Gazer",
+        "Mist-Walker",
+        "Dusk-Strider",
+        "Crystal-Heart",
+        "Aether-Bound",
+        "Grave-Lattice",
+        "Dawn-Spire",
+        "Frost-Bloom",
+        "Prism-Crown"
+      ],
+      "epithets": [
+        "the Shrouded",
+        "Star-Weaver",
+        "the Far-Seer",
+        "the Spell-Torn",
+        "the Serene",
+        "the Unfettered",
+        "of the Third Prism",
+        "the Veiled",
+        "the Radiant",
+        "the Unsleeping"
+      ]
+    },
+    "stoneforged_dwarven": {
+      "first_names": [
+        "Torin",
+        "Brokk",
+        "Duer",
+        "Valka",
+        "Durn",
+        "Thrag",
+        "Hulda",
+        "Barek",
+        "Krag",
+        "Murn",
+        "Bram",
+        "Orla",
+        "Ragnor",
+        "Brann",
+        "Dagmar",
+        "Gorm",
+        "Thorgil",
+        "Hilda",
+        "Korgan",
+        "Freyja"
+      ],
+      "clan_names": [
+        "Deepdelver",
+        "Ironfoot",
+        "Stoneguard",
+        "Hammerfall",
+        "Anvil-Hand",
+        "Ore-Breaker",
+        "Copper-Vein",
+        "Forge-Bound",
+        "Granite-Brow",
+        "Chasm-Strider",
+        "Gold-Hollow",
+        "Basalt-Grip"
+      ],
+      "epithets": [
+        "the Unyielding",
+        "Iron-Jaw",
+        "the Deep-Born",
+        "Shield-Bearer",
+        "the Delver",
+        "Stone-Fist",
+        "the Unbroken",
+        "Anvil-Born",
+        "the Master-Cutter"
+      ]
+    },
+    "monster_titles": {
+      "prefixes": [
+        "Gloom-Stalker",
+        "Ashen",
+        "Bone-Gnawer",
+        "Pyre-Touched",
+        "Dusk-Prowler",
+        "Ironhide",
+        "Blood-Frenzied",
+        "Venom-Spitter",
+        "Shadow-Bound",
+        "Frost-Carver",
+        "Void-Gorged",
+        "Corpse-Walker",
+        "Tide-Cursed",
+        "Cinder-Born",
+        "Blight-Sworn"
+      ],
+      "descriptors": [
+        "Alpha",
+        "Matriarch",
+        "Lurker",
+        "Terror",
+        "Behemoth",
+        "Ravager",
+        "Scourge",
+        "Stalker",
+        "Howler",
+        "Blight",
+        "Reaver",
+        "Fang",
+        "Gorgon-Spawn",
+        "Devourer",
+        "Dread",
+        "Bile-Feeder"
+      ]
+    }
+  },
+  "personality_matrix": {
+    "traits": {
+      "greedy": {
+        "desc": "Motivated by coin, treasures, and material advantage. Easily swayed by bribes, offended by low payments.",
+        "tells": [
+          "Eyes flicker immediately to your purse and gear.",
+          "Fingers tap a coin rhythm against their belt or weapon guard.",
+          "Counts carried coin under their breath while listening."
+        ],
+        "speech_tags": [
+          "prices",
+          "gold",
+          "cost",
+          "value",
+          "profit",
+          "coin",
+          "worth"
+        ],
+        "stance_mod": {
+          "trade": 2,
+          "bribe": 3,
+          "threaten": -1,
+          "persuade": 0
+        }
+      },
+      "cowardly": {
+        "desc": "Easily frightened, quick to yield, barter, or flee when threatened or injured.",
+        "tells": [
+          "Shifts footing continuously toward the nearest exit.",
+          "Swallows hard and keeps hands ostentatiously clear of weapons.",
+          "Sweats visibly under direct questioning."
+        ],
+        "speech_tags": [
+          "mercy",
+          "please",
+          "flee",
+          "safe",
+          "hurt",
+          "don't strike",
+          "run"
+        ],
+        "stance_mod": {
+          "threaten": 4,
+          "intimidate": 3,
+          "de_escalate": 2,
+          "persuade": 1
+        }
+      },
+      "watchful": {
+        "desc": "Observant, cautious, notices subtle tells, deceit, and ambush preparations quickly.",
+        "tells": [
+          "Scans the corners of the room and watches your hands before answering.",
+          "Never turns their back to an open doorway or unmapped lane.",
+          "Speaks only after a calculated, silent pause."
+        ],
+        "speech_tags": [
+          "notice",
+          "careful",
+          "look",
+          "quiet",
+          "watch",
+          "behind you",
+          "steady"
+        ],
+        "stance_mod": {
+          "lie": -3,
+          "threaten": -2,
+          "ask": 1,
+          "trade": 1
+        }
+      },
+      "devout": {
+        "desc": "Reverent toward sacred rites, holy relics, or the ancient order; deeply respects divine authority.",
+        "tells": [
+          "Touches a worn bronze medallion or prayer bead at every mention of danger.",
+          "Bows their head slightly before offering an answer.",
+          "Traces a warding circle on the table or stone."
+        ],
+        "speech_tags": [
+          "sacred",
+          "blessing",
+          "hallow",
+          "grace",
+          "faith",
+          "the altar",
+          "light"
+        ],
+        "stance_mod": {
+          "persuade": 2,
+          "insult": -4,
+          "threaten": -3,
+          "de_escalate": 2
+        }
+      },
+      "cynical": {
+        "desc": "Distrusts grand promises, altruism, and official authority; expects selfish motives in everyone.",
+        "tells": [
+          "Smirks faintly at earnest speeches or moral appeals.",
+          "Crosses arms tightly and lets out a dry, humorless snort.",
+          "Bites an offered copper coin to check for lead alloy."
+        ],
+        "speech_tags": [
+          "lies",
+          "talk",
+          "cheap",
+          "heard it before",
+          "fool",
+          "nothing is free",
+          "trap"
+        ],
+        "stance_mod": {
+          "persuade": -2,
+          "lie": -2,
+          "trade": 1,
+          "threaten": 0
+        }
+      },
+      "proud": {
+        "desc": "Values lineage, honor, and station; violently resents insults, condescension, or disrespect.",
+        "tells": [
+          "Stands with rigid posture and chin held deliberately high.",
+          "Bristles visibly at casual slang or informal address.",
+          "Rests hand heavily on the pommel of their blade."
+        ],
+        "speech_tags": [
+          "honor",
+          "respect",
+          "name",
+          "blood",
+          "station",
+          "lineage",
+          "reputation"
+        ],
+        "stance_mod": {
+          "insult": -5,
+          "threaten": -4,
+          "persuade": 2,
+          "trade": 0
+        }
+      },
+      "fanatical": {
+        "desc": "Unshakably committed to a single cause; ignores bribes and threats when doctrine is touched.",
+        "tells": [
+          "Stares with wide, unblinking eyes that rarely register pain.",
+          "Speaks with rapid, rhythmic, sermon-like cadence.",
+          "Refuses to flinch even under immediate physical peril."
+        ],
+        "speech_tags": [
+          "cleansing",
+          "inevitable",
+          "destiny",
+          "unyielding",
+          "fire",
+          "the deep",
+          "judgment"
+        ],
+        "stance_mod": {
+          "threaten": -4,
+          "bribe": -4,
+          "persuade": -2,
+          "de_escalate": -3
+        }
+      },
+      "mercenary": {
+        "desc": "Pragmatic, professional, neither loyal nor spiteful; answers strictly to clear terms and advantage.",
+        "tells": [
+          "Appraises the condition and sharpness of your gear with a practiced eye.",
+          "Speaks in crisp, non-committal syllables.",
+          "Checks the balance of their weapon out of mere habit."
+        ],
+        "speech_tags": [
+          "contract",
+          "business",
+          "neutral",
+          "terms",
+          "worth",
+          "payment",
+          "job"
+        ],
+        "stance_mod": {
+          "trade": 3,
+          "bribe": 3,
+          "threaten": 0,
+          "persuade": 1
+        }
+      },
+      "loyal": {
+        "desc": "Faithful to companions or community, stands firm for allies and remembers past kindness.",
+        "tells": [
+          "Positions body protectively between strangers and vulnerable allies.",
+          "Speaks on behalf of the settlement rather than their own interests.",
+          "Nods firmly to comrades before making any commitment."
+        ],
+        "speech_tags": [
+          "together",
+          "protect",
+          "stand",
+          "guard",
+          "community",
+          "our people",
+          "allies"
+        ],
+        "stance_mod": {
+          "threaten": -3,
+          "de_escalate": 2,
+          "persuade": 2,
+          "bribe": -2
+        }
+      },
+      "curious": {
+        "desc": "Hungry for knowledge, rumors, and relics; receptive to strange inquiries and ancient lore.",
+        "tells": [
+          "Leans in close and tilts their head when novel information is mentioned.",
+          "Traces map contours or rune shapes on their palm.",
+          "Asks rapid, detailed follow-up questions."
+        ],
+        "speech_tags": [
+          "fascinating",
+          "how",
+          "where did you find",
+          "tell me",
+          "secrets",
+          "origin",
+          "relic"
+        ],
+        "stance_mod": {
+          "ask": 3,
+          "persuade": 2,
+          "threaten": -1,
+          "trade": 1
+        }
+      },
+      "stoic": {
+        "desc": "Emotionally impenetrable, endures hardship, cold, and wounds without complaint.",
+        "tells": [
+          "Face remains an unreadable stone mask regardless of news.",
+          "Breathes in a slow, deep, disciplined rhythm.",
+          "Answers in measured, blunt monosyllables."
+        ],
+        "speech_tags": [
+          "plain",
+          "done",
+          "so it is",
+          "continue",
+          "matter-of-fact",
+          "endure",
+          "hold"
+        ],
+        "stance_mod": {
+          "threaten": -2,
+          "insult": 0,
+          "de_escalate": 1,
+          "persuade": 0
+        }
+      },
+      "reckless": {
+        "desc": "Impulsive, eager for violence or high-stakes gambles; easily provoked into action.",
+        "tells": [
+          "Bounces lightly on the balls of their feet with twitchy, restless energy.",
+          "Grins broadly at the prospect of immediate danger.",
+          "Interrupts conversation before others finish speaking."
+        ],
+        "speech_tags": [
+          "come on",
+          "fight",
+          "gamble",
+          "rush",
+          "now",
+          "dare",
+          "blood"
+        ],
+        "stance_mod": {
+          "insult": -4,
+          "threaten": -3,
+          "persuade": -1,
+          "trade": 0
+        }
+      }
+    },
+    "core_motives": {
+      "survival": {
+        "goal": "Live through the run and avoid lethal hazards.",
+        "surrender_hp_threshold": 0.45,
+        "flee_hp_threshold": 0.25,
+        "bribe_acceptance": 0.8
+      },
+      "greed": {
+        "goal": "Amass wealth, coin, and tradeable imprints.",
+        "surrender_hp_threshold": 0.3,
+        "flee_hp_threshold": 0.15,
+        "bribe_acceptance": 1.0
+      },
+      "duty": {
+        "goal": "Fulfill sworn oaths, hold the post, and protect the district.",
+        "surrender_hp_threshold": 0.15,
+        "flee_hp_threshold": 0.05,
+        "bribe_acceptance": 0.2
+      },
+      "vengeance": {
+        "goal": "Punish grievances and make intruders pay in blood.",
+        "surrender_hp_threshold": 0.05,
+        "flee_hp_threshold": 0.0,
+        "bribe_acceptance": 0.0
+      },
+      "knowledge": {
+        "goal": "Uncover the secrets of the deeper floors, seals, and ancient gates.",
+        "surrender_hp_threshold": 0.35,
+        "flee_hp_threshold": 0.2,
+        "bribe_acceptance": 0.6
+      },
+      "protection": {
+        "goal": "Shield dependents, children, and townspeople from harm.",
+        "surrender_hp_threshold": 0.2,
+        "flee_hp_threshold": 0.1,
+        "bribe_acceptance": 0.3
+      }
+    }
+  },
+  "monster_affix_kits": {
+    "threat_tiers": {
+      "common": {
+        "hp_multiplier": 1.0,
+        "ac_bonus": 0,
+        "prefix_count": 0,
+        "suffix_count": 0,
+        "has_spell_kit": false,
+        "power_budget": 0
+      },
+      "elite": {
+        "hp_multiplier": 1.35,
+        "ac_bonus": 1,
+        "prefix_count": 1,
+        "suffix_count": 0,
+        "has_spell_kit": true,
+        "power_budget": 1
+      },
+      "champion": {
+        "hp_multiplier": 1.75,
+        "ac_bonus": 2,
+        "prefix_count": 1,
+        "suffix_count": 1,
+        "has_spell_kit": true,
+        "power_budget": 2
+      },
+      "boss": {
+        "hp_multiplier": 2.5,
+        "ac_bonus": 3,
+        "prefix_count": 2,
+        "suffix_count": 1,
+        "has_spell_kit": true,
+        "power_budget": 4,
+        "legendary_resilience": true
+      }
+    },
+    "prefixes": {
+      "Flame-Wreathed": {
+        "element": "FIRE",
+        "stat_mods": {
+          "hp_multiplier": 1.15,
+          "ac_bonus": 0,
+          "attack_bonus": 1
+        },
+        "damage_type": "FIRE",
+        "resistances": [
+          "FIRE"
+        ],
+        "vulnerabilities": [
+          "ICE",
+          "WATER"
+        ],
+        "known_spells": [
+          "Scorching Ray@5e"
+        ],
+        "resource_pool": {
+          "flame_charges": 3
+        },
+        "tell": "Heat ripples the air around it in dizzying, shimmering waves.",
+        "lore_fragment": "Wreathed in perpetual volcanic embers that refuse to cool,"
+      },
+      "Frost-Bound": {
+        "element": "ICE",
+        "stat_mods": {
+          "hp_multiplier": 1.2,
+          "ac_bonus": 1,
+          "attack_bonus": 0
+        },
+        "damage_type": "ICE",
+        "resistances": [
+          "ICE"
+        ],
+        "vulnerabilities": [
+          "FIRE"
+        ],
+        "status_on_hit": "CHILLED",
+        "tell": "Rime crusts its hide and freezing vapor steams from every breath.",
+        "lore_fragment": "Encrusted with unmelting glacial rime forged in subterranean chasms,"
+      },
+      "Volt-Charged": {
+        "element": "SONIC",
+        "stat_mods": {
+          "speed_bonus": 10,
+          "initiative_bonus": 3,
+          "attack_bonus": 1
+        },
+        "damage_type": "SONIC",
+        "resistances": [
+          "SONIC"
+        ],
+        "known_spells": [
+          "Arcane Bolt@HSR"
+        ],
+        "resource_pool": {
+          "static_charges": 4
+        },
+        "tell": "Sharp blue sparks crackle across its limbs with a dry snapping sound.",
+        "lore_fragment": "Humming with violent static potential that arcs upon physical contact,"
+      },
+      "Venom-Spitting": {
+        "element": "CORROSIVE",
+        "stat_mods": {
+          "hp_multiplier": 1.1,
+          "attack_bonus": 1
+        },
+        "damage_type": "CORROSIVE",
+        "resistances": [
+          "CORROSIVE"
+        ],
+        "status_on_hit": "POISONED",
+        "tell": "Green bile hisses as it drips from its fangs onto the flagstones.",
+        "lore_fragment": "Gorged on vitriolic bile that corrodes steel and dissolves organic matter,"
+      },
+      "Void-Touched": {
+        "element": "NECROTIC",
+        "stat_mods": {
+          "hp_multiplier": 1.25,
+          "ac_bonus": 0,
+          "attack_bonus": 1
+        },
+        "damage_type": "NECROTIC",
+        "resistances": [
+          "NECROTIC",
+          "PSYCHIC"
+        ],
+        "vulnerabilities": [
+          "RADIANT"
+        ],
+        "known_spells": [
+          "Sleep@5e"
+        ],
+        "resource_pool": {
+          "void_shards": 2
+        },
+        "tell": "A patch of shadow clings unnaturally to its frame, drinking nearby light.",
+        "lore_fragment": "Steeped in abyssal silence that leaches heat and vitality from the air,"
+      },
+      "Ironclad": {
+        "element": "PHYSICAL",
+        "stat_mods": {
+          "hp_multiplier": 1.3,
+          "ac_bonus": 3,
+          "speed_bonus": -5
+        },
+        "damage_type": "SLASHING",
+        "resistances": [
+          "SLASHING",
+          "PIERCING"
+        ],
+        "tell": "Thick interlocking plates groan with heavy, deliberate movement.",
+        "lore_fragment": "Armored in dense masterwork plate that turns aside common edge,"
+      },
+      "Frenzied": {
+        "element": "PHYSICAL",
+        "stat_mods": {
+          "hp_multiplier": 0.9,
+          "attacks_per_action_bonus": 1,
+          "speed_bonus": 10,
+          "attack_bonus": 2
+        },
+        "damage_type": "SLASHING",
+        "tell": "Eyes bloodshot and twitching, it gnaws at its own harness in blinding fury.",
+        "lore_fragment": "Consumed by berserk frenzy that heeds neither wound nor warning,"
+      },
+      "Spell-Weaving": {
+        "element": "ARCANE",
+        "stat_mods": {
+          "hp_multiplier": 1.0,
+          "ac_bonus": 1,
+          "attack_bonus": 1
+        },
+        "damage_type": "ARCANE",
+        "resistances": [
+          "ARCANE"
+        ],
+        "known_spells": [
+          "Magic Missile@5e",
+          "Arcane Bolt@HSR",
+          "Counterspell@5e"
+        ],
+        "resource_pool": {
+          "mana": 6
+        },
+        "tell": "Runes ignite in the air about its hands as it traces geometric patterns.",
+        "lore_fragment": "Inscribed with intricate glyphs of power that spark at its command,"
+      }
+    },
+    "suffixes": {
+      "of the Inferno": {
+        "bonus_damage": 4,
+        "damage_type": "FIRE",
+        "known_spells": [
+          "Fireball@5e"
+        ],
+        "resource_pool": {
+          "pyre_burst": 1
+        },
+        "tell": "Smoke seeps continuously from its nostrils and sulfur stains its trail.",
+        "lore_fragment": "leaving a scorched wake of ash and smoldering stone."
+      },
+      "of Thunder": {
+        "bonus_damage": 3,
+        "damage_type": "BLUDGEONING",
+        "on_hit": "knockdown",
+        "tell": "Each step strikes the floor like a master hammer on an iron anvil.",
+        "lore_fragment": "striking with reverberating shockwaves that crack solid granite."
+      },
+      "of Mending": {
+        "stat_mods": {
+          "hp_multiplier": 1.2
+        },
+        "known_spells": [
+          "Cure Wounds@5e",
+          "Healing Word@5e"
+        ],
+        "resource_pool": {
+          "mending_draughts": 2
+        },
+        "tell": "Luminescent pale moss knits across its flesh as it breathes.",
+        "lore_fragment": "drawing upon restorative ley-threads to seal wounds as swiftly as they open."
+      },
+      "of the Juggernaut": {
+        "stat_mods": {
+          "hp_multiplier": 1.4,
+          "ac_bonus": 2
+        },
+        "condition_immunities": [
+          "PRONE",
+          "RESTRAINED",
+          "STUNNED"
+        ],
+        "tell": "Its mass is terrifyingly dense; footsteps dent the stone flags.",
+        "lore_fragment": "refusing to yield to barrier, blade, or binding spell."
+      },
+      "of the Phantom": {
+        "stat_mods": {
+          "speed_bonus": 10
+        },
+        "condition_immunities": [
+          "GRAPPLED"
+        ],
+        "resistances": [
+          "PHYSICAL"
+        ],
+        "known_spells": [
+          "Misty Step@5e"
+        ],
+        "resource_pool": {
+          "phase_charges": 2
+        },
+        "tell": "Its outline wavers and slips between adjacent dimensional planes.",
+        "lore_fragment": "slipping through the material weave like mist before the morning sun."
+      },
+      "of the Abyss": {
+        "stat_mods": {
+          "hp_multiplier": 1.25
+        },
+        "damage_type": "NECROTIC",
+        "condition_immunities": [
+          "BLINDED",
+          "FRIGHTENED"
+        ],
+        "tell": "The surrounding ambient light dims to grey twilight in its presence.",
+        "lore_fragment": "radiating the icy stillness of the unlit void."
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+  <!-- Chain loops -->
+  <path d="M12,4 Q20,12 28,4" fill="none" stroke="#b45309" stroke-width="2"/>
+  <circle cx="20" cy="11" r="2" fill="none" stroke="#d97706" stroke-width="1.5"/>
+  <!-- Sunburst rays -->
+  <polygon points="20,12 22,19 29,15 24,21 31,24 24,27 29,33 22,29 20,36 18,29 11,33 16,27 9,24 16,21 11,15 18,19" fill="#f59e0b"/>
+  <!-- Center disc -->
+  <circle cx="20" cy="24" r="6" fill="#fbbf24"/>
+  <circle cx="20" cy="24" r="3.5" fill="#78350f"/>
+  <circle cx="20" cy="24" r="1.5" fill="#fef3c7"/>
+</svg>

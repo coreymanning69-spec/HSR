@@ -1,0 +1,7 @@
+{"schema_version":"hsr-module-data-1","rooms":[
+  {"floor":1,"kind":"combat","title":"The First Threshold","apparent_function":"A guarded entrance into the deeper Reliquary.","tell":"Fresh chalk marks stop at the sealed arch.","actor_id":"marked-sentinel","checkpoint":true,"safe_room":true,"counterplay":["investigate","fight"],"structures":[{"name":"sealed arch","position":[25,20,0],"hp":80}]},
+  {"floor":2,"kind":"hazard","title":"The Machine Works","apparent_function":"A transit lane through working machinery.","tell":"The blue relay cable pulses before the press cycles.","checkpoint":true,"safe_room":true,"counterplay":["investigate","avoid","disarm"]},
+  {"floor":3,"kind":"social","title":"The Three Dragons","apparent_function":"A faction gallery with three marked approaches.","tell":"Painted scales mark which territory supplied the guards.","checkpoint":true,"safe_room":true,"counterplay":["negotiate","investigate","avoid"]},
+  {"floor":4,"kind":"hazard","title":"The Sunless Sea","apparent_function":"A lit landing over drowned structures.","tell":"Salt handprints appear above the waterline before pursuit.","checkpoint":true,"safe_room":true,"counterplay":["investigate","avoid","disarm"]},
+  {"floor":5,"kind":"boss","title":"The Opulent Palace and Cocoon","apparent_function":"A rival chamber around the visible cocoon clock.","tell":"Each cocoon seam brightens once per round.","counterplay":["investigate","fight","escape"],"escape_routes":["balconies","lower route"]}
+]}

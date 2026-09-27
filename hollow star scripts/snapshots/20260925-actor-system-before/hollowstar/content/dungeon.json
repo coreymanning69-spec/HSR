@@ -1,0 +1,339 @@
+{
+ "schema": 1,
+ "status": "editable DESIGN fixtures; not certified balance or played canon",
+ "rules_version": "hsr-design-1",
+ "starting_gold": 10,
+ "imprint_slots": [
+  "helmet",
+  "necklace",
+  "cloak",
+  "torso",
+  "ring_1",
+  "ring_2",
+  "legs",
+  "boots"
+ ],
+  "modifier_cap": 5,
+  "identification_cost": 5,
+ "carry_out": "temporary items dissolve; permanent gear remains in the run ledger",
+ "loot": {
+  "narration": "Describe what is found, where it was carried, and its condition before presenting the mechanical row.",
+  "npc_inventory_policy": "Not every NPC carries a full table. Use role, circumstances, clothing, pockets, and visible equipment to determine plausible finds.",
+  "practical_items": ["tinderbox", "snuff tin", "Steward's route key"],
+  "doran_table": {
+   "equipment": ["Doran's watchblade", "Steward's field coat", "Doran's Steward's Signet"],
+   "carried": ["tinderbox", "snuff tin"],
+   "conditional": ["Steward's route key"]
+  }
+ },
+ "defeat": "eject; re-entry starts a fresh run from frozen baselines",
+ "cocoon_rounds": 20,
+ "room_types": [
+  "social",
+  "combat",
+  "hazard",
+  "shop",
+  "secret",
+  "rest",
+  "boss"
+ ],
+ "shop": {
+  "room": 10,
+  "potion": 10,
+  "component": 8,
+  "imprint": 20,
+  "permanent_gear": 40
+ },
+ "floors": [
+  {
+   "name": "The Town Above the Well",
+   "apparent_function": "settlement",
+   "true_function": "settlement",
+   "observation_dc": 11,
+   "posture": "residents watch the market and close ranks around the well",
+   "resident": "Wellkeeper",
+   "motive": "Keep trade moving and strangers away from the town's coordinated store of seals.",
+   "law": "Town-controlled sleep raises an alarm and brings an organized night patrol.",
+   "terrain": "Narrow lanes, market stalls, shuttered homes, and the well.",
+   "tell": "Identical copper clasps flash when residents close ranks.",
+   "secret": "The well route can be opened from the market's old waterwheel.",
+   "hazard": "A weighted well platform drops when its latch is released.",
+   "exit": "well",
+   "enemy": {
+    "name": "Town watch",
+    "hp": 45,
+    "ac": 17,
+    "attack": 11,
+    "dice": "1d8+4",
+    "type": "PIERCING",
+    "speed": 30,
+    "band": 20,
+    "attacks": 2,
+    "abilities": {
+     "STR": 12,
+     "DEX": 16,
+     "CON": 14,
+     "INT": 10,
+     "WIS": 12,
+     "CHA": 11
+    },
+    "saves": {
+     "STR": 3,
+     "DEX": 5,
+     "CON": 4,
+     "INT": 1,
+     "WIS": 3,
+     "CHA": 2
+    },
+    "resistances": [],
+    "condition_immunities": [],
+    "pool": {
+     "name": "closed_ranks",
+     "amount": 2
+    },
+    "trait": "closed ranks: a second press in the same round, spent from a pool, matching the copper-clasp tell"
+    },
+    "room_overrides": {
+     "combat": {
+      "encounter_mode": "arcade",
+      "arcade_enemy_count": 1,
+      "waves": [
+       {"id": "watchline", "enemy_indices": [0]}
+      ],
+      "structures": [
+       {"object_id": "market-gap", "name": "Broken market crossing", "kind": "gap",
+        "position": [50, 0, 0], "width": 6, "height": 40, "hp": 0,
+        "required_mode": ["jump", "fly"]}
+      ]
+     }
+    }
+   },
+  {
+   "name": "The Machine Works",
+   "apparent_function": "transit",
+   "true_function": "hazard",
+   "observation_dc": 13,
+   "posture": "cleaners route visitors toward the working lanes",
+   "resident": "Sorting attendant",
+   "motive": "Route contamination away from working equipment; accept proof of maintenance clearance.",
+   "law": "Slow cleaners classify unregistered visitors as contamination. Cut power to open a safe maintenance path.",
+   "terrain": "Conveyor lanes, metal gantries, steam vents, and a locked hatch.",
+   "tell": "A blue cable links the cleaners' armor to a stationary relay.",
+   "secret": "A service hatch bypasses the sorting line.",
+   "hazard": "A conveyor carries unsecured travelers toward a steam press.",
+   "exit": "hatch",
+   "enemy": {
+    "name": "Cleaner",
+    "hp": 110,
+    "ac": 20,
+    "attack": 12,
+    "dice": "2d6+6",
+    "type": "BLUDGEONING",
+    "speed": 10,
+    "band": 30,
+    "attacks": 2,
+    "abilities": {
+     "STR": 20,
+     "DEX": 8,
+     "CON": 20,
+     "INT": 6,
+     "WIS": 12,
+     "CHA": 4
+    },
+    "saves": {
+     "STR": 8,
+     "DEX": 1,
+     "CON": 8,
+     "INT": -2,
+     "WIS": 2,
+     "CHA": -3
+    },
+    "resistances": [
+     "PIERCING"
+    ],
+    "condition_immunities": [
+     "CHARMED",
+     "FRIGHTENED"
+    ],
+    "pool": {
+     "name": "relay_surge",
+     "amount": 3
+    },
+    "trait": "relay surge: the blue cable to the stationary relay is the tell for the piercing resistance and the surge pool"
+   }
+  },
+  {
+   "name": "The Three Dragons",
+   "apparent_function": "faction node",
+   "true_function": "faction node",
+   "observation_dc": 15,
+   "posture": "territory representatives measure which approach the party chooses",
+   "resident": "Territory envoy",
+   "motive": "Protect draconic dependents and redirect rivals away from its patron's stores.",
+   "law": "White, red, and black territories recognize bargains and trespasses separately.",
+   "terrain": "Three marked approaches surround a shared gallery and hoard passages.",
+   "tell": "Painted scales on supply crates reveal which territory supplied each guard.",
+   "secret": "A neutral tunnel reaches the lower route without crossing a nursery.",
+   "hazard": "A contested supply bridge has been rigged to collapse.",
+   "exit": "neutral tunnel",
+   "enemy": {
+    "name": "Lair outrider",
+    "hp": 95,
+    "ac": 18,
+    "attack": 13,
+    "dice": "2d8+6",
+    "type": "SLASHING",
+    "speed": 30,
+    "band": 30,
+    "attacks": 2,
+    "abilities": {
+     "STR": 18,
+     "DEX": 16,
+     "CON": 18,
+     "INT": 12,
+     "WIS": 14,
+     "CHA": 15
+    },
+    "saves": {
+     "STR": 7,
+     "DEX": 6,
+     "CON": 7,
+     "INT": 2,
+     "WIS": 5,
+     "CHA": 5
+    },
+    "resistances": [
+     "FIRE"
+    ],
+    "condition_immunities": [
+     "FRIGHTENED"
+    ],
+    "pool": {
+     "name": "wing_rush",
+     "amount": 2
+    },
+    "trait": "wing rush: painted territory scales are the tell for which lair's fire resistance an outrider carries"
+   }
+  },
+  {
+   "name": "The Sunless Sea",
+   "apparent_function": "transit",
+   "true_function": "hazard",
+   "observation_dc": 14,
+   "posture": "the ferryman holds the lit landing while the water moves below",
+   "resident": "Shore ferryman",
+   "motive": "Recover navigation lamps while keeping the drowned away from the landing.",
+   "law": "Light reveals solid footholds; entering unlit water exposes travelers to pursuit.",
+   "terrain": "Drowned decks, broken piers, dark water, and narrow lit islands.",
+   "tell": "Salt dries in handprints above the waterline before a pursuer surfaces.",
+   "secret": "A submerged bell marks a dry passage under the wrecks.",
+   "hazard": "A rotted gangplank fails above grasping water.",
+   "exit": "bell passage",
+   "enemy": {
+    "name": "Drowned pursuer",
+    "hp": 120,
+    "ac": 17,
+    "attack": 13,
+    "dice": "2d8+7",
+    "type": "NECROTIC",
+    "speed": 25,
+    "band": 30,
+    "attacks": 2,
+    "abilities": {
+     "STR": 16,
+     "DEX": 14,
+     "CON": 20,
+     "INT": 8,
+     "WIS": 12,
+     "CHA": 10
+    },
+    "saves": {
+     "STR": 6,
+     "DEX": 4,
+     "CON": 9,
+     "INT": 0,
+     "WIS": 3,
+     "CHA": 1
+    },
+    "resistances": [
+     "NECROTIC",
+     "BLUDGEONING"
+    ],
+    "condition_immunities": [
+     "CHARMED",
+     "POISONED"
+    ],
+    "pool": {
+     "name": "undertow",
+     "amount": 3
+    },
+    "trait": "undertow: salt drying above the waterline is the tell that a pursuer is still carrying its pool"
+   }
+  },
+  {
+   "name": "The Opulent Palace and Cocoon",
+   "apparent_function": "boss approach",
+   "true_function": "boss approach",
+   "observation_dc": 16,
+   "posture": "rivals hold positions around the visible cocoon clock",
+   "resident": "Palace rival envoy",
+   "motive": "Win the chamber's prize while preventing another party from claiming control of the cocoon.",
+   "law": "The crisis chamber begins a visible twenty-round cocoon clock; surviving rivals and escape routes persist when it opens.",
+   "terrain": "Polished halls, balconies, five rival positions, and the central cocoon.",
+   "tell": "Each seam in the cocoon brightens once per round.",
+   "secret": "A service stair reaches the chamber's extraction balcony.",
+   "hazard": "A shining floor panel locks beneath a descending gilded counterweight.",
+   "exit": "extraction balcony",
+   "enemy": {
+    "name": "Palace rival",
+    "hp": 100,
+    "ac": 21,
+    "attack": 15,
+    "dice": "2d10+8",
+    "type": "SLASHING",
+    "speed": 30,
+    "band": 40,
+    "attacks": 2,
+    "abilities": {
+     "STR": 20,
+     "DEX": 18,
+     "CON": 20,
+     "INT": 16,
+     "WIS": 16,
+     "CHA": 18
+    },
+    "saves": {
+     "STR": 10,
+     "DEX": 9,
+     "CON": 10,
+     "INT": 7,
+     "WIS": 8,
+     "CHA": 9
+    },
+    "resistances": [
+     "SLASHING"
+    ],
+    "condition_immunities": [
+     "FRIGHTENED",
+     "CHARMED",
+     "GRAPPLED"
+    ],
+    "pool": {
+     "name": "rival_gambit",
+     "amount": 4
+    },
+    "trait": "rival gambit: the cocoon seam brightening once per round is the tell that a rival still holds gambits"
+   }
+  }
+ ],
+ "party_scaling": {
+  "status": "DESIGN fixture added 2026-09-24 so a custom character can survive floor one; editable, not certified balance.",
+  "applies_to": "runs whose party includes a custom: profile; champion-only parties are never scaled",
+  "reference_party_hp": 590,
+  "min_factor": 0.2,
+  "ac_step": 4,
+  "attack_step": 6,
+  "single_attack_below": 0.5
+ },
+ "opposition_status": "DESIGN fixture opposition, band-scaled 2026-09-05 so the floors are not inert against a STEWARD-band pair. Every number here is an editable fixture value, not certified balance and not a DM046_0 section 14 Phase 5 result. Resistances and immunities are only placed on floors that already publish an observable tell (section 11)."
+}

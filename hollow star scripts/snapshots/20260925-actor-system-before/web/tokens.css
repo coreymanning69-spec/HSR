@@ -1,0 +1,216 @@
+/* tokens.css — the HSR design system, extracted from the styles that already
+   existed rather than imported from anywhere. Loaded FIRST, before styles.css.
+
+   Rule of thumb for future edits: chrome (panels, rails, cards, labels, forms)
+   uses tokens. Illustration (.scene-*, .char-*, .intro-art, sprite layers) keeps
+   its literal colors — those are drawings, not UI, and tokenizing them would
+   make them harder to read, not easier.
+
+   COLOUR: every chrome colour comes from the THEME section at the end of this
+   file. Options > Interface theme sets body[data-accent]; a theme is one block
+   of raw channels there, and nothing else in any sheet should name a chrome
+   colour literally. */
+
+:root{
+  /* ---- Spacing ----------------------------------------------------------
+     The sheets held 197 distinct px values. Chrome should reach for these. */
+  --s1:4px; --s2:6px;  --s3:8px;  --s4:10px; --s5:12px;
+  --s6:14px; --s7:16px; --s8:20px; --s9:24px; --s10:32px; --s11:40px;
+
+  /* ---- Type scale -------------------------------------------------------
+     --t-micro is the FLOOR. Nothing in the chrome goes below it. The old
+     sheets had 21 declarations at 9px and 55 at 10px, most of them carrying
+     information the player needs to read. Uppercase eyebrow labels keep their
+     wide letter-spacing — that is the house voice — they just stop being tiny.
+     Scales dynamically with Options > Text size (--text-scale). */
+  --t-micro:calc(12px * var(--text-scale, 1));
+  --t-label:calc(13px * var(--text-scale, 1));
+  --t-body:calc(15px * var(--text-scale, 1));
+  --t-lead:calc(17px * var(--text-scale, 1));
+  --t-h3:calc(18px * var(--text-scale, 1));
+  --t-h2:calc(24px * var(--text-scale, 1));
+  --t-display:clamp(calc(26px * var(--text-scale, 1)),4vw,calc(40px * var(--text-scale, 1)));
+
+  /* ---- Radius ---- */
+  --r-sm:6px; --r-md:8px; --r-lg:12px; --r-pill:999px;
+
+  /* ---- Elevation ---- */
+  --e1:0 8px 16px #0008;
+  --e2:0 16px 40px #0006;
+  --e3:0 22px 55px #0008;
+  --e-dock:0 -8px 25px #0007;
+
+  /* ---- Layers -------------------------------------------------------------
+     The single real stacking scale for everything that sits against the page.
+     The Main Window (.center-stage) never leaves --z-backdrop -- it is not a
+     draggable and never receives a higher value, by design (that used to be
+     the bug: it shared the chrome's "bring to front" pool and could bury a
+     panel). Sprite/scene layering inside .illustrated-scene keeps its own
+     small local integers inside an `isolation:isolate` context; those are
+     relative only to their siblings and must never be compared with these. */
+  --z-world:-1;           /* the shared animated sky behind every screen (#hsr-backdrop) */
+  --z-backdrop:0;
+  --z-chrome:600;        /* resting panels: Party, Workspace, Screens, message log */
+  --z-chrome-active:650;  /* a panel that has been moved at least once */
+  --z-dock:300;           /* the bottom action dock, and its trays */
+  --z-messages:800;       /* Messages & Errors popup */
+  --z-frame:900;          /* the persistent top nav / bottom Back+Options bars pinned to the app frame */
+  --z-dragging:1200;      /* whatever panel is being dragged right now */
+  --z-context:1000;       /* the right-click context menu */
+  --z-modal:2000;         /* native <dialog> elements */
+
+  /* Persistent frame chrome: the top screen-nav bar and bottom Back/Help
+     bar pinned to #app.app-shell's own edges on every breakpoint (see
+     topNavigation()/mobileNavigation() in app.js). Real buttons need a real
+     tap target, so these are sized for that, not a bare 20px sliver. */
+  --frame-topbar-h:52px;
+  --frame-bottombar-h:44px;
+
+  /* The desktop viewport excludes the operating-system title bar. These are
+     the in-game frame dimensions only. */
+  --frame-gutter:clamp(14px,2vw,32px);
+  --frame-gap:clamp(8px,1vw,16px);
+
+  /* ---- Screen motion ------------------------------------------------------
+     One timing set for every screen change, so the whole client moves alike.
+     --t-screen-out must match SCREEN_EXIT_MS in app.js. */
+  --t-screen-in:280ms;
+  --t-screen-out:200ms;
+  --t-stage-in:220ms;
+  --t-backdrop:700ms;
+  --screen-rise:8px;
+  --backdrop-dim:.58;     /* scrim over the sky on dimmed screens (creation, options, play) */
+}
+
+/* ==========================================================================
+   THEME
+   ==========================================================================
+   A theme is a set of raw colour CHANNELS ("r,g,b"), so any opacity can be
+   derived from one source. The roles:
+
+     --gold-rgb       accent: borders, focus, active state, primary buttons
+     --gold-soft-rgb  accent, quieter (gradient partner, secondary emphasis)
+     --gold-hi-rgb    accent, brighter (glyph rings, highlights)
+     --bg-rgb         deepest layer: page, frame bars, console, panel backing
+     --surface-rgb    panels and cards
+     --raised-rgb     raised controls, inputs, headers inside panels
+     --lift-rgb       the brightest surface: header strips, hover plates
+     --edge-rgb       neutral hairlines (--edge-quiet)
+     --paper / --text-soft / --muted   text: primary, secondary, tertiary
+     --ink            text drawn ON the accent (primary buttons, selection)
+
+   Why this lives on `body` and not `:root`: a custom property whose value
+   uses var() is resolved once, on the element that declares it. Declared on
+   :root, --gold-a14 was computed from :root's --gold-rgb and inherited
+   unchanged -- so switching themes on <body> never re-tinted a single border.
+   Declaring the derived tokens on body makes them recompute per theme.
+
+   Adding a theme: copy one body[data-accent="…"] block, change the channels,
+   and add its swatch to the Interface theme picker in app.js (options()). */
+body{
+  /* Reliquary (gold) — the default theme's channels */
+  --gold-rgb:201,168,106;
+  --gold-soft-rgb:181,152,92;
+  --gold-hi-rgb:227,190,126;
+  --bg-rgb:8,10,16;
+  --surface-rgb:17,19,28;
+  --raised-rgb:24,29,43;
+  --lift-rgb:38,45,68;
+  --edge-rgb:183,199,222;
+  --paper:#e9e4d5;
+  --text-soft:#c5cad5;
+  --muted:#a9a397;
+  --ink:#11131c;
+  --mint:#8ac8bb;
+
+  /* ---- Derived: never edit per theme ---- */
+  --gold:rgb(var(--gold-rgb));
+  --goldSoft:rgb(var(--gold-soft-rgb));
+  --gold-hi:rgb(var(--gold-hi-rgb));
+  --gold-a03:rgba(var(--gold-rgb),.03);
+  --gold-a04:rgba(var(--gold-rgb),.04);
+  --gold-a05:rgba(var(--gold-rgb),.05);
+  --gold-a06:rgba(var(--gold-rgb),.06);
+  --gold-a07:rgba(var(--gold-rgb),.07);
+  --gold-a08:rgba(var(--gold-rgb),.08);
+  --gold-a10:rgba(var(--gold-rgb),.1);
+  --gold-a12:rgba(var(--gold-rgb),.12);
+  --gold-a14:rgba(var(--gold-rgb),.14);
+  --gold-a15:rgba(var(--gold-rgb),.15);
+  --gold-a16:rgba(var(--gold-rgb),.16);
+  --gold-a18:rgba(var(--gold-rgb),.18);
+  --gold-a20:rgba(var(--gold-rgb),.2);
+  --gold-a22:rgba(var(--gold-rgb),.22);
+  --gold-a25:rgba(var(--gold-rgb),.25);
+  --gold-a30:rgba(var(--gold-rgb),.3);
+  --gold-a32:rgba(var(--gold-rgb),.32);
+  --gold-a35:rgba(var(--gold-rgb),.35);
+  --gold-a40:rgba(var(--gold-rgb),.4);
+  --gold-a55:rgba(var(--gold-rgb),.55);
+  --gold-a60:rgba(var(--gold-rgb),.6);
+  --gold-a70:rgba(var(--gold-rgb),.7);
+  --line:var(--gold-a40);
+  --frame-border:1px solid var(--line);
+  --edge-quiet:rgba(var(--edge-rgb),.16);
+
+  --panel:rgb(var(--raised-rgb));
+  --ink-soft:rgb(var(--raised-rgb));
+  --surface-raised:rgb(var(--raised-rgb));
+  --surface-inset:rgba(var(--bg-rgb),.9);
+  --hsr-panel-bg:rgba(var(--bg-rgb),.9);
+  --hsr-panel-bg-strong:rgba(var(--bg-rgb),.97);
+  --page-bg:radial-gradient(circle at 50% 0,rgb(var(--raised-rgb)),rgb(var(--bg-rgb)) 62%);
+  --lift-bg:linear-gradient(135deg,rgb(var(--lift-rgb)),rgb(var(--surface-rgb)) 72%);
+
+  --stage-frame-bg:transparent;   /* the shared #hsr-backdrop shows around the stage */
+  --stage-bg:linear-gradient(180deg,rgba(var(--surface-rgb),.66),rgba(var(--bg-rgb),.8));
+  --stage-overlay-bg:linear-gradient(180deg,rgba(var(--raised-rgb),.99),rgba(var(--surface-rgb),.99));
+  --cc-card-bg:rgba(var(--surface-rgb),.55);
+  --cc-panel-bg:rgba(var(--surface-rgb),.55);
+
+  /* Title-screen world: illustration colours, chosen per theme below. */
+  --intro-sky-top:#1a1f35;--intro-sky-mid:#2d3a52;--intro-sky-bottom:#0d111b;
+  --intro-moon-core:#f5e6d3;--intro-moon-mid:#e8d4b8;--intro-cloud:#cbd0d733;
+  --intro-mountain-back:#1a2333;--intro-mountain-mid:#253548;--intro-mountain-front:#1f2d42;--intro-mountain-edge:#2a3a52;
+  --intro-mist:#8d9bb455;--intro-firefly:#f3d79a;
+}
+/* Moon — silver on cold steel blue */
+body[data-accent="moon"]{
+  --gold-rgb:200,216,236;
+  --gold-soft-rgb:158,181,207;
+  --gold-hi-rgb:232,242,252;
+  --bg-rgb:6,11,20;
+  --surface-rgb:13,21,35;
+  --raised-rgb:20,32,51;
+  --lift-rgb:36,58,88;
+  --edge-rgb:176,202,232;
+  --paper:#e6edf5;
+  --text-soft:#c3d0de;
+  --muted:#98a7b9;
+  --ink:#0b1320;
+  --mint:#a9d9e5;
+  --intro-sky-top:#17283f;--intro-sky-mid:#345575;--intro-sky-bottom:#09121f;
+  --intro-moon-core:#eef8ff;--intro-moon-mid:#c8d8ec;--intro-cloud:#d8e9ff33;
+  --intro-mountain-back:#172b45;--intro-mountain-mid:#234362;--intro-mountain-front:#1b3550;--intro-mountain-edge:#315a76;
+  --intro-mist:#a9c4e255;--intro-firefly:#d8ecff;
+}
+/* Ember — rose on warm plum */
+body[data-accent="ember"]{
+  --gold-rgb:227,161,154;
+  --gold-soft-rgb:191,123,117;
+  --gold-hi-rgb:244,195,181;
+  --bg-rgb:14,8,12;
+  --surface-rgb:27,15,23;
+  --raised-rgb:39,22,33;
+  --lift-rgb:72,39,56;
+  --edge-rgb:228,192,198;
+  --paper:#f2e5e0;
+  --text-soft:#dcc7c7;
+  --muted:#b59b9d;
+  --ink:#1a0d14;
+  --mint:#d8b09c;
+  --intro-sky-top:#351d2a;--intro-sky-mid:#653b4b;--intro-sky-bottom:#160c15;
+  --intro-moon-core:#fff0dc;--intro-moon-mid:#e3a19a;--intro-cloud:#f4c3b533;
+  --intro-mountain-back:#3a2130;--intro-mountain-mid:#563044;--intro-mountain-front:#321c31;--intro-mountain-edge:#713b4b;
+  --intro-mist:#c9959a55;--intro-firefly:#ffc58f;
+}

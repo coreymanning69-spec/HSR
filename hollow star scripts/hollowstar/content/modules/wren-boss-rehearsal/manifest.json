@@ -1,0 +1,11 @@
+{
+  "schema_version": "hollow-star-module-1",
+  "module_id": "wren-boss-rehearsal",
+  "version": "0.1.0",
+  "title": "The Brass Castellan — Champion Rehearsal",
+  "ruleset": "5e-certified-runtime",
+  "status": "editable",
+  "entry_fixture": {"fixture_id":"brass-castellan-entry","party_policy":"caller-selected","seed_required":true},
+  "blind_play": {"sealed_room_boundary":true,"generate_on_reach":true,"future_room_contents_hidden":true},
+  "content": {"floors":"fixture.json","rooms":"fixture.json","actors":"fixture.json","equipment":"fixture.json","spells":"fixture.json","encounter_tables":"fixture.json","rules":"fixture.json","authored_tells":"fixture.json"}
+}

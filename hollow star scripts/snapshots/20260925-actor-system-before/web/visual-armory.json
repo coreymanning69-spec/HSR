@@ -1,0 +1,23 @@
+{
+  "schema": "hsr-visual-armory-1",
+  "status": "Illustrative presentation catalog; host remains authoritative for mechanics.",
+  "selectors": {
+    "classes": ["Warrior", "Magician", "Archer", "Rogue", "Cleric"],
+    "genders": ["Feminine", "Masculine", "Androgynous"],
+    "races": ["Human", "Elf", "Half-Elf", "Orc", "Goblin"]
+  },
+  "items": [
+    {"id":"ashen-longsword","name":"Ashen Longsword","kind":"weapon","silhouette":"⚔","material":"smoke-dark steel","classes":["Warrior","Rogue"],"races":["Human","Orc"],"tones":["Feminine","Masculine","Androgynous"]},
+    {"id":"glass-rapier","name":"Glass Rapier","kind":"weapon","silhouette":"╱","material":"clear edge and silver guard","classes":["Rogue","Magician"],"races":["Elf","Half-Elf"],"tones":["Feminine","Androgynous"]},
+    {"id":"moon-sickle","name":"Moon Sickle","kind":"weapon","silhouette":"☾","material":"crescent iron","classes":["Cleric","Rogue"],"races":["Elf","Goblin"],"tones":["Feminine","Androgynous"]},
+    {"id":"ironroot-maul","name":"Ironroot Maul","kind":"weapon","silhouette":"╋","material":"knotted ironwood and iron","classes":["Warrior","Cleric"],"races":["Orc","Human"],"tones":["Masculine","Androgynous"]},
+    {"id":"starfall-bow","name":"Starfall Bow","kind":"weapon","silhouette":"⌒","material":"dark yew with pale inlay","classes":["Archer"],"races":["Elf","Half-Elf","Goblin"],"tones":["Feminine","Masculine","Androgynous"]},
+    {"id":"needle-dagger","name":"Needle Dagger","kind":"weapon","silhouette":"◇","material":"narrow silvered steel","classes":["Rogue","Archer"],"races":["Goblin","Half-Elf"],"tones":["Feminine","Androgynous"]},
+    {"id":"storm-glaive","name":"Storm Glaive","kind":"weapon","silhouette":"†","material":"blue-black alloy and ash haft","classes":["Warrior","Cleric"],"races":["Orc","Human"],"tones":["Masculine","Androgynous"]},
+    {"id":"ember-quarterstaff","name":"Ember Quarterstaff","kind":"weapon","silhouette":"│","material":"charred oak with copper rings","classes":["Magician","Cleric"],"races":["Human","Half-Elf"],"tones":["Feminine","Masculine","Androgynous"]},
+    {"id":"thorn-handbow","name":"Thorn Handbow","kind":"weapon","silhouette":"⌁","material":"blackwood, sinew, and thorn tips","classes":["Archer","Rogue"],"races":["Goblin","Elf"],"tones":["Feminine","Androgynous"]},
+    {"id":"dawn-battleaxe","name":"Dawn Battleaxe","kind":"weapon","silhouette":"⚒","material":"bright steel with wrapped ash grip","classes":["Warrior"],"races":["Orc","Human"],"tones":["Masculine","Androgynous"]},
+    {"id":"watcher-buckler","name":"Watcher Buckler","kind":"shield","silhouette":"◉","material":"layered steel and leather","classes":["Warrior","Rogue","Cleric"],"races":["Human","Goblin","Half-Elf"],"tones":["Feminine","Masculine","Androgynous"]},
+    {"id":"cairn-shield","name":"Cairn Shield","kind":"shield","silhouette":"⬟","material":"slate-faced iron with stone boss","classes":["Warrior","Cleric"],"races":["Orc","Human","Elf"],"tones":["Masculine","Androgynous"]}
+  ]
+}

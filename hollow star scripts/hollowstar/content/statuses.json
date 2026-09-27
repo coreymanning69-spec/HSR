@@ -1,0 +1,103 @@
+{
+ "statuses": [
+  {
+   "name": "PRONE",
+   "category": "physical"
+  },
+  {
+   "name": "GRAPPLED",
+   "category": "physical"
+  },
+  {
+   "name": "RESTRAINED",
+   "category": "physical"
+  },
+  {
+   "name": "STUNNED",
+   "category": "physical",
+   "incapacitating": true
+  },
+  {
+   "name": "PARALYZED",
+   "category": "physical",
+   "incapacitating": true
+  },
+  {
+   "name": "INCAPACITATED",
+   "category": "physical",
+   "incapacitating": true
+  },
+  {
+   "name": "BLINDED",
+   "category": "physical"
+  },
+  {
+   "name": "POISONED",
+   "category": "physical"
+  },
+  {
+   "name": "DODGING",
+   "category": "physical",
+   "decays": false,
+   "clears_on_turn_start": true
+  },
+  {
+   "name": "DISENGAGED",
+   "category": "physical",
+   "decays": false,
+   "clears_on_turn_start": true
+  },
+  {
+   "name": "INVISIBLE",
+   "category": "physical"
+  },
+  {
+   "name": "HASTED",
+   "category": "physical"
+  },
+  {
+   "name": "SLOWED",
+   "category": "physical"
+  },
+  {
+   "name": "PETRIFIED",
+   "category": "physical"
+  },
+  {
+   "name": "SILENCED",
+   "category": "physical"
+  },
+  {
+   "name": "CHARMED",
+   "category": "mental"
+  },
+  {
+   "name": "FRIGHTENED",
+   "category": "mental"
+  },
+  {
+   "name": "CONFUSED",
+   "category": "mental"
+  },
+  {
+   "name": "DOMINATED",
+   "category": "mental"
+  },
+  {
+   "name": "POSSESSED",
+   "category": "mental"
+  },
+  {
+   "name": "MENTALLY_PARALYZED",
+   "category": "mental"
+  },
+  {
+   "name": "FEEBLEMIND",
+   "category": "mental"
+  },
+  {
+   "name": "MEMORY_EDIT",
+   "category": "mental"
+  }
+ ]
+}

@@ -1,0 +1,11 @@
+<svg viewBox="0 0 24 96" xmlns="http://www.w3.org/2000/svg">
+  <!-- Handle -->
+  <polygon points="11,38 13,38 14,88 10,88" fill="#9ca3af"/>
+  <polygon points="10,88 14,88 13,92 11,92" fill="#6b7280"/>
+  <!-- Neck -->
+  <polygon points="10,38 14,38 15,26 9,26" fill="#cbd5e1"/>
+  <!-- Two tines -->
+  <polygon points="9,26 11,26 10,8 8,8" fill="#e2e8f0"/>
+  <polygon points="13,26 15,26 16,8 14,8" fill="#cbd5e1"/>
+  <line x1="12" y1="8" x2="12" y2="28" stroke="#64748b" stroke-width="1"/>
+</svg>

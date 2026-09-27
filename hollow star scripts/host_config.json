@@ -1,0 +1,31 @@
+{
+  "schema_version": "hollow-star-host-config-1",
+  "rules_profile": "2014_5e_hsr_overlay",
+  "local_pc_required": false,
+  "local_desktop_root": "C:/Users/ACore/OneDrive/Desktop",
+  "local_workspace_prefix": "Soliera and Sera",
+  "paths": {
+    "corpus_dir": "divine mythos set",
+    "hsr_dir": "hollow star scripts",
+    "content_dir": "hollow star scripts/hollowstar/content",
+    "snapshot": "hollow star scripts/snapshots/party_snapshot.json",
+    "handshake": "hollow star scripts/HSR_HANDSHAKE.json",
+    "data_dir": ".local",
+    "runs_dir": ".local/reliquary_runs",
+    "profiles_dir": ".local/reliquary_profiles"
+  },
+  "authority": {
+    "design_owner": "DM046_0",
+    "routing_concept": "hollow-star-reliquary",
+    "runtime_pair": ["DM044_0", "DM044_1"],
+    "snapshot_mode": "SIMULATION",
+    "corpus_writes": false,
+    "runtime_story_markdown_reads": false
+  },
+  "modes": {
+    "DESIGN": "available",
+    "REVIEW": "available",
+    "SANDBOX": "available",
+    "FORGE": "available"
+  }
+}

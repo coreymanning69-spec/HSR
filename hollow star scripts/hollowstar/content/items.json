@@ -1,0 +1,1691 @@
+{
+  "_note": "D&D base items. Inherent effects are rules-as-written properties. Prefix and suffix are applied at load or generation time.",
+  "_weapon_authoring_note": "Two resolvers read this file. tactical.py (the live dungeon run) needs damage_dice + attack_ability + reach/range_normal/range_long on every hand-slot weapon, or a custom-identity wielder's weapon_attack() raises 'weapon dice are not implemented'. resolution.py (the SIMULATION/rehearsal engine) reads base_damage directly and ignores damage_dice. Keep both populated on every weapon so neither resolver breaks. tags should carry the specific physical subtype (PIERCING/SLASHING/BLUDGEONING) alongside PHYSICAL -- tactical.damage() uses it to pick the armor mitigation lane against divine-plate targets, and items.py's _silhouette() uses it to pick the paperdoll weapon shape. 'axe' has no mechanical tell that distinguishes it from 'sword' (both are ordinarily SLASHING), so an axe-shaped weapon must set an explicit \"silhouette\": \"axe\" override -- see items.py's Item.silhouette field. reach is melee reach in feet (5 = adjacent, 10 = a polearm/reach weapon); range_normal/range_long are ranged-attack bands in feet and stay at the reach default for pure melee weapons.",
+  "items": [
+    {
+      "name": "Doran's Steward's Signet",
+      "slot": "ring",
+      "tier": "MAGICAL",
+      "ac_bonus": 1,
+      "utility_uses": [
+        "identify Sanctum authority",
+        "seal a Steward's requisition"
+      ],
+      "flavor": "A dark ring cut with a single bright line. The line is legible only when its bearer is expected.",
+      "sprite_id": "stewards-signet",
+      "lore": "Forged in the foundry of the First Sanctum from dense meteoric iron alloy. The inner band carries micro-inscribed administrative seals that resonate when entering sanctioned precincts."
+    },
+    {
+      "name": "Steward's field coat",
+      "slot": "armor",
+      "base_ac": 17,
+      "dex_cap": 2,
+      "utility_uses": [
+        "hold a folded map",
+        "protect carried tinder"
+      ],
+      "flavor": "Layered grey plates over waxed cloth; every buckle has been chosen for quiet use.",
+      "sprite_id": "stewards-coat",
+      "lore": "Tailored from heavy linen dipped in mineral wax, reinforced with overlapping plates of cold-rolled alloy. Designed to turn glancing strikes in dark passageways while deadening the rustle of carried gear."
+    },
+    {
+      "name": "Doran's watchblade",
+      "slot": "hand",
+      "base_damage": 8,
+      "damage_dice": "1d10",
+      "damage_modifier": 5,
+      "attack_bonus": 2,
+      "attack_ability": "STR",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "SLASHING"
+      ],
+      "utility_uses": [
+        "cut cord",
+        "mark stone",
+        "strike a firesteel"
+      ],
+      "flavor": "A broad, serviceable blade with a nicked guard and a polished edge where a hand keeps finding it.",
+      "sprite_id": "watchblade",
+      "lore": "Primeverse steel folded thirty-two times, bearing a deep grey temper that swallows reflections. Its heavy spine acts as a counterweight, delivering the dense concussive impact characteristic of early Steward service."
+    },
+    {
+      "name": "tinderbox",
+      "slot": "utility",
+      "utility_uses": [
+        "start a fire",
+        "test a draft",
+        "light a fuse"
+      ],
+      "flavor": "Steel, flint, char cloth, and a little wrapped fat. It has been used recently.",
+      "sprite_id": "tinderbox",
+      "lore": "A compact brass casing containing scorched char cloth, high-purity spark flint, and shaved tallow. Standard issue for expeditions venturing beneath the light of the upper terrace."
+    },
+    {
+      "name": "snuff tin",
+      "slot": "utility",
+      "utility_uses": [
+        "mask a smell",
+        "wake a sleeper",
+        "offer a customary courtesy"
+      ],
+      "flavor": "A dented tin of bitter black snuff, sealed against damp.",
+      "sprite_id": "snuff-tin",
+      "lore": "Carved from horn and sealed with bees-wax. Holds ground mint, dried sage, and mild stimulants used by gate sentries to endure twenty-hour watches without losing vigilance."
+    },
+    {
+      "name": "Steward's route key",
+      "slot": "key",
+      "temporary": true,
+      "utility_uses": [
+        "open marked Sanctum service locks"
+      ],
+      "flavor": "Three teeth, one red thread, and a wax trace on the bow. It is not a general key.",
+      "sprite_id": "route-key",
+      "lore": "An angular, ward-notched key of dull bronze. Its tumblers align with the subterranean locks safeguarding the drainage channels beneath the wellhead."
+    },
+    {
+      "name": "longsword",
+      "slot": "hand",
+      "base_damage": 5,
+      "damage_dice": "1d8",
+      "attack_ability": "STR",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "SLASHING"
+      ],
+      "handedness": "one-handed",
+      "alternate_modes": {
+        "two_handed": {
+          "damage_dice": "1d10",
+          "reach": 5,
+          "range_long": 5,
+          "damage_type": "SLASHING"
+        }
+      },
+      "flavor": "A versatile, double-edged blade favored by martial combatants for its balanced strikes.",
+      "sprite_id": "longsword",
+      "lore": "A standard double-edged arming sword forged according to military specifications. Weighted for both the thrust and the draw cut, balanced three fingers above the crossguard."
+    },
+    {
+      "name": "greatsword",
+      "slot": "hand",
+      "base_damage": 7,
+      "damage_dice": "2d6",
+      "attack_ability": "STR",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "SLASHING",
+        "HEAVY"
+      ],
+      "handedness": "two-handed",
+      "flavor": "A massive, heavy blade designed to sweep through lightly armored foes with wide arcs.",
+      "inherent": [
+        {
+          "name": "heavy build",
+          "phase": "PERMISSION",
+          "direction": "GRANT",
+          "grants_tags": [
+            "HEAVY"
+          ],
+          "opens_gate": "requires_heavy"
+        }
+      ],
+      "sprite_id": "greatsword",
+      "lore": "A six-foot slab of tempered steel featuring an unsharpened ricasso wrapped in cord. Demands two hands to wield, striking with devastating leverage capable of cleaving pike shafts and light armor."
+    },
+    {
+      "name": "silvered dagger",
+      "slot": "hand",
+      "base_damage": 3,
+      "damage_dice": "1d4",
+      "attack_ability": "DEX",
+      "reach": 5,
+      "range_normal": 20,
+      "range_long": 60,
+      "tags": [
+        "PHYSICAL",
+        "PIERCING",
+        "SILVER"
+      ],
+      "handedness": "one-handed",
+      "flavor": "A thin, honed blade, its edge treated with silver -- and light enough to throw.",
+      "inherent": [
+        {
+          "name": "silvered",
+          "phase": "PERMISSION",
+          "direction": "GRANT",
+          "grants_tags": [
+            "SILVER"
+          ],
+          "opens_gate": "requires_silver"
+        }
+      ],
+      "sprite_id": "silvered-dagger",
+      "lore": "A leaf-bladed fighting knife clad in a microscopic veneer of beaten astral silver. Highly dense and permanently mirror-polished, crafted specifically to bypass the uncanny regeneration of subterranean horrors."
+    },
+    {
+      "name": "chain shirt",
+      "slot": "armor",
+      "base_ac": 13,
+      "flavor": "Interlocking metal rings worn over a padded gambeson, offering solid protection without completely hindering movement.",
+      "sprite_id": "chain-shirt",
+      "lore": "Interlocking rings of mild steel, every rivet hand-hammered over padded wool. Supple enough to wear beneath a common traveler's coat while absorbing slashes from cutlasses and claws."
+    },
+    {
+      "name": "ring of protection",
+      "slot": "ring",
+      "base_ac": 0,
+      "tier": "MAGICAL",
+      "flavor": "A simple silver band that faintly hums with defensive wards. Requires attunement to shield its wearer.",
+      "sprite_id": "ring-of-protection",
+      "lore": "A seamless band of dense white electrum inscribed with microscopic geometric glyphs. Projects a persistent harmonic frequency that subtly deflects incoming physical vectors.",
+      "ac_bonus": 1
+    },
+    {
+      "name": "warhammer",
+      "slot": "hand",
+      "base_damage": 6,
+      "damage_dice": "1d8",
+      "attack_ability": "STR",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "BLUDGEONING"
+      ],
+      "silhouette": "axe",
+      "handedness": "one-handed",
+      "alternate_modes": {
+        "two_handed": {
+          "damage_dice": "1d10",
+          "reach": 5,
+          "range_long": 5,
+          "damage_type": "BLUDGEONING"
+        }
+      },
+      "flavor": "A one-handed breaker for armored opposition.",
+      "sprite_id": "warhammer",
+      "lore": "A hardened steel square-head paired with a wicked armor-piercing beak. The solid ash haft is bound with steel langets to prevent weapon shearing during heavy concussive impacts."
+    },
+    {
+      "name": "glaive",
+      "slot": "hand",
+      "base_damage": 6,
+      "damage_dice": "1d10",
+      "attack_ability": "STR",
+      "reach": 10,
+      "range_normal": 10,
+      "range_long": 10,
+      "tags": [
+        "PHYSICAL",
+        "SLASHING",
+        "HEAVY"
+      ],
+      "handedness": "two-handed",
+      "flavor": "A single-edged blade mounted on a long shaft, perfect for keeping foes at bay.",
+      "sprite_id": "glaive",
+      "lore": "A broad, curved blade riveted securely to a seven-foot treated oak shaft. Combines the sweeping perimeter control of an axe with the standoff reach necessary against mounted or towering opposition."
+    },
+    {
+      "name": "rapier",
+      "slot": "hand",
+      "base_damage": 5,
+      "damage_dice": "1d8",
+      "attack_ability": "DEX",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "PIERCING"
+      ],
+      "silhouette": "sword",
+      "handedness": "one-handed",
+      "flavor": "A precise thrusting blade with an ornate guard, favoring agility over raw strength.",
+      "sprite_id": "rapier",
+      "lore": "A slender diamond-section blade housed in a swept hilt of pierced steel. Engineered for blinding thrusts that slip between the articulated seams of enemy harness."
+    },
+    {
+      "name": "hand crossbow",
+      "slot": "hand",
+      "base_damage": 4,
+      "damage_dice": "1d6",
+      "attack_ability": "DEX",
+      "reach": 5,
+      "range_normal": 30,
+      "range_long": 120,
+      "tags": [
+        "PHYSICAL",
+        "PIERCING"
+      ],
+      "handedness": "one-handed",
+      "flavor": "A compact, highly mobile crossbow that can easily be fired with one hand.",
+      "sprite_id": "hand-crossbow",
+      "lore": "A precision mechanism of tempered spring steel and oiled walnut. Engineered for close-quarters release, easily drawn and fired with a single hand from beneath a cloak."
+    },
+    {
+      "name": "battleaxe",
+      "slot": "hand",
+      "base_damage": 6,
+      "damage_dice": "1d8",
+      "attack_ability": "STR",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "SLASHING"
+      ],
+      "silhouette": "axe",
+      "handedness": "one-handed",
+      "alternate_modes": {
+        "two_handed": {
+          "damage_dice": "1d10",
+          "reach": 5,
+          "range_long": 5,
+          "damage_type": "SLASHING"
+        }
+      },
+      "flavor": "A broad-headed martial axe.",
+      "sprite_id": "battleaxe",
+      "lore": "A broad-bearded wedge of cast iron and forge-welded steel. The pronounced forward hook allows the wielder to catch enemy shields or drag limbs out of defensive alignment."
+    },
+    {
+      "name": "hunting bow",
+      "slot": "hand",
+      "base_damage": 5,
+      "damage_dice": "1d8",
+      "attack_ability": "DEX",
+      "reach": 5,
+      "range_normal": 150,
+      "range_long": 600,
+      "tags": [
+        "PHYSICAL",
+        "PIERCING"
+      ],
+      "silhouette": "bow",
+      "handedness": "two-handed",
+      "flavor": "A recurve hunting bow, restrung for war.",
+      "sprite_id": "hunting-bow",
+      "lore": "A recurve composite bow of laminated yew and horn. Responsive and resilient, built to loose heavy broadheads through thick brush and damp dungeon air without warping."
+    },
+    {
+      "name": "war pick",
+      "slot": "hand",
+      "base_damage": 5,
+      "damage_dice": "1d8",
+      "attack_ability": "STR",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "PIERCING"
+      ],
+      "handedness": "one-handed",
+      "flavor": "A narrow spike built to find the seams in plate.",
+      "sprite_id": "war-pick",
+      "lore": "A heavy beak of tempered iron angled to concentrate the entirety of a warrior's swing onto a single sharp square millimeter, puncturing plate armor like parchment."
+    },
+    {
+      "name": "Ashen Guard helm",
+      "set_name": "Ashen Guard",
+      "slot": "head",
+      "flavor": "Soot-darkened plate with a closed brow.",
+      "sprite_id": "ashen-guard-helm",
+      "lore": "A blackened steel barbute with a narrow visor slit. The inner rim is lined with sheepskin to absorb concussive shock from overhead bludgeons."
+    },
+    {
+      "name": "Ashen Guard cuirass",
+      "set_name": "Ashen Guard",
+      "slot": "armor",
+      "base_ac": 15,
+      "flavor": "The central, soot-darkened plate of the Ashen Guard set, forged to endure immense heat.",
+      "sprite_id": "ashen-guard-cuirass",
+      "lore": "Heavy breastplate and backplate forged from low-sulfur slag iron, blackened by oil quenching. Stamped with the watch-mark of the First Garrison."
+    },
+    {
+      "name": "Ashen Guard gauntlets",
+      "set_name": "Ashen Guard",
+      "slot": "hand",
+      "flavor": "Segmented gloves marked with old fire scars.",
+      "sprite_id": "ashen-guard-gauntlets",
+      "lore": "Articulated hourglass gauntlets with overlapping finger scales. Offers rigid wrist support for parrying without sacrificing grip sensitivity."
+    },
+    {
+      "name": "Ashen Guard boots",
+      "set_name": "Ashen Guard",
+      "slot": "boots",
+      "flavor": "Heavy boots built for broken stone.",
+      "sprite_id": "ashen-guard-boots",
+      "lore": "Cuffed leather boots reinforced with steel toe-caps and shin splints, treaded for grip on slime-slick dungeon stairwells."
+    },
+    {
+      "name": "Wayfarer Scale helm",
+      "set_name": "Wayfarer Scale",
+      "slot": "head",
+      "flavor": "Layered leather and overlapping scales protecting the crown and jaw.",
+      "sprite_id": "wayfarer-scale-helm",
+      "lore": "A domed open-faced cap covered in overlapping brass scales, providing skull protection while leaving peripheral sightlines unimpeded."
+    },
+    {
+      "name": "Wayfarer Scale coat",
+      "set_name": "Wayfarer Scale",
+      "slot": "armor",
+      "base_ac": 14,
+      "dex_cap": 2,
+      "flavor": "A layered scale-mail coat designed for long routes, balancing protection and mobility.",
+      "sprite_id": "wayfarer-scale-coat",
+      "lore": "A calf-length hauberk of stitched horn and steel scales over boiled leather. Designed for long-range scouts who require mobility across broken terrain."
+    },
+    {
+      "name": "Wayfarer Scale gloves",
+      "set_name": "Wayfarer Scale",
+      "slot": "hand",
+      "flavor": "Supple gloves reinforced at the knuckles.",
+      "sprite_id": "wayfarer-scale-gloves",
+      "lore": "Soft calfskin riding gloves faced with light brass studs across the knuckles and outer palm."
+    },
+    {
+      "name": "Wayfarer Scale boots",
+      "set_name": "Wayfarer Scale",
+      "slot": "boots",
+      "flavor": "Quiet-soled boots for long routes.",
+      "sprite_id": "wayfarer-scale-boots",
+      "lore": "Supple leather riding boots equipped with brass arch supports and reinforced heel guards for long marches."
+    },
+    {
+      "name": "mace",
+      "slot": "hand",
+      "base_damage": 4,
+      "damage_dice": "1d6",
+      "attack_ability": "STR",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "BLUDGEONING"
+      ],
+      "handedness": "one-handed",
+      "silhouette": "mace",
+      "sprite_id": "mace",
+      "weight": 4.0,
+      "category": "weapon",
+      "flavor": "A flanged iron mace with a leather-wrapped haft.",
+      "lore": "A flanged head of solid cast bronze atop a steel-cored grip. Simple, brutal, and virtually indestructible, requiring no edge maintenance."
+    },
+    {
+      "name": "scale mail",
+      "slot": "armor",
+      "base_ac": 14,
+      "dex_cap": 2,
+      "silhouette": "armor",
+      "material": "chain",
+      "sprite_id": "scale-mail",
+      "weight": 45.0,
+      "category": "armor",
+      "flavor": "Overlapping scales of bronze and steel on a supple leather backing.",
+      "lore": "Overlapping scales of stamped steel riveted onto a leather chassis. Provides formidable coverage against slashing blades and piercing arrows."
+    },
+    {
+      "name": "shield",
+      "slot": "hand",
+      "shield_bonus": 2,
+      "silhouette": "shield",
+      "sprite_id": "shield",
+      "weight": 6.0,
+      "category": "shield",
+      "flavor": "A stout wooden heater shield faced with steel rim and boss.",
+      "lore": "A convex heater shield of layered lime wood faced with raw rawhide and bound in iron. Deflects heavy blows away from the bearer's center of mass."
+    },
+    {
+      "name": "holy focus",
+      "slot": "neck",
+      "silhouette": "trinket",
+      "sprite_id": "holy-focus",
+      "weight": 1.0,
+      "category": "focus",
+      "flavor": "A carved sunburst medallion blessed for divine spellcasting.",
+      "lore": "A carved solar disc of bleached bone resting upon a bronze chain. Holds an internal resonance that channels divine intent into physical reality."
+    },
+    {
+      "name": "signet ring",
+      "slot": "ring",
+      "silhouette": "trinket",
+      "sprite_id": "signet-ring",
+      "weight": 0.1,
+      "category": "jewelry",
+      "flavor": "A signet band stamped with personal or house heraldry.",
+      "lore": "An engraved gold seal carrying an ancestral crest. Recognized by guild factors, bailiffs, and gate wardens as valid proof of identity and authority."
+    },
+    {
+      "name": "traveler's cloak",
+      "slot": "cloak",
+      "silhouette": "cloak",
+      "sprite_id": "cloak",
+      "weight": 3.0,
+      "category": "adventuring_gear",
+      "flavor": "A heavy wool cloak with cowl and bronze clasp.",
+      "lore": "Heavy wool treated with goose fat to shed torrential rains and biting subterranean damp. Generous enough to serve as a blanket at dry camps."
+    },
+    {
+      "name": "prayer beads",
+      "slot": "neck",
+      "silhouette": "trinket",
+      "sprite_id": "prayer-beads",
+      "weight": 0.5,
+      "category": "adventuring_gear",
+      "flavor": "A strand of carved wooden devotional beads.",
+      "lore": "A loop of ninety polished juniper beads anchored by a small iron hammer pendant. Used to pace devotional breath cycles and maintain focus under pressure."
+    },
+    {
+      "name": "herb sachet",
+      "slot": "cloak",
+      "silhouette": "trinket",
+      "sprite_id": "herb-sachet",
+      "weight": 0.2,
+      "category": "adventuring_gear",
+      "flavor": "A linen sachet of dried aromatic herbs.",
+      "lore": "Dried sprigs of wolfsbane, wild mint, and crushed camphor sewn into waxed silk. Worn near the neck to mask the putrid odor of rot and deter carrion vermin."
+    },
+    {
+      "name": "survey lens",
+      "slot": "head",
+      "silhouette": "trinket",
+      "sprite_id": "survey-lens",
+      "weight": 0.5,
+      "category": "tool",
+      "flavor": "A calibrated brass monocle for close inspection.",
+      "lore": "A brass eyepiece housing ground lead-glass lenses of high clarity. Enables the examination of hairline stonework fractures, hidden runes, and lock mechanisms."
+    },
+    {
+      "name": "old lantern",
+      "slot": "hand",
+      "silhouette": "staff",
+      "sprite_id": "old-lantern",
+      "weight": 2.0,
+      "category": "tool",
+      "flavor": "A hooded tin lantern that casts clear yellow light.",
+      "lore": "A four-sided tin lantern fitted with mica panes and an adjustable bullseye shutter. Casts a steady amber beam fueled by ordinary whale or seed oil."
+    },
+    {
+      "name": "pewter plate",
+      "slot": "utility",
+      "silhouette": "trinket",
+      "sprite_id": "plate",
+      "weight": 1.0,
+      "category": "tableware",
+      "flavor": "A simple hammered pewter dinner plate, lightly scuffed from cutlery.",
+      "lore": "A sturdy, leaded tableware disc stamped with an artisan's rose mark. Serviceable and difficult to chip or break in transit."
+    },
+    {
+      "name": "dining fork",
+      "slot": "utility",
+      "silhouette": "dagger",
+      "sprite_id": "fork",
+      "weight": 0.1,
+      "category": "tableware",
+      "flavor": "A two-tined dining fork forged from iron.",
+      "lore": "A two-tined dining implement fashioned from beaten brass wire, typical of river-trade settlements."
+    },
+    {
+      "name": "carved spoon",
+      "slot": "utility",
+      "silhouette": "trinket",
+      "sprite_id": "spoon",
+      "weight": 0.1,
+      "category": "tableware",
+      "flavor": "A smooth spoon carved from ash wood.",
+      "lore": "A wooden spoon smoothed with walnut oil, whittled from dry alder during long winter evenings."
+    },
+    {
+      "name": "table knife",
+      "slot": "utility",
+      "silhouette": "dagger",
+      "sprite_id": "knife-table",
+      "weight": 0.2,
+      "category": "tableware",
+      "flavor": "A blunt-point dining knife with wood scales.",
+      "lore": "A blunt-backed utility knife with a bone scale handle, used equally for portioning salted pork and carving kindling."
+    },
+    {
+      "name": "ale tankard",
+      "slot": "utility",
+      "silhouette": "trinket",
+      "sprite_id": "tankard",
+      "weight": 1.0,
+      "category": "tableware",
+      "flavor": "A banded wooden tavern tankard.",
+      "lore": "A heavy earthenware mug glazed in forest green, marked with the stamp of the Crooked Crown tavern."
+    },
+    {
+      "name": "wine goblet",
+      "slot": "utility",
+      "silhouette": "trinket",
+      "sprite_id": "goblet",
+      "weight": 0.8,
+      "category": "tableware",
+      "flavor": "A pewter drinking goblet with a flared base.",
+      "lore": "A flared bronze vessel with a twisted stem, showing tarnish along the inner rim from years of ceremonial vintages."
+    },
+    {
+      "name": "torch",
+      "slot": "utility",
+      "silhouette": "staff",
+      "sprite_id": "torch",
+      "weight": 1.0,
+      "category": "adventuring_gear",
+      "flavor": "Pitch and linen wrapped around a wooden stave; burns bright for 1 hour.",
+      "lore": "A split hardwood stave soaked in pitch and petroleum residue. Burns for roughly an hour with a crackling, smoky orange flame."
+    },
+    {
+      "name": "trail rations",
+      "slot": "utility",
+      "silhouette": "trinket",
+      "sprite_id": "rations",
+      "weight": 2.0,
+      "category": "consumable",
+      "flavor": "Hardtack wafers and salted cured meat wrapped in wax paper.",
+      "lore": "Hardtack wafers, dried plums, and strips of heavily salted venison sewn into greaseproof parchment."
+    },
+    {
+      "name": "canvas backpack",
+      "slot": "utility",
+      "silhouette": "cloak",
+      "sprite_id": "backpack",
+      "weight": 5.0,
+      "category": "container",
+      "flavor": "A heavy canvas pack with oiled leather straps and brass buckles.",
+      "lore": "A framed pack of triple-stitched sailcloth fitted with brass grommets and oiled shoulder straps."
+    },
+    {
+      "name": "wool bedroll",
+      "slot": "utility",
+      "silhouette": "cloak",
+      "sprite_id": "bedroll",
+      "weight": 7.0,
+      "category": "adventuring_gear",
+      "flavor": "A heavy wool blanket and waterproof canvas groundcloth rolled tight.",
+      "lore": "A dense fleece blanket backed with oiled canvas, rollable into a tight cylinder lashed beneath a backpack."
+    },
+    {
+      "name": "leather coin pouch",
+      "slot": "utility",
+      "silhouette": "trinket",
+      "sprite_id": "coin-pouch",
+      "weight": 0.5,
+      "category": "container",
+      "flavor": "A supple pigskin drawstring pouch for holding coins and gems.",
+      "lore": "A deerskin drawstring bag reinforced with double-welt stitching, sized to hold fifty standard silver marks comfortably."
+    },
+    {
+      "name": "dagger",
+      "slot": "hand",
+      "tier": "MUNDANE",
+      "base_damage": 4,
+      "damage_dice": "1d4",
+      "damage_modifier": 0,
+      "attack_bonus": 0,
+      "attack_ability": "DEX",
+      "reach": 5,
+      "range_normal": 20,
+      "range_long": 60,
+      "tags": [
+        "PHYSICAL",
+        "PIERCING"
+      ],
+      "utility_uses": [
+        "cut cord",
+        "skin game",
+        "jimmy a latch"
+      ],
+      "flavor": "A double-edged steel dagger with a plain leather-wrapped grip and a needle point.",
+      "lore": "The quintessential sidearm of the Primeverse. Forged from high-carbon spring steel, balanced identically for swift thrusts from concealment or a desperate close-range throw.",
+      "silhouette": "dagger",
+      "material": "steel",
+      "item_type": "weapon",
+      "handedness": "one-handed",
+      "coverage": "none",
+      "animation_profile": "dagger",
+      "weight": 1.0,
+      "category": "weapon"
+    },
+    {
+      "name": "shortsword",
+      "slot": "hand",
+      "tier": "MUNDANE",
+      "base_damage": 6,
+      "damage_dice": "1d6",
+      "damage_modifier": 0,
+      "attack_bonus": 0,
+      "attack_ability": "DEX",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "PIERCING"
+      ],
+      "utility_uses": [
+        "clear brush",
+        "parry close thrusts"
+      ],
+      "flavor": "A straight double-edged blade favored by skirmishers and watchmen in close corridors.",
+      "lore": "Manufactured in municipal armories throughout the settlements. Its stiff central ridge ensures clean armor penetration in narrow passages where larger blades would foul against stonework.",
+      "silhouette": "sword",
+      "material": "steel",
+      "item_type": "weapon",
+      "handedness": "one-handed",
+      "coverage": "none",
+      "animation_profile": "sword-1h",
+      "weight": 2.0,
+      "category": "weapon"
+    },
+    {
+      "name": "scimitar",
+      "slot": "hand",
+      "tier": "MUNDANE",
+      "base_damage": 6,
+      "damage_dice": "1d6",
+      "damage_modifier": 0,
+      "attack_bonus": 0,
+      "attack_ability": "DEX",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "SLASHING"
+      ],
+      "utility_uses": [
+        "slash ropes",
+        "cut canvas"
+      ],
+      "flavor": "A gracefully curved saber with a single keen cutting edge that sings through the air.",
+      "lore": "Brought north along the canal trade routes. The curved belly of the blade maximizes draw-cut contact area, slicing through leather and cloth with minimal arm exertion.",
+      "silhouette": "sword",
+      "material": "steel",
+      "item_type": "weapon",
+      "handedness": "one-handed",
+      "coverage": "none",
+      "animation_profile": "sword-1h",
+      "weight": 2.0,
+      "category": "weapon"
+    },
+    {
+      "name": "shortbow",
+      "slot": "hand",
+      "tier": "MUNDANE",
+      "base_damage": 6,
+      "damage_dice": "1d6",
+      "damage_modifier": 0,
+      "attack_bonus": 0,
+      "attack_ability": "DEX",
+      "reach": 5,
+      "range_normal": 80,
+      "range_long": 320,
+      "tags": [
+        "PHYSICAL",
+        "PIERCING"
+      ],
+      "utility_uses": [
+        "signal with whistle arrows",
+        "hunt small game"
+      ],
+      "flavor": "A compact yew stave with oiled sinew backing, quick to bring to bear.",
+      "lore": "Favored by scouts and tunnel outriders who cannot afford the cumbersome length of a great war bow. Snaps arrows with high velocity out to effective skirmishing range.",
+      "silhouette": "bow",
+      "material": "wood",
+      "item_type": "weapon",
+      "handedness": "two-handed",
+      "coverage": "none",
+      "animation_profile": "bow",
+      "weight": 2.0,
+      "category": "weapon"
+    },
+    {
+      "name": "longbow",
+      "slot": "hand",
+      "tier": "MUNDANE",
+      "base_damage": 8,
+      "damage_dice": "1d8",
+      "damage_modifier": 0,
+      "attack_bonus": 0,
+      "attack_ability": "DEX",
+      "reach": 5,
+      "range_normal": 150,
+      "range_long": 600,
+      "tags": [
+        "PHYSICAL",
+        "PIERCING"
+      ],
+      "utility_uses": [
+        "pierce distant sentries",
+        "lob fire arrows"
+      ],
+      "flavor": "A towering stave of seasoned heartwood yew with horn nocks and a heavy draw.",
+      "lore": "A devastating battlefield instrument requiring immense back and shoulder conditioning. Looses heavy bodkin shafts capable of puncturing plate armor across wide cavern spaces.",
+      "silhouette": "bow",
+      "material": "wood",
+      "item_type": "weapon",
+      "handedness": "two-handed",
+      "coverage": "none",
+      "animation_profile": "bow",
+      "weight": 3.0,
+      "category": "weapon"
+    },
+    {
+      "name": "light crossbow",
+      "slot": "hand",
+      "tier": "MUNDANE",
+      "base_damage": 8,
+      "damage_dice": "1d8",
+      "damage_modifier": 0,
+      "attack_bonus": 0,
+      "attack_ability": "DEX",
+      "reach": 5,
+      "range_normal": 80,
+      "range_long": 320,
+      "tags": [
+        "PHYSICAL",
+        "PIERCING"
+      ],
+      "utility_uses": [
+        "hold aim without arm strain",
+        "fire from arrow slits"
+      ],
+      "flavor": "A steel prod mounted on a wooden tiller with an iron stirrup for drawing.",
+      "lore": "The democratic weapon of town militias. Requires minimal athletic training to point and loose, storing mechanical energy in its tempered prod to drive quarrel bolts with steady force.",
+      "silhouette": "bow",
+      "material": "wood",
+      "item_type": "weapon",
+      "handedness": "two-handed",
+      "coverage": "none",
+      "animation_profile": "bow",
+      "weight": 5.0,
+      "category": "weapon"
+    },
+    {
+      "name": "heavy crossbow",
+      "slot": "hand",
+      "tier": "MUNDANE",
+      "base_damage": 10,
+      "damage_dice": "1d10",
+      "damage_modifier": 0,
+      "attack_bonus": 0,
+      "attack_ability": "DEX",
+      "reach": 5,
+      "range_normal": 100,
+      "range_long": 400,
+      "tags": [
+        "PHYSICAL",
+        "PIERCING"
+      ],
+      "utility_uses": [
+        "crack heavy shields",
+        "pin barricades"
+      ],
+      "flavor": "A massive siege engine scaled for the infantryman, fitted with a heavy cranequin winch.",
+      "lore": "Forged with a laminated steel prod of immense tension. When loosed, its heavy square-headed bolts deliver concussive kinetic energy that shatters bones behind struck shields.",
+      "silhouette": "bow",
+      "material": "steel",
+      "item_type": "weapon",
+      "handedness": "two-handed",
+      "coverage": "none",
+      "animation_profile": "bow",
+      "weight": 9.0,
+      "category": "weapon"
+    },
+    {
+      "name": "spear",
+      "slot": "hand",
+      "tier": "MUNDANE",
+      "base_damage": 6,
+      "damage_dice": "1d6",
+      "damage_modifier": 0,
+      "attack_bonus": 0,
+      "attack_ability": "STR",
+      "reach": 5,
+      "range_normal": 20,
+      "range_long": 60,
+      "tags": [
+        "PHYSICAL",
+        "PIERCING"
+      ],
+      "utility_uses": [
+        "probe pit traps",
+        "vault across chasms",
+        "brace against charging beasts"
+      ],
+      "flavor": "An ash haft tipped with a leaf-shaped steel point and reinforced iron langets.",
+      "lore": "The most ancient and reliable arm in the Primeverse. Equally lethal held behind a shield in the battle line or hurled across a sunken courtyard into an oncoming threat.",
+      "silhouette": "polearm",
+      "material": "wood",
+      "item_type": "weapon",
+      "handedness": "one-handed",
+      "coverage": "none",
+      "animation_profile": "neutral",
+      "weight": 3.0,
+      "category": "weapon"
+    },
+    {
+      "name": "pike",
+      "slot": "hand",
+      "tier": "MUNDANE",
+      "base_damage": 10,
+      "damage_dice": "1d10",
+      "damage_modifier": 0,
+      "attack_bonus": 0,
+      "attack_ability": "STR",
+      "reach": 10,
+      "range_normal": 10,
+      "range_long": 10,
+      "tags": [
+        "PHYSICAL",
+        "PIERCING"
+      ],
+      "utility_uses": [
+        "brace against monstrous charges",
+        "hold doorframes"
+      ],
+      "flavor": "An imposing twelve-foot ash shaft tipped with a four-sided armor-punching spike.",
+      "lore": "Designed for defensive hedge formations. Its extended reach forces monstrous beasts and cavalry to impale themselves on its spike before their claws or fangs can reach the bearer.",
+      "silhouette": "polearm",
+      "material": "wood",
+      "item_type": "weapon",
+      "handedness": "two-handed",
+      "coverage": "none",
+      "animation_profile": "neutral",
+      "weight": 8.0,
+      "category": "weapon"
+    },
+    {
+      "name": "halberd",
+      "slot": "hand",
+      "tier": "MUNDANE",
+      "base_damage": 10,
+      "damage_dice": "1d10",
+      "damage_modifier": 0,
+      "attack_bonus": 0,
+      "attack_ability": "STR",
+      "reach": 10,
+      "range_normal": 10,
+      "range_long": 10,
+      "tags": [
+        "PHYSICAL",
+        "SLASHING"
+      ],
+      "utility_uses": [
+        "hook shields",
+        "chop timber",
+        "drag enemies down"
+      ],
+      "flavor": "A formidable polearm combining an axe blade, a top thrusting spike, and a rear beak hook.",
+      "lore": "The pinnacle of heavy infantry pole-arms. Enables a trained soldier to chop, thrust, or disarm shields with massive mechanical leverage from outside sword reach.",
+      "silhouette": "polearm",
+      "material": "steel",
+      "item_type": "weapon",
+      "handedness": "two-handed",
+      "coverage": "none",
+      "animation_profile": "neutral",
+      "weight": 6.0,
+      "category": "weapon"
+    },
+    {
+      "name": "morningstar",
+      "slot": "hand",
+      "tier": "MUNDANE",
+      "base_damage": 8,
+      "damage_dice": "1d8",
+      "damage_modifier": 0,
+      "attack_bonus": 0,
+      "attack_ability": "STR",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "PIERCING"
+      ],
+      "utility_uses": [
+        "crush helmets",
+        "splinter wooden doors"
+      ],
+      "flavor": "A dense steel ball bristling with pyramidal spikes atop a steel-plated haft.",
+      "lore": "A fearsome anti-armor weapon that blends bludgeoning shock with piercing punctures. Glancing impacts catch on the armor face and drive spikes through plate ridges.",
+      "silhouette": "mace",
+      "material": "steel",
+      "item_type": "weapon",
+      "handedness": "one-handed",
+      "coverage": "none",
+      "animation_profile": "neutral",
+      "weight": 4.0,
+      "category": "weapon"
+    },
+    {
+      "name": "flail",
+      "slot": "hand",
+      "tier": "MUNDANE",
+      "base_damage": 8,
+      "damage_dice": "1d8",
+      "damage_modifier": 0,
+      "attack_bonus": 0,
+      "attack_ability": "STR",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "BLUDGEONING"
+      ],
+      "utility_uses": [
+        "wrap around enemy shields",
+        "disarm weapon guards"
+      ],
+      "flavor": "A spiked iron sphere connected to a hardwood haft by three heavy chain links.",
+      "lore": "The articulated chain makes the weapon impossible to parry traditionally, wrapping over shield rims and around crossguards to strike defenders who believe themselves protected.",
+      "silhouette": "mace",
+      "material": "steel",
+      "item_type": "weapon",
+      "handedness": "one-handed",
+      "coverage": "none",
+      "animation_profile": "neutral",
+      "weight": 3.0,
+      "category": "weapon"
+    },
+    {
+      "name": "trident",
+      "slot": "hand",
+      "tier": "MUNDANE",
+      "base_damage": 6,
+      "damage_dice": "1d6",
+      "damage_modifier": 0,
+      "attack_bonus": 0,
+      "attack_ability": "STR",
+      "reach": 5,
+      "range_normal": 20,
+      "range_long": 60,
+      "tags": [
+        "PHYSICAL",
+        "PIERCING"
+      ],
+      "utility_uses": [
+        "trap enemy blades between tines",
+        "spear river fish"
+      ],
+      "flavor": "A three-pronged steel fork with barbed tines and an oiled brass grip.",
+      "lore": "Adapted from canal fishing implements for the arena and the wet underways. The outer tines easily catch and twist enemy blades, allowing rapid follow-up thrusts.",
+      "silhouette": "polearm",
+      "material": "steel",
+      "item_type": "weapon",
+      "handedness": "one-handed",
+      "coverage": "none",
+      "animation_profile": "neutral",
+      "weight": 4.0,
+      "category": "weapon"
+    },
+    {
+      "name": "scythe",
+      "slot": "hand",
+      "tier": "MUNDANE",
+      "base_damage": 8,
+      "damage_dice": "2d4",
+      "damage_modifier": 0,
+      "attack_bonus": 0,
+      "attack_ability": "STR",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "SLASHING"
+      ],
+      "utility_uses": [
+        "reap tall weeds",
+        "trip opponents' heels"
+      ],
+      "flavor": "A crescent blade with a razor inner curve fastened perpendicular to an ash snath.",
+      "lore": "An agricultural tool repurposed for desperate uprisings and grim ritual executions. The sweeping inward draw of its curved edge inflicts catastrophic lacerations.",
+      "silhouette": "polearm",
+      "material": "steel",
+      "item_type": "weapon",
+      "handedness": "two-handed",
+      "coverage": "none",
+      "animation_profile": "neutral",
+      "weight": 5.0,
+      "category": "weapon"
+    },
+    {
+      "name": "quarterstaff",
+      "slot": "hand",
+      "tier": "MUNDANE",
+      "base_damage": 6,
+      "damage_dice": "1d6",
+      "damage_modifier": 0,
+      "attack_bonus": 0,
+      "attack_ability": "STR",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "BLUDGEONING"
+      ],
+      "utility_uses": [
+        "test swamp depth",
+        "support walking on inclines",
+        "brace falling debris"
+      ],
+      "flavor": "A six-foot length of dense seasoned ash capped at both ends with iron ferrules.",
+      "lore": "Simple, unassuming, and immensely versatile in skilled hands. Delivers rapid alternating blows from either end that disorient attackers while parrying incoming cuts cleanly.",
+      "silhouette": "staff",
+      "material": "wood",
+      "item_type": "weapon",
+      "handedness": "one-handed",
+      "coverage": "none",
+      "animation_profile": "staff",
+      "weight": 4.0,
+      "category": "weapon"
+    },
+    {
+      "name": "club",
+      "slot": "hand",
+      "tier": "MUNDANE",
+      "base_damage": 4,
+      "damage_dice": "1d4",
+      "damage_modifier": 0,
+      "attack_bonus": 0,
+      "attack_ability": "STR",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "BLUDGEONING"
+      ],
+      "utility_uses": [
+        "drive wooden stakes",
+        "subdue without killing"
+      ],
+      "flavor": "A knotty cudgel of fire-hardened oak with a cord wrist thong.",
+      "lore": "The most primitive weapon of survival. Weighted heavily toward the knot, imparting concussive force capable of cracking ribs and stunning unarmored adversaries.",
+      "silhouette": "staff",
+      "material": "wood",
+      "item_type": "weapon",
+      "handedness": "one-handed",
+      "coverage": "none",
+      "animation_profile": "neutral",
+      "weight": 2.0,
+      "category": "weapon"
+    },
+    {
+      "name": "arcane wand",
+      "slot": "hand",
+      "tier": "MAGICAL",
+      "base_damage": 4,
+      "damage_dice": "1d4",
+      "damage_modifier": 1,
+      "attack_bonus": 1,
+      "attack_ability": "INT",
+      "reach": 5,
+      "range_normal": 60,
+      "range_long": 120,
+      "tags": [
+        "ARCANE",
+        "FORCE"
+      ],
+      "utility_uses": [
+        "ignite candles at distance",
+        "detect ley currents"
+      ],
+      "flavor": "A slender baton of petrified rowanwood bound with copper filigree and a crystal tip.",
+      "lore": "Attuned to focus raw arcane force into needle-thin bolts of kinetic disruption. Does not require brute muscle to loose, tracking the mental geometry of the caster.",
+      "silhouette": "wand",
+      "material": "wood",
+      "item_type": "weapon",
+      "handedness": "one-handed",
+      "coverage": "none",
+      "animation_profile": "wand",
+      "weight": 1.0,
+      "category": "weapon"
+    },
+    {
+      "name": "elder staff",
+      "slot": "hand",
+      "tier": "MAGICAL",
+      "base_damage": 8,
+      "damage_dice": "1d8",
+      "damage_modifier": 1,
+      "attack_bonus": 1,
+      "attack_ability": "INT",
+      "reach": 5,
+      "range_normal": 60,
+      "range_long": 120,
+      "tags": [
+        "ARCANE"
+      ],
+      "utility_uses": [
+        "stabilize magical discharge",
+        "channel ritual circles"
+      ],
+      "flavor": "A gnarled staff of black elderwood that faintly hums with suppressed magical pressure.",
+      "lore": "Harvested from trees growing over sunken conduits of the Old Empire. Its porous wood naturally absorbs and stabilizes volatile mana, allowing prolonged spellcasting without resonance burn.",
+      "silhouette": "staff",
+      "material": "wood",
+      "item_type": "weapon",
+      "handedness": "two-handed",
+      "coverage": "none",
+      "animation_profile": "staff",
+      "weight": 4.0,
+      "category": "weapon"
+    },
+    {
+      "name": "padded armor",
+      "slot": "armor",
+      "tier": "MUNDANE",
+      "base_ac": 11,
+      "dex_cap": null,
+      "utility_uses": [
+        "cushion falls",
+        "dampen armor clatter"
+      ],
+      "flavor": "Quilted layers of heavy cloth and batting stitched in diamond baffles.",
+      "lore": "The humble foundation of all heavy harness, worn alone by river boatmen and laborers. Dampens concussive strikes, though vulnerable to piercing daggers and point thrusts.",
+      "silhouette": "armor",
+      "material": "cloth",
+      "item_type": "armor",
+      "handedness": "none",
+      "coverage": "full-body",
+      "animation_profile": "neutral",
+      "weight": 8.0,
+      "category": "armor"
+    },
+    {
+      "name": "leather armor",
+      "slot": "armor",
+      "tier": "MUNDANE",
+      "base_ac": 11,
+      "dex_cap": null,
+      "utility_uses": [
+        "repel briars",
+        "withstand rain without rusting"
+      ],
+      "flavor": "Supple cured steerhide reinforced across the shoulders and chest with boiled leather.",
+      "lore": "Treated in brine and bark tannin to retain full flexibility while providing a tough outer barrier against animal claws, knives, and ambient underground grit.",
+      "silhouette": "armor",
+      "material": "leather",
+      "item_type": "armor",
+      "handedness": "none",
+      "coverage": "full-body",
+      "animation_profile": "neutral",
+      "weight": 10.0,
+      "category": "armor"
+    },
+    {
+      "name": "studded leather armor",
+      "slot": "armor",
+      "tier": "MUNDANE",
+      "base_ac": 12,
+      "dex_cap": null,
+      "utility_uses": [
+        "deflect slashing cuts",
+        "quiet movement in darkness"
+      ],
+      "flavor": "Dense dyed leather set with hundreds of close-spaced steel rivets.",
+      "lore": "Each rivet covers a small internal steel plate sandwiched between leather layers. Glancing blades slide off the hardened studs before cutting the hide beneath.",
+      "silhouette": "armor",
+      "material": "leather",
+      "item_type": "armor",
+      "handedness": "none",
+      "coverage": "full-body",
+      "animation_profile": "neutral",
+      "weight": 13.0,
+      "category": "armor"
+    },
+    {
+      "name": "hide armor",
+      "slot": "armor",
+      "tier": "MUNDANE",
+      "base_ac": 12,
+      "dex_cap": 2,
+      "utility_uses": [
+        "insulate against bitter cold",
+        "cushion rough stone impacts"
+      ],
+      "flavor": "Thick pelts of winter bear and dire wolf cured with heavy grease.",
+      "lore": "Rough-hewn protective wear favored by wilderness stalkers and outriders. Provides reliable insulation against damp subterranean chills at the expense of agility.",
+      "silhouette": "armor",
+      "material": "leather",
+      "item_type": "armor",
+      "handedness": "none",
+      "coverage": "full-body",
+      "animation_profile": "neutral",
+      "weight": 12.0,
+      "category": "armor"
+    },
+    {
+      "name": "breastplate",
+      "slot": "armor",
+      "tier": "MUNDANE",
+      "base_ac": 14,
+      "dex_cap": 2,
+      "utility_uses": [
+        "shield vital organs",
+        "allow unencumbered arm swings"
+      ],
+      "flavor": "A fitted plate of cold-rolled steel protecting the chest and vitals, strapped over leather.",
+      "lore": "The choice of cavalry officers and duelists who require maximum vital protection without the stifling weight or restricted stride of a full harness.",
+      "silhouette": "armor",
+      "material": "plate",
+      "item_type": "armor",
+      "handedness": "none",
+      "coverage": "partial",
+      "animation_profile": "neutral",
+      "weight": 20.0,
+      "category": "armor"
+    },
+    {
+      "name": "half plate",
+      "slot": "armor",
+      "tier": "MUNDANE",
+      "base_ac": 15,
+      "dex_cap": 2,
+      "utility_uses": [
+        "turn heavy polearm strikes",
+        "survive frontal charges"
+      ],
+      "flavor": "Interlocking steel breastplate, rerebraces, greaves, and faulds over a mail hauberk.",
+      "lore": "Comprehensive personal protection covering all primary arterial lines and joints with articulated steel lamellae. Requires considerable strength to march in for hours.",
+      "silhouette": "armor",
+      "material": "plate",
+      "item_type": "armor",
+      "handedness": "none",
+      "coverage": "full-body",
+      "animation_profile": "heavy-armor",
+      "weight": 40.0,
+      "category": "armor"
+    },
+    {
+      "name": "full plate",
+      "slot": "armor",
+      "tier": "MUNDANE",
+      "base_ac": 18,
+      "dex_cap": 0,
+      "utility_uses": [
+        "render bearer impervious to ordinary arrows",
+        "withstand crushing weight"
+      ],
+      "flavor": "A complete articulated fortress of custom-fitted, polished steel plates.",
+      "lore": "The absolute pinnacle of Primeverse armor craft. Every plate is contoured to deflect incoming kinetic vectors outward, rendering the wearer practically impervious to standard infantry blades.",
+      "silhouette": "armor",
+      "material": "plate",
+      "item_type": "armor",
+      "handedness": "none",
+      "coverage": "full-body",
+      "animation_profile": "heavy-armor",
+      "weight": 55.0,
+      "category": "armor"
+    },
+    {
+      "name": "brigandine",
+      "slot": "armor",
+      "tier": "MUNDANE",
+      "base_ac": 14,
+      "dex_cap": 2,
+      "utility_uses": [
+        "conceal armor under noble livery",
+        "absorb bludgeoning impacts"
+      ],
+      "flavor": "Heavy velvet and linen sandwiching hundreds of overlapping rectangular steel plates.",
+      "lore": "Favored by mercenary captains who prize elegance alongside resilience. The overlapping plates disperse concussive force across a wide area without the rigid immobility of a solid cuirass.",
+      "silhouette": "armor",
+      "material": "chain",
+      "item_type": "armor",
+      "handedness": "none",
+      "coverage": "full-body",
+      "animation_profile": "neutral",
+      "weight": 25.0,
+      "category": "armor"
+    },
+    {
+      "name": "warded robe",
+      "slot": "armor",
+      "tier": "MAGICAL",
+      "base_ac": 15,
+      "dex_cap": null,
+      "utility_uses": [
+        "repel elemental sparks",
+        "disperse magical static"
+      ],
+      "flavor": "Flowing silk robes woven with fine silver thread and lined with leaden velvet.",
+      "lore": "Spun on spell-looms from spider-silk saturated with sanctified salts. Though feeling no heavier than common festival garments, it turns steel blades as though they struck stone.",
+      "silhouette": "armor",
+      "material": "robe",
+      "item_type": "armor",
+      "handedness": "none",
+      "coverage": "full-body",
+      "animation_profile": "neutral",
+      "weight": 4.0,
+      "category": "armor"
+    },
+    {
+      "name": "enchanted cowl",
+      "slot": "head",
+      "tier": "MAGICAL",
+      "ac_bonus": 1,
+      "utility_uses": [
+        "muffle deafening sounds",
+        "shade eyes from blinding flashes"
+      ],
+      "flavor": "A dark linen hood embroidered along its hem with faint blue defensive runes.",
+      "lore": "Woven by cloistered arcanists to shield their temples during volatile experimentations. Projects a localized dampening field that shields the wearer's neck and head.",
+      "silhouette": "helm",
+      "material": "cloth",
+      "item_type": "headgear",
+      "handedness": "none",
+      "coverage": "partial",
+      "animation_profile": "neutral",
+      "weight": 1.0,
+      "category": "armor"
+    },
+    {
+      "name": "iron greaves",
+      "slot": "boots",
+      "tier": "MUNDANE",
+      "ac_bonus": 1,
+      "utility_uses": [
+        "deflect low sweeps",
+        "kick through rotten barricades"
+      ],
+      "flavor": "Curved shin-plates of heavy hammered iron secured by triple leather straps.",
+      "lore": "Forged to guard the exposed shins and ankles of frontline infantry from low spear thrusts, traps, and slashing beast claws.",
+      "silhouette": "boots",
+      "material": "steel",
+      "item_type": "boots",
+      "handedness": "none",
+      "coverage": "partial",
+      "animation_profile": "neutral",
+      "weight": 6.0,
+      "category": "armor"
+    },
+    {
+      "name": "heavy tower shield",
+      "slot": "hand",
+      "tier": "MUNDANE",
+      "shield_bonus": 3,
+      "dex_cap": 2,
+      "utility_uses": [
+        "provide mobile full cover",
+        "anchor defensive lines"
+      ],
+      "flavor": "A rectangular door of oak planks bound with heavy iron braces and a viewing slit.",
+      "lore": "Virtually a portable rampart. Grounded in the dirt during incoming barrages, it grants complete physical concealment against projectile fire at the cost of mobility.",
+      "silhouette": "shield",
+      "material": "steel",
+      "item_type": "shield",
+      "handedness": "off-hand",
+      "coverage": "full-body",
+      "animation_profile": "shield",
+      "weight": 14.0,
+      "category": "shield"
+    },
+    {
+      "name": "buckler shield",
+      "slot": "hand",
+      "tier": "MUNDANE",
+      "shield_bonus": 1,
+      "utility_uses": [
+        "deflect rapiers",
+        "strike in hand-to-hand brawls"
+      ],
+      "flavor": "A small circular steel boss gripped firmly in the fist, edged with bronze.",
+      "lore": "Compact and agile, designed not to shelter the body but to aggressively intercept and bind the opponent's sword at the instant of strike.",
+      "silhouette": "shield",
+      "material": "steel",
+      "item_type": "shield",
+      "handedness": "off-hand",
+      "coverage": "none",
+      "animation_profile": "shield",
+      "weight": 3.0,
+      "category": "shield"
+    },
+    {
+      "name": "vial of healing draught",
+      "slot": "utility",
+      "tier": "MAGICAL",
+      "utility_uses": [
+        "drink to recover health",
+        "apply to stabilize deep wounds"
+      ],
+      "flavor": "A stoppered glass phial glowing with faint ruby warmth that tastes of honey and iron.",
+      "lore": "Distilled from mountain ginseng and suspended alchemical silver. When consumed, it accelerates the body's natural coagulation and cellular knit tenfold within seconds.",
+      "silhouette": "trinket",
+      "material": "glass",
+      "item_type": "utility",
+      "weight": 0.5,
+      "category": "potion"
+    },
+    {
+      "name": "vial of restorative nectar",
+      "slot": "utility",
+      "tier": "MAGICAL",
+      "utility_uses": [
+        "cleanse paralyzing venoms",
+        "clear mental fog"
+      ],
+      "flavor": "An iridescent golden liquid that smells of pine needles and ozone.",
+      "lore": "An alchemical panacea brewed from solar lilies. Purges biological poisons and neutralizes lingering paralyzing venoms from the bloodstream upon ingestion.",
+      "silhouette": "trinket",
+      "material": "glass",
+      "item_type": "utility",
+      "weight": 0.5,
+      "category": "potion"
+    },
+    {
+      "name": "draught of iron-skin",
+      "slot": "utility",
+      "tier": "MAGICAL",
+      "utility_uses": [
+        "harden flesh against blades",
+        "endure concussive shocks"
+      ],
+      "flavor": "A thick, slate-grey tonic that settles heavily in the stomach like molten lead.",
+      "lore": "Infused with suspended microscopic basalt particles. Hardens the epidermis to the resilience of petrified wood for the duration of a pitched skirmish.",
+      "silhouette": "trinket",
+      "material": "glass",
+      "item_type": "utility",
+      "weight": 0.5,
+      "category": "potion"
+    },
+    {
+      "name": "draught of swiftness",
+      "slot": "utility",
+      "tier": "MAGICAL",
+      "utility_uses": [
+        "outrun collapsing caverns",
+        "slip past hostile sentries"
+      ],
+      "flavor": "A quicksilver broth that bubbles vigorously without heat.",
+      "lore": "Stimulates the nervous system with astral static, sharpening reaction time and accelerating sprinting cadence across hazardous terrain.",
+      "silhouette": "trinket",
+      "material": "glass",
+      "item_type": "utility",
+      "weight": 0.5,
+      "category": "potion"
+    },
+    {
+      "name": "flask of liquid fire",
+      "slot": "utility",
+      "tier": "MUNDANE",
+      "utility_uses": [
+        "ignite barricades",
+        "hurl at swarms of vermin"
+      ],
+      "flavor": "A clay amphora sealed with wax containing volatile naphtha and sulfur.",
+      "lore": "A devastating incendiary compound that ignites violently on contact with atmospheric air when the ceramic shell fractures against stone or flesh.",
+      "silhouette": "trinket",
+      "material": "clay",
+      "item_type": "utility",
+      "weight": 1.0,
+      "category": "potion"
+    },
+    {
+      "name": "smoke bomb",
+      "slot": "utility",
+      "tier": "MUNDANE",
+      "utility_uses": [
+        "break line of sight",
+        "cover tactical retreats"
+      ],
+      "flavor": "A ceramic sphere packed with sulfur, saltpeter, and dried pitch.",
+      "lore": "Ignited by pulling a friction cord. Produces a sudden, choking cloud of opaque grey smoke that blinds archers and disrupts enemy pursuit in close corridors.",
+      "silhouette": "trinket",
+      "material": "clay",
+      "item_type": "utility",
+      "weight": 0.5,
+      "category": "potion"
+    },
+    {
+      "name": "antitoxin vial",
+      "slot": "utility",
+      "tier": "MUNDANE",
+      "utility_uses": [
+        "neutralize spider bites",
+        "treat tainted water"
+      ],
+      "flavor": "A chalky white mixture of activated charcoal and dried viper bile.",
+      "lore": "Essential standard issue for delving into pestilent underways. Absorbs ingested and bloodstream toxins before they can attack the central nervous system.",
+      "silhouette": "trinket",
+      "material": "glass",
+      "item_type": "utility",
+      "weight": 0.5,
+      "category": "potion"
+    },
+    {
+      "name": "amulet of shielding",
+      "slot": "neck",
+      "tier": "MAGICAL",
+      "ac_bonus": 1,
+      "utility_uses": [
+        "deflect missile attacks",
+        "ward against surprise strikes"
+      ],
+      "flavor": "A polished disc of lapis lazuli encased in a spiraling silver torque.",
+      "lore": "Inscribed with ancient geometry from the Second Era. Projects a microscopic kinetic buffer that reduces the penetration depth of incoming physical strikes.",
+      "silhouette": "trinket",
+      "material": "silver",
+      "item_type": "accessory",
+      "weight": 0.5,
+      "category": "accessory"
+    },
+    {
+      "name": "talisman of warding",
+      "slot": "neck",
+      "tier": "MAGICAL",
+      "utility_uses": [
+        "fortify willpower against spells",
+        "resist unnatural dread"
+      ],
+      "flavor": "A fossilized ammonite carved with microscopic protective runes.",
+      "lore": "The spiral fossil acts as an arcane dampener, soaking up malignant psychic vibrations and fortifying the bearer's mental resolve under magical pressure.",
+      "silhouette": "trinket",
+      "material": "stone",
+      "item_type": "accessory",
+      "weight": 0.5,
+      "category": "accessory"
+    },
+    {
+      "name": "band of vigor",
+      "slot": "ring",
+      "tier": "MAGICAL",
+      "utility_uses": [
+        "stave off physical exhaustion",
+        "endure long forced marches"
+      ],
+      "flavor": "A thick band of hammered bloodstone that pulses warmly against the finger.",
+      "lore": "Attuned to the vitality of the wearer's heart. Gently stimulates red marrow production, bolstering stamina and physical durability in hostile environments.",
+      "silhouette": "trinket",
+      "material": "stone",
+      "item_type": "accessory",
+      "weight": 0.1,
+      "category": "accessory"
+    },
+    {
+      "name": "pendant of clarity",
+      "slot": "neck",
+      "tier": "MAGICAL",
+      "utility_uses": [
+        "dispel illusions",
+        "maintain calm in crisis"
+      ],
+      "flavor": "A clear prism of cut rock crystal hanging from a braided silver cord.",
+      "lore": "Refracts ambient magical fields, allowing the wearer to see through magical mirages, phantasms, and subtle visual distortions in deep vaults.",
+      "silhouette": "trinket",
+      "material": "silver",
+      "item_type": "accessory",
+      "weight": 0.2,
+      "category": "accessory"
+    },
+    {
+      "name": "relic of the sunken gate",
+      "slot": "utility",
+      "tier": "ARTIFACT",
+      "utility_uses": [
+        "attune to flooded portals",
+        "breathe underwater briefly"
+      ],
+      "flavor": "A barnacle-crusted bronze cog that stays damp even beside a roaring fire.",
+      "lore": "Salvaged from the submerged lockwork of the ancient sunken floodgates. It pulses with the rhythmic ebb of subterranean tides, whispering forgotten paths beneath the water table.",
+      "silhouette": "trinket",
+      "material": "bronze",
+      "item_type": "relic",
+      "weight": 2.0,
+      "category": "relic"
+    },
+    {
+      "name": "ring of embers",
+      "slot": "ring",
+      "tier": "MAGICAL",
+      "utility_uses": [
+        "resist searing flames",
+        "warm hands in freezing caves"
+      ],
+      "flavor": "A ring of blackened brass set with a smoldering cinder that never turns to ash.",
+      "lore": "Harvested from the magma vents beneath the lower foundations. Channels dangerous ambient heat into harmless infrared radiation, insulating the bearer against scorching burns.",
+      "silhouette": "trinket",
+      "material": "brass",
+      "item_type": "accessory",
+      "weight": 0.1,
+      "category": "accessory"
+    },
+    {
+      "name": "stone of warming",
+      "slot": "utility",
+      "tier": "MAGICAL",
+      "utility_uses": [
+        "melt frozen rations",
+        "warm a sleeping roll",
+        "prevent frostbite"
+      ],
+      "flavor": "A smooth river stone that radiates the comforting warmth of a sun-baked rock.",
+      "lore": "Charged under the desert sun before being sealed in damp-proof lead. Emits steady, gentle heat for months on end, serving as a lifesaver in frostbitten ruins.",
+      "silhouette": "trinket",
+      "material": "stone",
+      "item_type": "tool",
+      "weight": 0.5,
+      "category": "tool"
+    }
+  ]
+}

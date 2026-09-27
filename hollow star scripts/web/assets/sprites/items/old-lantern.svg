@@ -1,0 +1,19 @@
+<svg viewBox="0 0 40 48" xmlns="http://www.w3.org/2000/svg">
+  <!-- Handle -->
+  <path d="M14,10 Q20,2 26,10" fill="none" stroke="#71717a" stroke-width="2"/>
+  <!-- Cap / Vent -->
+  <polygon points="12,12 28,12 25,16 15,16" fill="#3f3f46"/>
+  <rect x="18" y="9" width="4" height="3" fill="#52525b"/>
+  <!-- Glass cage -->
+  <rect x="13" y="16" width="14" height="20" rx="1" fill="#fef08a" fill-opacity="0.4"/>
+  <rect x="13" y="16" width="14" height="20" fill="none" stroke="#3f3f46" stroke-width="2"/>
+  <!-- Flame inside -->
+  <circle cx="20" cy="27" r="4" fill="#f59e0b"/>
+  <circle cx="20" cy="26" r="2" fill="#fef08a"/>
+  <!-- Protective cage bars -->
+  <line x1="17" y1="16" x2="17" y2="36" stroke="#52525b" stroke-width="1.5"/>
+  <line x1="23" y1="16" x2="23" y2="36" stroke="#52525b" stroke-width="1.5"/>
+  <!-- Base oil reservoir -->
+  <polygon points="11,36 29,36 31,42 9,42" fill="#27272a"/>
+  <rect x="12" y="42" width="16" height="2" fill="#18181b"/>
+</svg>

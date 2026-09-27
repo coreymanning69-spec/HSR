@@ -1,0 +1,507 @@
+{
+  "schema": "hollow-star-looks-1",
+  "version": "2026-09-25",
+  "note": "Presentation only. How non-player figures look: town residents, fixture foes and filler. Nothing here changes a roll, a disposition or a number, and nothing here is canon. Canon roster characters (DM053 and the Divineverse matrix) are deliberately absent: their appearance must be sourced from their owner files before it is authored here.",
+  "how_to_extend": {
+    "archetypes": "A named look anyone can reuse. `appearance` uses the character creator's own fields and option ids (hollowstar/content/character_creation.json appearance.fields). A value may be an option id, a '#rrggbb' colour (for colour fields: skin_tone, hair_color, eye_color, outfit, cloth_color, accent_color), or a list of either -- a list is picked per figure from a stable seed, so a squad of three reads as three people. `race`, `gender` and `age` ('adult' or 'child') may be fixed or listed the same way. `costume` is presentation-only gear drawn on the figure (rows shaped like an item's `presentation` block: silhouette, material, fx, rarity, handedness, coverage); it never enters mechanics or the item lists. `aura` adds an element glow token (see ELEMENT_COLOUR in web/actor-look.js).",
+    "residents": "Resident id (floor_one_life.json) -> {archetype, ...overrides}. Overrides merge over the archetype, appearance field by field.",
+    "foes": "Base actor name without its squad number ('Town watch 2' -> 'Town watch') -> {archetype, ...overrides}. Real equipment always wins: costume never replaces an equipped weapon's silhouette.",
+    "by_class": "Fallback archetype by resident class when a resident has no entry.",
+    "verify": "Open /web/actor-lab.html to see any look, and run tests/test_looks_and_salience.py."
+  },
+  "archetypes": {
+    "townsfolk": {
+      "gender": [
+        "female",
+        "male",
+        "other"
+      ],
+      "appearance": {
+        "outfit": [
+          "tunic",
+          "vest",
+          "coat",
+          "travel"
+        ],
+        "hair_style": [
+          "short",
+          "cropped",
+          "long",
+          "braided",
+          "tousled"
+        ],
+        "body_type": [
+          "average",
+          "average",
+          "lean",
+          "sturdy"
+        ]
+      }
+    },
+    "trader": {
+      "gender": [
+        "female",
+        "male"
+      ],
+      "appearance": {
+        "outfit": [
+          "coat",
+          "vest"
+        ],
+        "cloth_color": [
+          "#6b3f5e",
+          "#3f5e6b",
+          "#6b5a3f"
+        ],
+        "accent_color": "#d9b56e",
+        "trinket_style": "satchel"
+      }
+    },
+    "guard": {
+      "gender": [
+        "female",
+        "male"
+      ],
+      "appearance": {
+        "outfit": "uniform",
+        "cloth_color": "#2f4a6b",
+        "accent_color": "#d9b56e",
+        "headgear_style": "half-helm",
+        "cloak_style": "shoulder-mantle",
+        "hair_style": [
+          "short",
+          "cropped"
+        ]
+      },
+      "costume": [
+        {
+          "silhouette": "armor",
+          "material": "chain"
+        },
+        {
+          "silhouette": "sword",
+          "material": "steel",
+          "handedness": "one-handed"
+        }
+      ]
+    },
+    "labourer": {
+      "gender": [
+        "female",
+        "male"
+      ],
+      "appearance": {
+        "outfit": [
+          "vest",
+          "tunic"
+        ],
+        "body_type": [
+          "sturdy",
+          "broad"
+        ],
+        "hair_style": [
+          "shaved",
+          "cropped",
+          "short"
+        ]
+      }
+    },
+    "clergy": {
+      "gender": [
+        "female",
+        "male",
+        "other"
+      ],
+      "appearance": {
+        "outfit": "robe",
+        "cloth_color": [
+          "#e8e2d0",
+          "#3f4f6b"
+        ],
+        "accent_color": "#d9b56e",
+        "trinket_style": "pendant"
+      }
+    },
+    "bandit": {
+      "gender": [
+        "female",
+        "male"
+      ],
+      "appearance": {
+        "outfit": "travel",
+        "cloth_color": [
+          "#3f3a30",
+          "#2f3230"
+        ],
+        "cloak_style": "hooded-cloak",
+        "facial_marks": [
+          "war-paint",
+          "cheek-scar",
+          "none"
+        ]
+      },
+      "costume": [
+        {
+          "silhouette": "armor",
+          "material": "leather"
+        },
+        {
+          "silhouette": "dagger",
+          "material": "iron",
+          "handedness": "one-handed"
+        }
+      ]
+    },
+    "goblin": {
+      "race": "goblin",
+      "gender": [
+        "female",
+        "male",
+        "other"
+      ],
+      "appearance": {
+        "outfit": [
+          "vest",
+          "travel"
+        ],
+        "trinket_style": "satchel",
+        "hair_style": [
+          "shaved",
+          "topknot",
+          "tousled"
+        ]
+      }
+    },
+    "child": {
+      "age": "child",
+      "gender": [
+        "female",
+        "male",
+        "other"
+      ],
+      "appearance": {
+        "outfit": "tunic",
+        "hair_style": [
+          "tousled",
+          "short",
+          "braided"
+        ]
+      }
+    },
+    "spectre": {
+      "gender": "other",
+      "aura": "phase",
+      "appearance": {
+        "skin_tone": "#c8d8e8",
+        "hair_color": "#eef3f8",
+        "eye_color": "#9fe7ff",
+        "hair_style": "long",
+        "outfit": "robe",
+        "cloth_color": "#9fb3c8",
+        "accent_color": "#dff4ff",
+        "cloak_style": "long-mantle"
+      }
+    }
+  },
+  "by_class": {
+    "townsfolk": "townsfolk",
+    "trader": "trader",
+    "guard": "guard",
+    "labourer": "labourer",
+    "clergy": "clergy",
+    "bandit": "bandit",
+    "goblin": "goblin",
+    "child": "child"
+  },
+  "residents": {
+    "marta-vell": {
+      "archetype": "townsfolk",
+      "gender": "female",
+      "appearance": {
+        "outfit": "vest",
+        "cloth_color": "#5b6b5a",
+        "hair_style": "braided",
+        "hair_color": "#8b7355",
+        "trinket_style": "pendant",
+        "facial_marks": "none"
+      }
+    },
+    "oben-sarkey": {
+      "archetype": "trader",
+      "gender": "male",
+      "appearance": {
+        "cloth_color": "#6b3f5e",
+        "body_type": "sturdy",
+        "hair_style": "cropped",
+        "hair_color": "#3b2a1d"
+      }
+    },
+    "halgrim-tosk": {
+      "archetype": "labourer",
+      "gender": "male",
+      "appearance": {
+        "body_type": "broad",
+        "hair_style": "shaved",
+        "outfit": "vest",
+        "cloth_color": "#6a5a44"
+      },
+      "costume": [
+        {
+          "silhouette": "armor",
+          "material": "leather"
+        }
+      ]
+    },
+    "nessa-quill": {
+      "archetype": "clergy",
+      "gender": "female",
+      "appearance": {
+        "cloth_color": "#3f4f6b",
+        "hair_style": "long",
+        "hair_color": "#0f1418",
+        "body_type": "slight",
+        "facial_marks": "freckles"
+      }
+    },
+    "bren-aldis": {
+      "archetype": "labourer",
+      "gender": "male",
+      "appearance": {
+        "outfit": "tunic",
+        "cloth_color": "#7a4a2e",
+        "hair_style": "tousled",
+        "body_type": "lean"
+      },
+      "costume": [
+        {
+          "silhouette": "armor",
+          "material": "leather"
+        }
+      ]
+    },
+    "skarn": {
+      "archetype": "goblin",
+      "gender": "male",
+      "appearance": {
+        "outfit": "vest",
+        "cloth_color": "#6a5a3a",
+        "headgear_style": "hood",
+        "hair_style": "shaved"
+      }
+    },
+    "wick": {
+      "archetype": "child",
+      "gender": "other",
+      "appearance": {
+        "cloth_color": "#5b6f8a",
+        "hair_style": "tousled",
+        "hair_color": "#5a3a24"
+      }
+    },
+    "corvin-hask": {
+      "archetype": "townsfolk",
+      "gender": "male",
+      "appearance": {
+        "outfit": "coat",
+        "cloth_color": "#262a33",
+        "accent_color": "#9a2f2f",
+        "hair_style": "cropped",
+        "facial_marks": "cheek-scar",
+        "cloak_style": "shoulder-mantle"
+      },
+      "costume": [
+        {
+          "silhouette": "dagger",
+          "material": "steel",
+          "handedness": "one-handed"
+        }
+      ]
+    },
+    "mara-vale": {
+      "archetype": "townsfolk",
+      "gender": "female",
+      "appearance": {
+        "outfit": "vest",
+        "cloth_color": "#7a2f3a",
+        "hair_style": "topknot",
+        "hair_color": "#7d3b2e",
+        "trinket_style": "medal"
+      }
+    },
+    "orrin-pike": {
+      "archetype": "guard",
+      "gender": "male",
+      "appearance": {
+        "hair_color": "#3b2a1d",
+        "cloak_style": "long-mantle"
+      }
+    },
+    "sela-penn": {
+      "archetype": "clergy",
+      "gender": "female",
+      "appearance": {
+        "cloth_color": "#e8e2d0",
+        "headgear_style": "circlet",
+        "hair_style": "long",
+        "hair_color": "#ddd6d1",
+        "trinket_style": "talisman"
+      }
+    },
+    "davin-rusk": {
+      "archetype": "trader",
+      "gender": "male",
+      "appearance": {
+        "outfit": "coat",
+        "cloth_color": "#2e5a5a",
+        "cloak_style": "travel-cape",
+        "trinket_style": "none",
+        "hair_style": "short"
+      }
+    },
+    "ila-morn": {
+      "archetype": "townsfolk",
+      "gender": "female",
+      "appearance": {
+        "outfit": "vest",
+        "cloth_color": "#6b7a5a",
+        "hair_style": "braided",
+        "trinket_style": "satchel"
+      }
+    },
+    "tob-ken": {
+      "archetype": "townsfolk",
+      "gender": "male",
+      "appearance": {
+        "outfit": "coat",
+        "cloth_color": "#3a3440",
+        "headgear_style": "hood",
+        "offhand_style": "lantern",
+        "hair_style": "short"
+      }
+    },
+    "vesh": {
+      "archetype": "bandit",
+      "gender": "female"
+    },
+    "pella-reed": {
+      "archetype": "trader",
+      "gender": "female",
+      "appearance": {
+        "outfit": "tunic",
+        "cloth_color": "#c28a2e",
+        "hair_style": "long",
+        "hair_color": "#c9a961"
+      }
+    },
+    "garran-holt": {
+      "archetype": "guard",
+      "gender": "male",
+      "appearance": {
+        "cloth_color": "#4a5a5f",
+        "body_type": "sturdy",
+        "facial_marks": "cheek-scar",
+        "hair_color": "#ddd6d1",
+        "headgear_style": "none",
+        "cloak_style": "none"
+      },
+      "costume": [
+        {
+          "silhouette": "sword",
+          "material": "iron",
+          "handedness": "one-handed"
+        }
+      ]
+    },
+    "nix": {
+      "archetype": "goblin",
+      "gender": "female",
+      "appearance": {
+        "outfit": "travel",
+        "cloak_style": "travel-cape",
+        "hair_style": "topknot"
+      }
+    }
+  },
+  "foes": {
+    "Townsperson": {
+      "archetype": "townsfolk"
+    },
+    "Town watch": {
+      "archetype": "guard",
+      "appearance": {
+        "cloak_style": "none"
+      }
+    },
+    "Cleaner": {
+      "archetype": "labourer",
+      "appearance": {
+        "outfit": "vest",
+        "cloth_color": "#4a4a42",
+        "body_type": "broad",
+        "hair_style": "shaved",
+        "facial_marks": [
+          "cheek-scar",
+          "none"
+        ]
+      },
+      "costume": [
+        {
+          "silhouette": "armor",
+          "material": "leather"
+        }
+      ]
+    },
+    "Lair outrider": {
+      "archetype": "bandit",
+      "appearance": {
+        "cloak_style": "travel-cape",
+        "headgear_style": "hood",
+        "cloth_color": "#3b2f2a"
+      }
+    },
+    "Drowned pursuer": {
+      "archetype": "townsfolk",
+      "gender": [
+        "female",
+        "male"
+      ],
+      "aura": "tide",
+      "appearance": {
+        "skin_tone": "#8fa3a0",
+        "hair_color": "#1f2a2a",
+        "eye_color": "#9fe7ff",
+        "hair_style": "long",
+        "outfit": "robe",
+        "cloth_color": "#2c3e46",
+        "accent_color": "#5f8a8a"
+      }
+    },
+    "Palace rival": {
+      "archetype": "townsfolk",
+      "gender": [
+        "female",
+        "male"
+      ],
+      "appearance": {
+        "outfit": "coat",
+        "cloth_color": "#5a1f2e",
+        "accent_color": "#e0bd62",
+        "cloak_style": "long-mantle",
+        "hair_style": [
+          "topknot",
+          "long"
+        ],
+        "weapon_style": "ceremonial"
+      },
+      "costume": [
+        {
+          "silhouette": "armor",
+          "material": "chain"
+        }
+      ]
+    },
+    "Wailing Spirit": {
+      "archetype": "spectre"
+    }
+  }
+}

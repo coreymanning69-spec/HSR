@@ -1,0 +1,131 @@
+{
+  "schema": "hsr-item-preview-1",
+  "status": "Illustrative equipment from live loader; not a saved loadout",
+  "equipment": [
+    {
+      "name": "longsword",
+      "slot": "hand",
+      "base_damage": 5,
+      "attack_bonus": 0,
+      "damage_dice": "",
+      "damage_modifier": 0,
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "critical_dice": "",
+      "alternate_modes": {},
+      "base_ac": 0,
+      "dex_cap": null,
+      "ac_bonus": 0,
+      "shield_bonus": 0,
+      "attack_ability": "",
+      "tier": "MUNDANE",
+      "tags": [
+        "ICE",
+        "PHYSICAL"
+      ],
+      "inherent": [],
+      "prefix": {
+        "name": "Petty",
+        "affix_type": "prefix",
+        "effects": [
+          {
+            "name": "petty bonus",
+            "phase": "MAGNITUDE",
+            "direction": "MODIFY",
+            "tier": "MUNDANE",
+            "scope": "TARGET",
+            "condition": "enemy_full_hp",
+            "flat_bonus": 2,
+            "multiplier": 1.0,
+            "per_stack_bonus": 0,
+            "per_stack_source": "",
+            "applies_to_tags": [],
+            "grants_tags": [],
+            "opens_gate": "",
+            "closes_gate": "",
+            "inflicts_status": "",
+            "status_duration": 0,
+            "status_potency": 1,
+            "blocks_statuses": [],
+            "charges": null,
+            "tell": "",
+            "description": "",
+            "specificity": 0
+          }
+        ],
+        "description": "Hits harder when they haven't suffered yet."
+      },
+      "suffix": {
+        "name": "of Ice",
+        "affix_type": "suffix",
+        "effects": [
+          {
+            "name": "iced material",
+            "phase": "PERSISTENCE",
+            "direction": "GRANT",
+            "tier": "MUNDANE",
+            "scope": "RUN",
+            "condition": "always",
+            "flat_bonus": 0,
+            "multiplier": 1.0,
+            "per_stack_bonus": 0,
+            "per_stack_source": "",
+            "applies_to_tags": [],
+            "grants_tags": [
+              "ICE"
+            ],
+            "opens_gate": "",
+            "closes_gate": "",
+            "inflicts_status": "",
+            "status_duration": 0,
+            "status_potency": 1,
+            "blocks_statuses": [],
+            "charges": null,
+            "tell": "Frost beads along the edge and does not run off.",
+            "description": "",
+            "specificity": 0
+          }
+        ],
+        "description": "Permanent material state. A sheen that never melts."
+      },
+      "density": 1.0,
+      "utility_uses": [],
+      "temporary": false,
+      "flavor": "Versatile martial weapon.",
+      "display_name": "Petty longsword of Ice",
+      "appearance": [
+        "Frost beads along the edge and does not run off."
+      ]
+    },
+    {
+      "name": "chain shirt",
+      "slot": "armor",
+      "base_damage": 0,
+      "attack_bonus": 0,
+      "damage_dice": "",
+      "damage_modifier": 0,
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "critical_dice": "",
+      "alternate_modes": {},
+      "base_ac": 13,
+      "dex_cap": null,
+      "ac_bonus": 0,
+      "shield_bonus": 0,
+      "attack_ability": "",
+      "tier": "MUNDANE",
+      "tags": [],
+      "inherent": [],
+      "prefix": null,
+      "suffix": null,
+      "density": 1.0,
+      "utility_uses": [],
+      "temporary": false,
+      "flavor": "Medium armor.",
+      "display_name": "chain shirt",
+      "appearance": []
+    }
+  ]
+}

@@ -1,0 +1,839 @@
+"""Local browser adapter: static presentation plus the existing HSRHost JSON contract."""
+from __future__ import annotations
+
+import atexit
+import hashlib
+import json
+import argparse
+import math
+import os
+import queue
+import socket
+import subprocess
+import sys
+import threading
+import time
+import traceback
+import uuid
+from collections import deque
+from urllib.parse import urlsplit, parse_qs
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from hollowstar.host import HSRHost
+from hollowstar.session_intent import vocabulary
+from hollowstar.hosted_controls import HostedControls
+import hsr_bridge_watch as watch
+
+ROOT = Path(__file__).resolve().parent
+BRIDGE = ROOT / ".local" / "phone_bridge"
+INBOX, OUTBOX = BRIDGE / "inbox.jsonl", BRIDGE / "outbox.jsonl"
+_write_lock = threading.Lock()
+_engine_lock = threading.Lock()
+_startup_lock = threading.Lock()
+_watcher = None
+_hostless = None
+_server = None  # set once main() binds the port; lets a dead engine stop the host itself
+_shutting_down = threading.Event()
+_hosted_controls = HostedControls(ROOT / ".local" / "hosted_controls.json")
+
+SAFE_RETRY_COMMANDS = {
+    "health", "ready", "status", "inspect", "readout", "list_runs",
+    "character_options", "character_roll", "content_catalog", "affix_catalog",
+    "scenario_catalog", "peek_creation_seed", "allocate_creation_seed", "randomize_build",
+}
+
+TAIL_SECONDS = 0.005    # outbox check interval while a request waits
+PROBE_SECONDS = 0.5     # a live watcher answers within about one host update
+STARTUP_SECONDS = 12
+STATS_SECONDS = 20
+# Digest of the code this host loaded; the launcher refuses to reuse an older host.
+SERVER_SHA256 = hashlib.sha256(Path(__file__).resolve().read_bytes()).hexdigest()
+# Request-body ceilings: 1 MiB and 8 KiB, each raised by 30% (rounded down)
+# on 2026-09-23.
+MAX_REQUEST_BYTES = 1_363_148
+MAX_CLIENT_LOG_BYTES = 10_649
+
+_startup = {}
+_began = time.monotonic()
+_stats_lock = threading.Lock()
+_stats = {"requests": 0, "errors": 0, "timeouts": 0, "total_ms": 0.0, "max_ms": 0.0, "fresh": False}
+_recent_ms = deque(maxlen=1000)
+_console = queue.Queue(maxsize=4000)
+_console_lock = threading.Lock()
+_console_thread = None
+_console_dropped = 0
+
+
+def _say(message):
+    """Queue one console line; a stalled or closed console never blocks a request."""
+    global _console_thread, _console_dropped
+    if _console_thread is None:
+        with _console_lock:
+            if _console_thread is None:
+                _console_thread = threading.Thread(target=_console_writer, name="hsr-console", daemon=True)
+                _console_thread.start()
+                # Drain before interpreter shutdown; a daemon thread still inside
+                # print() at finalization aborts the process with a fatal error.
+                atexit.register(_flush_console)
+    try:
+        _console.put_nowait(message)
+    except queue.Full:
+        _console_dropped += 1
+
+
+def _console_writer():
+    global _console_dropped
+    while True:
+        message = _console.get()
+        if _console_dropped:
+            dropped, _console_dropped = _console_dropped, 0
+            message = f"[web] {dropped} console line(s) dropped while output was stalled\n{message}"
+        try:
+            print(message, flush=True)
+        except (OSError, ValueError):
+            pass
+        _console.task_done()
+
+
+def _flush_console(timeout=1.0):
+    deadline = time.monotonic() + timeout
+    while _console.unfinished_tasks and time.monotonic() < deadline:
+        time.sleep(0.01)
+
+
+def _record(ms, ok=True, timeout=False):
+    with _stats_lock:
+        if timeout:
+            _stats["timeouts"] += 1
+        else:
+            _stats["requests"] += 1
+            _stats["errors"] += not ok
+            _stats["total_ms"] += ms
+            _stats["max_ms"] = max(_stats["max_ms"], ms)
+            _recent_ms.append(ms)
+        _stats["fresh"] = True
+
+
+def _stats_line(force=False):
+    """Cumulative request readout, or None when nothing happened since the last one."""
+    with _stats_lock:
+        if not _stats["requests"] or not (_stats["fresh"] or force):
+            return None
+        _stats["fresh"] = False
+        stats, ordered = dict(_stats), sorted(_recent_ms)
+
+    def rank(q):
+        return ordered[max(0, math.ceil(q * len(ordered)) - 1)]
+    count, up = stats["requests"], int(time.monotonic() - _began)
+    return (f"[web] stats {count} req, {stats['errors']} err, {stats['timeouts']} timeout | "
+            f"round trip ms avg {stats['total_ms'] / count:.1f} p50 {rank(.5):.1f} "
+            f"p95 {rank(.95):.1f} max {stats['max_ms']:.1f} | up {up // 3600}:{up // 60 % 60:02d}:{up % 60:02d}")
+
+
+def _stats_loop(stop):
+    while not stop.wait(STATS_SECONDS):
+        line = _stats_line()
+        if line:
+            _say(line)
+
+
+def _health_request():
+    return {"id": uuid.uuid4().hex, "command": "health"}
+
+
+def _approved(probe):
+    return bool(probe.get("ok") and probe.get("result", {}).get("local_location", {}).get("approved"))
+
+
+def _watcher_info():
+    try:
+        info = json.loads((BRIDGE / "watcher.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return info if isinstance(info, dict) else {}
+
+
+def _watcher_current():
+    """Current only when the live watcher recorded the digest of today's hsr_bridge_watch.py."""
+    return _watcher_info().get("source_sha256") == watch._source_sha256()
+
+
+def _watcher_running():
+    """True while any process holds the watcher's OS singleton lock."""
+    try:
+        with watch._watcher_lock(BRIDGE / "watcher.lock"):
+            return False
+    except RuntimeError:
+        return True
+
+
+def _echo_engine(stream):
+    """Drain the watcher pipe until it closes, so the watcher never blocks on output."""
+    try:
+        for line in stream:
+            _say("[engine] " + line.rstrip())
+    except (OSError, ValueError):
+        pass
+
+
+def _spawn_watcher():
+    _discard_pending_shutdowns()
+    process = subprocess.Popen([sys.executable, "hsr_bridge_watch.py"], cwd=ROOT,
+        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, encoding="utf-8", errors="replace",
+        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    threading.Thread(target=_echo_engine, args=(process.stdout,), name="hsr-engine-output", daemon=True).start()
+    _say(f"[web] spawned watcher pid {process.pid}")
+    return process
+
+
+def _fatal_shutdown(reason: str) -> None:
+    """The engine is gone and would not come back: stop serving instead of
+    answering every future request with the same failure forever. app.py
+    watches this process and closes the game window once it exits."""
+    if _shutting_down.is_set():
+        return
+    _shutting_down.set()
+    _say(f"[web] stopping: {reason}")
+    if _server is not None:
+        threading.Thread(target=_server.shutdown, daemon=True).start()
+
+
+def _watch_owned_engine(process):
+    """React the moment an owned watcher exits, instead of waiting for the
+    next request to time out. A deliberate shutdown already set the flag
+    below before the process could exit, so only an unexpected death (crash,
+    kill) reaches the recovery attempt here."""
+    process.wait()
+    if _shutting_down.is_set():
+        return
+    _say(f"[web] engine process pid={process.pid} ended unexpectedly "
+         f"(exit code {process.returncode}); attempting recovery")
+    try:
+        _recover_engine()
+    except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
+        _say(f"[web] engine recovery failed: {watch._clip(str(exc))}")
+        _fatal_shutdown(f"engine recovery failed: {exc}")
+        return
+    _say("[web] engine recovery complete")
+
+
+def _discard_pending_shutdowns():
+    """Remove control-plane shutdowns left behind by a previous web host."""
+    with _write_lock:
+        try:
+            lines = INBOX.read_bytes().splitlines(keepends=True)
+        except OSError:
+            return
+        kept = []
+        removed = 0
+        for line in lines:
+            try:
+                request = json.loads(line)
+            except (UnicodeDecodeError, ValueError):
+                kept.append(line)
+                continue
+            if isinstance(request, dict) and request.get("command") == "shutdown":
+                removed += 1
+            else:
+                kept.append(line)
+        if not removed:
+            return
+        temporary = INBOX.with_name(INBOX.name + ".startup")
+        try:
+            temporary.write_bytes(b"".join(kept))
+            os.replace(temporary, INBOX)
+        finally:
+            try:
+                temporary.unlink()
+            except FileNotFoundError:
+                pass
+        _say(f"[web] discarded {removed} stale shutdown request(s) before watcher start")
+
+
+def _reuse_watcher():
+    """True when a live watcher runs current code; an outdated one is shut down first."""
+    if _approved(_mailbox_request(_health_request(), timeout=PROBE_SECONDS)):
+        if _watcher_current():
+            return True
+    elif not _watcher_running():
+        return False  # nothing holds the singleton lock: start a fresh watcher
+    elif _watcher_current():
+        # Current code, just busy with a long command: wait rather than race its lock.
+        if _approved(_mailbox_request(_health_request(), timeout=STARTUP_SECONDS)):
+            return True
+        raise RuntimeError("HSR watcher holds the workspace lock but did not answer a health request")
+    _say("[web] running watcher predates the current hsr_bridge_watch.py; asking it to shut down")
+    # Expires with the wait: if this watcher is hung, the request must not
+    # linger in the inbox and stop the fresh watcher spawned next.
+    _mailbox_request({"id": uuid.uuid4().hex, "command": "shutdown",
+                      "expires_at": time.time() + STARTUP_SECONDS}, timeout=STARTUP_SECONDS)
+    deadline = time.monotonic() + 5
+    while _watcher_running():
+        if time.monotonic() >= deadline:
+            raise RuntimeError("outdated HSR watcher did not exit after a shutdown request")
+        time.sleep(0.05)
+    _say("[web] outdated watcher stopped")
+    return False
+
+
+def start_engine(hostless=False, data_root=None):
+    """Serialize startup/recovery so concurrent health requests cannot race
+    watcher metadata creation and shut down a freshly spawned watcher."""
+    with _startup_lock:
+        return _start_engine(hostless, data_root=data_root)
+
+
+def _start_engine(hostless=False, data_root=None):
+    """Refresh owner evidence, then verify the singleton with a fresh roundtrip."""
+    global _watcher, _hostless
+    BRIDGE.mkdir(parents=True, exist_ok=True)
+    if hostless:
+        _hostless = HSRHost.from_options(data_root=data_root or ROOT / ".local")
+        _say("[web] engine: hostless in-process HSRHost, no watcher | local-check not used")
+        return
+    # The launcher's passing check covers the first start only; recovery re-runs it.
+    if os.environ.pop("HSR_LOCAL_CHECK_DONE", "") == "1":
+        checked = "skipped (launcher already passed it)"
+    else:
+        check = subprocess.run([sys.executable, "hollowstar_host.py", "local-check"],
+                               cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
+        if check.returncode:
+            raise RuntimeError("HSR local-check failed: " + (check.stdout + check.stderr).strip())
+        checked = "ran and passed"
+    # Probe an existing watcher before starting one. A stale log is not readiness.
+    if _reuse_watcher():
+        engine = f"watcher reused (pid {_watcher_info().get('pid', '?')})"
+    else:
+        _watcher = _spawn_watcher()
+        probe = _mailbox_request(_health_request(), timeout=STARTUP_SECONDS)
+        if not _approved(probe):
+            if _watcher.poll() is None:
+                _watcher.terminate()
+                _watcher.wait(timeout=5)
+            raise RuntimeError("HSR watcher did not answer a fresh health request")
+        if _watcher.poll() is not None:
+            _watcher = None  # A concurrent launcher won the OS singleton lock.
+            engine = f"watcher reused (pid {_watcher_info().get('pid', '?')}, concurrent launcher)"
+        else:
+            engine = f"watcher owned (pid {_watcher.pid})"
+            threading.Thread(target=_watch_owned_engine, args=(_watcher,),
+                              name="hsr-engine-watchdog", daemon=True).start()
+    poll = _watcher_info().get("poll_seconds", watch.POLL_SECONDS)
+    _startup.update(engine=engine, local_check=checked, poll_seconds=poll)
+    _say(f"[web] engine: {engine} | host update {poll}s | local-check {checked}")
+
+
+def _file_size(path):
+    try:
+        return path.stat().st_size
+    except OSError:
+        return 0
+
+
+def _tail_outbox(path, offset, request_id):
+    """Scan complete outbox lines past `offset`; return (matching reply or None, next offset)."""
+    size = _file_size(path)
+    if size < offset:
+        offset = 0  # truncated or replaced: everything in it is new
+    if size == offset:
+        return None, offset
+    try:
+        with path.open("rb") as stream:
+            stream.seek(offset)
+            chunk = stream.read()
+    except OSError:
+        return None, offset
+    end = chunk.rfind(b"\n")
+    if end < 0:
+        return None, offset  # a reply is still being written
+    for line in chunk[:end].split(b"\n"):
+        try:
+            row = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(row, dict) and row.get("id") == request_id:
+            return row, offset + end + 1
+    return None, offset + end + 1
+
+
+def _mailbox_request(request, timeout=35):
+    if _hostless is not None:
+        return _hostless.handle(request)
+    request_id = request["id"]
+    inbox, outbox = INBOX, OUTBOX
+    with _write_lock:
+        # A reply to this fresh id can only land after this point, so tail from here.
+        offset = _file_size(outbox)
+        with inbox.open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(request, ensure_ascii=False) + "\n")
+            stream.flush()
+    deadline = time.monotonic() + timeout
+    while True:
+        result, offset = _tail_outbox(outbox, offset, request_id)
+        if result is not None:
+            return result
+        if time.monotonic() >= deadline:
+            break
+        time.sleep(TAIL_SECONDS)
+    return {"id": request_id, "ok": False, "error": {"code": "ENGINE_TIMEOUT", "message": "Watcher did not answer; refresh before retrying an uncertain action"}}
+
+
+def _recover_engine():
+    """Restore the single watcher after a crash or an intentional shutdown."""
+    global _watcher
+    if _hostless is not None:
+        return
+    with _engine_lock:
+        probe = _mailbox_request({"id": uuid.uuid4().hex, "command": "health"}, timeout=1)
+        if probe.get("ok") and probe.get("result", {}).get("local_location", {}).get("approved"):
+            return
+        if _watcher is not None and _watcher.poll() is not None:
+            _watcher = None
+        start_engine(False)
+
+
+def request_engine(request, timeout=35):
+    """Send one request and self-heal the watcher without replaying uncertain writes."""
+    result = _mailbox_request(request, timeout=timeout)
+    if result.get("ok") or request.get("command") == "shutdown":
+        return result
+    if result.get("error", {}).get("code") != "ENGINE_TIMEOUT":
+        return result
+    command = watch._clip(request.get("command"), 60)
+    _record(0, timeout=True)
+    _say(f"[web] TIMEOUT {command}: no engine answer in {timeout}s; recovering engine")
+    try:
+        _recover_engine()
+    except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
+        _say(f"[web] engine recovery failed: {watch._clip(str(exc))}")
+        _fatal_shutdown(f"engine recovery failed: {exc}")
+        return {"id": request.get("id"), "ok": False, "error": {
+            "code": "ENGINE_RECOVERY_FAILED", "message": str(exc)}}
+    _say("[web] engine recovery complete")
+    if request.get("command") in SAFE_RETRY_COMMANDS:
+        _say(f"[web] retrying safe read {command} once")
+        retry = {**request, "id": uuid.uuid4().hex}
+        result = _mailbox_request(retry, timeout=timeout)
+        result["id"] = request.get("id")
+        return result
+    return {"id": request.get("id"), "ok": False, "error": {
+        "code": "ENGINE_RECOVERED_RETRY_REQUIRED",
+        "message": "The engine restarted after the request timed out. Retry the action once; it was not replayed automatically."}}
+
+
+def _engine(request, timeout=35, route="POST /api/host"):
+    """request_engine plus one IN line, one OUT line and a stats sample."""
+    command = watch._clip(request.get("command"), 60)
+    _say(f"[web] IN  {route} {watch._describe_request(request)}")
+    began = time.perf_counter()
+    try:
+        result = request_engine(request, timeout=timeout)
+    except Exception as exc:
+        ms = (time.perf_counter() - began) * 1000
+        _record(ms, ok=False)
+        _say(f"[web] OUT {route} {command} failed {type(exc).__name__}: {watch._clip(str(exc))} {ms:.1f}ms")
+        raise
+    ms = (time.perf_counter() - began) * 1000
+    ok = bool(result.get("ok"))
+    _record(ms, ok=ok)
+    _say(f"[web] OUT {route} {command} {'ok' if ok else 'ERR ' + watch._error_text(result)} {ms:.1f}ms")
+    return result
+
+
+class Handler(BaseHTTPRequestHandler):
+    # Only presentation assets are web-readable. Saves/config/corpus stay local.
+    assets = {
+        "/": "web/index.html", "/hsr-ui-mockup.html": "hsr-ui-mockup.html",
+        "/web/index.html": "web/index.html", "/web/manifest.webmanifest": "web/manifest.webmanifest",
+        "/web/assets/favicon.svg": "web/assets/favicon.svg", "/web/app.js": "web/app.js",
+        "/web/hsr-client.js": "web/hsr-client.js",
+        "/web/arcade-canvas.js": "web/arcade-canvas.js",
+        "/web/arcade-input.js": "web/arcade-input.js",
+        "/web/arcade-loop.js": "web/arcade-loop.js",
+        "/web/sprite-renderer.js": "web/sprite-renderer.js",
+        "/web/fx-engine.js": "web/fx-engine.js", "/fx-engine.js": "web/fx-engine.js",
+        "/web/puppet-renderer.js": "web/puppet-renderer.js", "/puppet-renderer.js": "web/puppet-renderer.js",
+        "/web/puppet-dom.js": "web/puppet-dom.js", "/puppet-dom.js": "web/puppet-dom.js",
+        "/web/skeletal-rig.js": "web/skeletal-rig.js", "/skeletal-rig.js": "web/skeletal-rig.js",
+        "/web/magic-articulation.js": "web/magic-articulation.js", "/magic-articulation.js": "web/magic-articulation.js",
+        "/web/traversal-controller.js": "web/traversal-controller.js", "/traversal-controller.js": "web/traversal-controller.js",
+        "/web/paperdoll.js": "web/paperdoll.js", "/paperdoll.js": "web/paperdoll.js",
+        "/web/combat-director.js": "web/combat-director.js", "/combat-director.js": "web/combat-director.js",
+        "/web/voice-feed.js": "web/voice-feed.js", "/voice-feed.js": "web/voice-feed.js",
+        "/web/tokens.css": "web/tokens.css", "/tokens.css": "web/tokens.css",
+        "/web/stage.css": "web/stage.css", "/stage.css": "web/stage.css",
+        "/web/styles.css": "web/styles.css",
+        "/app.js": "web/app.js", "/hsr-client.js": "web/hsr-client.js",
+        "/arcade-canvas.js": "web/arcade-canvas.js", "/arcade-input.js": "web/arcade-input.js",
+        "/arcade-loop.js": "web/arcade-loop.js", "/sprite-renderer.js": "web/sprite-renderer.js",
+        "/styles.css": "web/styles.css", "/character-creation.css": "web/character-creation.css",
+        "/visual-character-creation.css": "web/visual-character-creation.css",
+        "/ui-components.js": "web/ui-components.js", "/ui-components.css": "web/ui-components.css",
+    }
+
+    presentation_assets = (
+        "content-workbench.html", "content-workbench.js", "content-workbench.css",
+        "content-package-example.json", "content-package.schema.json",
+        "tokens.css", "stage.css", "ui-components.js", "ui-components.css", "ui-polish.js", "character-creation.css", "visual-character-creation.css", "item-preview.json",
+        "magic-articulation.js", "puppet-renderer.js", "puppet-dom.js", "fx-engine.js", "skeletal-rig.js", "traversal-controller.js", "visual-armory.json",
+        "doran-rig.js", "wren-rig.js", "battle-scene.js", "expedition-map.js", "battle.css",
+        "assets/favicon.svg", "manifest.webmanifest", "assets/townsperson.png", "assets/longsword.png", "assets/chain-shirt.png",
+        "assets/unidentified-rune.png", "assets/character-sprite-sheet.png", "assets/npc-portrait-sheet.png", "assets/art-manifest.json",
+        "assets/sprites/layers/cloak.svg", "assets/sprites/layers/headgear.svg",
+        "assets/sprites/layers/shield.svg", "assets/sprites/layers/trinket.svg",
+        "assets/sprites/layers/cloak-v1.png", "assets/sprites/layers/headgear-v1.png",
+        "assets/sprites/layers/shield-v1.png", "assets/sprites/layers/trinket-v1.png",
+        # Doran's retired frame art. He draws through web/doran-rig.js now
+        # (2026-09-23); the files stay served while they remain on disk.
+        *(f"assets/sprites/characters/doran/doran-{pose}.png"
+          for pose in ("guard", "overhead-strike", "sweep", "rest", "low-ready")),
+        *(f"assets/sprites/characters/{race}-{variant}.png"
+          for race in ("human", "elf", "half-elf", "orc", "goblin")
+          for variant in ("female", "male")),
+    )
+    assets.update({"/web/" + name: "web/" + name for name in presentation_assets})
+    assets.update({"/" + name: "web/" + name for name in presentation_assets})
+
+    # Discover and allow any presentation assets inside web/
+    _web_dir = ROOT / "web"
+    if _web_dir.is_dir():
+        for _p in _web_dir.rglob("*"):
+            if _p.is_file():
+                _rel = _p.relative_to(_web_dir).as_posix()
+                assets.setdefault("/web/" + _rel, "web/" + _rel)
+                assets.setdefault("/" + _rel, "web/" + _rel)
+
+    def _json(self, payload, status=200):
+        data = json.dumps(payload, ensure_ascii=False, allow_nan=False).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Host-Time", str(int(time.time() * 1000)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def _trusted_origin(self):
+        allowed = {f"127.0.0.1:{self.server.server_port}", f"localhost:{self.server.server_port}"}
+        if self.headers.get("Host") not in allowed:
+            return False
+        origin = self.headers.get("Origin")
+        return origin is None or origin in {"http://" + host for host in allowed}
+
+    def _safe_error(self, status, code, message):
+        """Best-effort JSON error; swallowed if the connection is already gone."""
+        try:
+            self._json({"ok": False, "error": {"code": code, "message": message}}, status)
+        except Exception:
+            pass
+
+    def _hosted_request(self):
+        """Authenticate and authorize one desktop-connected Hosted Controls call."""
+        if not self._trusted_origin():
+            self._safe_error(403, "HOSTED_ORIGIN_REJECTED", "Hosted Controls accepts only the local desktop connector")
+            return
+        client = self.headers.get("X-HSR-Client", "").strip().lower()
+        token = self.headers.get("Authorization", "")
+        if token.startswith("Bearer "):
+            token = token[7:].strip()
+        ok, code = _hosted_controls.authenticate(client, token)
+        if not ok:
+            self._safe_error(401, code, "Hosted Controls credentials were rejected")
+            return
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            if not 0 < length <= MAX_REQUEST_BYTES:
+                raise ValueError("Request body must be between 1 byte and 1.3 MiB")
+            request = json.loads(self.rfile.read(length))
+            if not isinstance(request, dict):
+                raise ValueError("Request must be an object")
+            request_id = request.get("id")
+            if not isinstance(request_id, str) or not request_id.strip() or len(request_id) > 256:
+                raise ValueError("Request requires a nonempty string id")
+            replay = _hosted_controls.replay(client, request_id)
+            if replay is not None:
+                self._json(replay)
+                return
+            command = request.get("command")
+            if command == "hosted_capabilities":
+                result = {"id": request_id, "ok": True, "result": {"hosted_controls": _hosted_controls.capabilities()}}
+            elif command == "hosted_lease":
+                valid, error, detail = _hosted_controls.lease(client, str(request.get("run_id", "")), str(request.get("operation", "")))
+                result = {"id": request_id, "ok": valid}
+                result["result" if valid else "error"] = detail if valid else {"code": error, "details": detail}
+            else:
+                valid, error, detail = _hosted_controls.authorize(client, request)
+                if not valid:
+                    result = {"id": request_id, "ok": False, "error": {"code": error, "details": detail}}
+                else:
+                    wire = {**request, "id": "hosted-" + uuid.uuid4().hex, "public_only": True}
+                    result = _engine(wire, route="POST /api/hosted")
+                    result["id"] = request_id
+                    result.setdefault("hosted", {})
+                    result["hosted"].update({"client": client, "transport": "hosted-controls", "lease": detail})
+            _hosted_controls.remember(client, request_id, result)
+            self._json(result, 200 if result.get("ok") else 409)
+        except (ValueError, OSError) as exc:
+            self._safe_error(400, "INVALID_REQUEST", str(exc))
+
+    NETWORK_ERRORS = (ConnectionAbortedError, ConnectionResetError, BrokenPipeError, TimeoutError)
+
+    def do_GET(self):
+        try:
+            self._route_get()
+        except self.NETWORK_ERRORS:
+            pass  # the client went away mid-response; nothing left to send
+        except Exception as exc:
+            _say(f"[web] ERROR GET {watch._clip(self.path)}: {type(exc).__name__}: {watch._clip(str(exc))}")
+            _say(watch._clip(traceback.format_exc(), 4000))
+            self._safe_error(500, "INTERNAL_ERROR", str(exc))
+
+    def do_POST(self):
+        try:
+            self._route_post()
+        except self.NETWORK_ERRORS:
+            pass
+        except Exception as exc:
+            _say(f"[web] ERROR POST {watch._clip(self.path)}: {type(exc).__name__}: {watch._clip(str(exc))}")
+            _say(watch._clip(traceback.format_exc(), 4000))
+            self._safe_error(500, "INTERNAL_ERROR", str(exc))
+
+    def _handle_client_log(self):
+        """Sink for browser-side errors, so a client-only crash still shows up
+        in this console instead of only in DevTools no one has open."""
+        if not self._trusted_origin():
+            _say(f"[web] 403 POST {watch._clip(self.path)}")
+            self.send_error(403)
+            return
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            if not 0 < length <= MAX_CLIENT_LOG_BYTES:
+                raise ValueError("Request body must be between 1 byte and 10.4 KiB")
+            payload = json.loads(self.rfile.read(length))
+            if not isinstance(payload, dict):
+                raise ValueError("Request must be an object")
+        except (ValueError, OSError) as exc:
+            self._safe_error(400, "INVALID_REQUEST", str(exc))
+            return
+        level = payload.get("level") if payload.get("level") in {"error", "warn"} else "error"
+        message = watch._clip(payload.get("message", ""), 500)
+        where = watch._clip(payload.get("where", ""), 200)
+        _say(f"[client] {level}: {message}" + (f" ({where})" if where else ""))
+        self._json({"ok": True})
+
+    def _route_get(self):
+        if not self._trusted_origin():
+            _say(f"[web] 403 GET {watch._clip(self.path)}")
+            self.send_error(403)
+            return
+        route = urlsplit(self.path)
+        if route.path == "/api/ui":
+            _say("[web] GET /api/ui")
+            self._json({"schema": "hsr-ui-manifest-1", "name": "HSR Interface", "version": "2026-09-13",
+                "primary": "/", "compact": "/web/index.html",
+                "screens": ["room", "battle", "equipment", "roster", "residents", "journal", "map", "library", "create", "options"],
+                "encounter_modes": {"turn_based": "tactical host actions", "arcade": "fixed-cadence host frames with public interpolation"},
+                "screen_reference": "/#<screen>", "health": "/api/health",
+                "public_readout": "/api/readout?run_id=<id>", "host": "/api/host",
+                "public_schema": "hollow-star-public-view-1",
+                "affix_catalog": "/api/affixes",
+                "content_catalog": "/api/content",
+                "browser_reference": "window.HollowStarUI", "session_vocabulary": "/api/session/vocabulary",
+                "item_fields": ["name", "display_name", "slot", "tier", "base_damage", "damage_dice", "base_ac", "prefix", "suffix", "inherent", "modifiers", "appearance"],
+                "assets": "/web/assets/art-manifest.json", "server_sha256": SERVER_SHA256})
+            return
+        if route.path == "/api/session/vocabulary":
+            _say("[web] GET /api/session/vocabulary")
+            self._json({"ok": True, "result": vocabulary()})
+            return
+        if route.path == "/api/affixes":
+            self._json(_engine({"id": "http-get-" + uuid.uuid4().hex,
+                                "command": "affix_catalog"}, timeout=5, route="GET /api/affixes"))
+            return
+        if route.path == "/api/content":
+            self._json(_engine({"id": "http-get-" + uuid.uuid4().hex,
+                                "command": "content_catalog"}, timeout=10, route="GET /api/content"))
+            return
+        if route.path == "/api/capabilities":
+            self._json(_engine({"id": "http-get-" + uuid.uuid4().hex, "command": "inspect",
+                                "target": "capabilities"}, timeout=5, route="GET /api/capabilities"))
+            return
+        if route.path in {"/api/health", "/api/readout"}:
+            request = {"id": "http-get-" + uuid.uuid4().hex, "command": "health"}
+            if route.path == "/api/readout":
+                run_id = parse_qs(route.query).get("run_id", [""])[0]
+                if not run_id.strip() or len(run_id) > 256:
+                    _say("[web] GET /api/readout rejected: RUN_ID_REQUIRED")
+                    self._json({"ok": False, "error": {"code": "RUN_ID_REQUIRED"}}, 400)
+                    return
+                request.update(command="readout", run_id=run_id, public_only=True, compact=False)
+            try:
+                result = _engine(request, timeout=5 if request["command"] == "health" else 35,
+                                 route="GET " + route.path)
+            except OSError:
+                result = {"ok": False, "error": {"code": "ENGINE_UNAVAILABLE"}}
+            self._json(result, 200 if result.get("ok") else 503)
+            return
+        clean_path = route.path.split("?", 1)[0]
+        rel = self.assets.get(clean_path)
+        if rel is None:
+            # Safe runtime fallback: resolve strictly within web/
+            candidate = clean_path.removeprefix("/web").lstrip("/")
+            web_file = (ROOT / "web" / candidate).resolve()
+            try:
+                web_file.relative_to((ROOT / "web").resolve())
+                if web_file.is_file():
+                    rel = "web/" + web_file.relative_to((ROOT / "web").resolve()).as_posix()
+            except ValueError:
+                pass
+        if rel is None or not (ROOT / rel).is_file():
+            _say(f"[web] 404 GET {watch._clip(self.path)}")
+            self.send_error(404)
+            return
+        path = ROOT / rel
+        data = path.read_bytes()
+        kind = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
+                ".css": "text/css; charset=utf-8", ".png": "image/png", ".svg": "image/svg+xml",
+                ".webmanifest": "application/manifest+json; charset=utf-8",
+                ".json": "application/json; charset=utf-8"}.get(path.suffix, "application/octet-stream")
+        self.send_response(200)
+        self.send_header("Content-Type", kind)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.end_headers()
+        self.wfile.write(data)
+
+    def _route_post(self):
+        if self.path == "/api/client-log":
+            self._handle_client_log()
+            return
+        if self.path == "/api/hosted":
+            self._hosted_request()
+            return
+        if self.path != "/api/host":
+            _say(f"[web] 404 POST {watch._clip(self.path)}")
+            self.send_error(404)
+            return
+        if not self._trusted_origin():
+            _say(f"[web] 403 POST {watch._clip(self.path)}")
+            self.send_error(403)
+            return
+        request_id = None
+        try:
+            if self.headers.get_content_type() != "application/json":
+                raise ValueError("Content-Type must be application/json")
+            length = int(self.headers.get("Content-Length", 0))
+            if not 0 < length <= MAX_REQUEST_BYTES:
+                raise ValueError("Request body must be between 1 byte and 1.3 MiB")
+            request = json.loads(self.rfile.read(length))
+            if not isinstance(request, dict):
+                raise ValueError("Request must be an object")
+            request_id = request.get("id")
+            if not isinstance(request_id, str) or not request_id.strip() or len(request_id) > 256:
+                raise ValueError("Request requires a nonempty string id of at most 256 characters")
+            if not isinstance(request.get("command"), str):
+                raise ValueError("Request requires a command")
+            # Unique mailbox IDs avoid collisions between CLI/MCP/browser sessions.
+            wire = {**request, "id": "http-" + uuid.uuid4().hex}
+            result = _engine(wire)
+            result["id"] = request_id
+            if request.get("command") == "shutdown" and result.get("ok"):
+                # Let the HTTP response reach the caller before stopping the
+                # server.  This is the clean-exit path owned by the launcher.
+                _shutting_down.set()
+                threading.Thread(target=self.server.shutdown, daemon=True).start()
+        except (ValueError, OSError) as exc:
+            _say(f"[web] POST /api/host rejected INVALID_REQUEST: {watch._clip(str(exc))}")
+            result = {"id": request_id, "ok": False, "error": {"code": "INVALID_REQUEST", "message": str(exc)}}
+        data = json.dumps(result).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def log_message(self, *_):
+        pass
+
+
+class LoopbackServer(ThreadingHTTPServer):
+    """Claims its port exclusively. On Windows, SO_REUSEADDR lets a second host
+    bind the same port beside the first, and requests then land on either one."""
+    allow_reuse_address = os.name != "nt"
+    allow_reuse_port = False
+    daemon_threads = True  # a request thread still running at exit must never block it
+
+    def server_bind(self):
+        if os.name == "nt" and hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
+    def handle_error(self, request, client_address):
+        """Replace socketserver's raw stderr traceback dump with one line
+        routed through the same console queue as everything else -- quiet
+        for an ordinary disconnect, still fully visible for a real bug."""
+        exc_type = sys.exc_info()[0]
+        if exc_type is not None and issubclass(exc_type, Handler.NETWORK_ERRORS):
+            _say(f"[web] client {client_address} disconnected mid-request")
+            return
+        _say(f"[web] ERROR handling request from {client_address}:")
+        _say(watch._clip(traceback.format_exc(), 4000))
+
+
+def main():
+    global _server
+    parser = argparse.ArgumentParser(description="Hollow Star loopback web host")
+    parser.add_argument("--hostless", action="store_true",
+                        help="serve the UI with an in-process HSRHost and no watcher")
+    parser.add_argument("--data-root", type=Path, default=ROOT / ".local",
+                        help="override host data in --hostless mode (useful for isolated runs and tests)")
+    parser.add_argument("--port", type=int, default=int(os.environ.get("HSR_WEB_PORT", "8765")),
+                        help="loopback port (default: HSR_WEB_PORT or 8765)")
+    args = parser.parse_args()
+    began = time.monotonic()
+    try:
+        try:
+            # Bind before launching anything so a second web launcher cannot orphan a watcher.
+            server = LoopbackServer(("127.0.0.1", args.port), Handler)
+        except OSError as exc:
+            _say(f"[web] could not bind port {args.port}: {exc}")
+            _say("[web] a previous Hollow Star process may still be holding this port; "
+                 "end any lingering python.exe for this workspace and try again")
+            return 1
+        _server = server
+        with server:
+            start_engine(args.hostless, data_root=args.data_root)
+            _say(f"HSR 2D client + shared watcher: http://127.0.0.1:{args.port}")
+            _say(f"[web] ready on port {server.server_port} in {(time.monotonic() - began) * 1000:.0f} ms"
+                 f" | stats every {STATS_SECONDS}s while active")
+            stop = threading.Event()
+            threading.Thread(target=_stats_loop, args=(stop,), name="hsr-stats", daemon=True).start()
+            try:
+                server.serve_forever()
+            except KeyboardInterrupt:
+                _shutting_down.set()
+                _say("HSR server interrupted")
+            finally:
+                _shutting_down.set()
+                stop.set()
+                final = _stats_line(force=True)
+                if final:
+                    _say(final)
+                if _watcher and _watcher.poll() is None:
+                    _say("HSR server stopping watcher")
+                    _watcher.terminate()
+                    try:
+                        _watcher.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        _watcher.kill()
+                _say("HSR server stopped")
+    finally:
+        _flush_console()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

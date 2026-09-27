@@ -1,0 +1,382 @@
+{
+  "_note": "D&D base items. Inherent effects are rules-as-written properties. Prefix and suffix are applied at load or generation time.",
+  "_weapon_authoring_note": "Two resolvers read this file. tactical.py (the live dungeon run) needs damage_dice + attack_ability + reach/range_normal/range_long on every hand-slot weapon, or a custom-identity wielder's weapon_attack() raises 'weapon dice are not implemented'. resolution.py (the SIMULATION/rehearsal engine) reads base_damage directly and ignores damage_dice. Keep both populated on every weapon so neither resolver breaks. tags should carry the specific physical subtype (PIERCING/SLASHING/BLUDGEONING) alongside PHYSICAL -- tactical.damage() uses it to pick the armor mitigation lane against divine-plate targets, and items.py's _silhouette() uses it to pick the paperdoll weapon shape. 'axe' has no mechanical tell that distinguishes it from 'sword' (both are ordinarily SLASHING), so an axe-shaped weapon must set an explicit \"silhouette\": \"axe\" override -- see items.py's Item.silhouette field. reach is melee reach in feet (5 = adjacent, 10 = a polearm/reach weapon); range_normal/range_long are ranged-attack bands in feet and stay at the reach default for pure melee weapons.",
+  "items": [
+    {
+      "name": "Doran's Steward's Signet",
+      "slot": "ring",
+      "tier": "MAGICAL",
+      "ac_bonus": 1,
+      "utility_uses": [
+        "identify Sanctum authority",
+        "seal a Steward's requisition"
+      ],
+      "flavor": "A dark ring cut with a single bright line. The line is legible only when its bearer is expected.",
+      "sprite_id": "stewards-signet"
+    },
+    {
+      "name": "Steward's field coat",
+      "slot": "armor",
+      "base_ac": 17,
+      "dex_cap": 2,
+      "utility_uses": [
+        "hold a folded map",
+        "protect carried tinder"
+      ],
+      "flavor": "Layered grey plates over waxed cloth; every buckle has been chosen for quiet use.",
+      "sprite_id": "stewards-coat"
+    },
+    {
+      "name": "Doran's watchblade",
+      "slot": "hand",
+      "base_damage": 8,
+      "damage_dice": "1d10",
+      "damage_modifier": 5,
+      "attack_bonus": 2,
+      "attack_ability": "STR",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "SLASHING"
+      ],
+      "utility_uses": [
+        "cut cord",
+        "mark stone",
+        "strike a firesteel"
+      ],
+      "flavor": "A broad, serviceable blade with a nicked guard and a polished edge where a hand keeps finding it.",
+      "sprite_id": "watchblade"
+    },
+    {
+      "name": "tinderbox",
+      "slot": "utility",
+      "utility_uses": [
+        "start a fire",
+        "test a draft",
+        "light a fuse"
+      ],
+      "flavor": "Steel, flint, char cloth, and a little wrapped fat. It has been used recently.",
+      "sprite_id": "tinderbox"
+    },
+    {
+      "name": "snuff tin",
+      "slot": "utility",
+      "utility_uses": [
+        "mask a smell",
+        "wake a sleeper",
+        "offer a customary courtesy"
+      ],
+      "flavor": "A dented tin of bitter black snuff, sealed against damp.",
+      "sprite_id": "snuff-tin"
+    },
+    {
+      "name": "Steward's route key",
+      "slot": "key",
+      "temporary": true,
+      "utility_uses": [
+        "open marked Sanctum service locks"
+      ],
+      "flavor": "Three teeth, one red thread, and a wax trace on the bow. It is not a general key.",
+      "sprite_id": "route-key"
+    },
+    {
+      "name": "longsword",
+      "slot": "hand",
+      "base_damage": 5,
+      "damage_dice": "1d8",
+      "attack_ability": "STR",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "SLASHING"
+      ],
+      "handedness": "one-handed",
+      "alternate_modes": {
+        "two_handed": {
+          "damage_dice": "1d10",
+          "reach": 5,
+          "range_long": 5,
+          "damage_type": "SLASHING"
+        }
+      },
+      "flavor": "A versatile, double-edged blade favored by martial combatants for its balanced strikes.",
+      "sprite_id": "longsword"
+    },
+    {
+      "name": "greatsword",
+      "slot": "hand",
+      "base_damage": 7,
+      "damage_dice": "2d6",
+      "attack_ability": "STR",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "SLASHING",
+        "HEAVY"
+      ],
+      "handedness": "two-handed",
+      "flavor": "A massive, heavy blade designed to sweep through lightly armored foes with wide arcs.",
+      "inherent": [
+        {
+          "name": "heavy build",
+          "phase": "PERMISSION",
+          "direction": "GRANT",
+          "grants_tags": [
+            "HEAVY"
+          ],
+          "opens_gate": "requires_heavy"
+        }
+      ],
+      "sprite_id": "greatsword"
+    },
+    {
+      "name": "silvered dagger",
+      "slot": "hand",
+      "base_damage": 3,
+      "damage_dice": "1d4",
+      "attack_ability": "DEX",
+      "reach": 5,
+      "range_normal": 20,
+      "range_long": 60,
+      "tags": [
+        "PHYSICAL",
+        "PIERCING",
+        "SILVER"
+      ],
+      "handedness": "one-handed",
+      "flavor": "A thin, honed blade, its edge treated with silver -- and light enough to throw.",
+      "inherent": [
+        {
+          "name": "silvered",
+          "phase": "PERMISSION",
+          "direction": "GRANT",
+          "grants_tags": [
+            "SILVER"
+          ],
+          "opens_gate": "requires_silver"
+        }
+      ],
+      "sprite_id": "silvered-dagger"
+    },
+    {
+      "name": "chain shirt",
+      "slot": "armor",
+      "base_ac": 13,
+      "flavor": "Interlocking metal rings worn over a padded gambeson, offering solid protection without completely hindering movement.",
+      "sprite_id": "chain-shirt"
+    },
+    {
+      "name": "ring of protection",
+      "slot": "ring",
+      "base_ac": 1,
+      "tier": "MAGICAL",
+      "flavor": "A simple silver band that faintly hums with defensive wards. Requires attunement to shield its wearer.",
+      "sprite_id": "ring-of-protection"
+    },
+    {
+      "name": "warhammer",
+      "slot": "hand",
+      "base_damage": 6,
+      "damage_dice": "1d8",
+      "attack_ability": "STR",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "BLUDGEONING"
+      ],
+      "silhouette": "axe",
+      "handedness": "one-handed",
+      "alternate_modes": {
+        "two_handed": {
+          "damage_dice": "1d10",
+          "reach": 5,
+          "range_long": 5,
+          "damage_type": "BLUDGEONING"
+        }
+      },
+      "flavor": "A one-handed breaker for armored opposition.",
+      "sprite_id": "warhammer"
+    },
+    {
+      "name": "glaive",
+      "slot": "hand",
+      "base_damage": 6,
+      "damage_dice": "1d10",
+      "attack_ability": "STR",
+      "reach": 10,
+      "range_normal": 10,
+      "range_long": 10,
+      "tags": [
+        "PHYSICAL",
+        "SLASHING",
+        "HEAVY"
+      ],
+      "handedness": "two-handed",
+      "flavor": "A single-edged blade mounted on a long shaft, perfect for keeping foes at bay.",
+      "sprite_id": "glaive"
+    },
+    {
+      "name": "rapier",
+      "slot": "hand",
+      "base_damage": 5,
+      "damage_dice": "1d8",
+      "attack_ability": "DEX",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "PIERCING"
+      ],
+      "silhouette": "sword",
+      "handedness": "one-handed",
+      "flavor": "A precise thrusting blade with an ornate guard, favoring agility over raw strength.",
+      "sprite_id": "rapier"
+    },
+    {
+      "name": "hand crossbow",
+      "slot": "hand",
+      "base_damage": 4,
+      "damage_dice": "1d6",
+      "attack_ability": "DEX",
+      "reach": 5,
+      "range_normal": 30,
+      "range_long": 120,
+      "tags": [
+        "PHYSICAL",
+        "PIERCING"
+      ],
+      "handedness": "one-handed",
+      "flavor": "A compact, highly mobile crossbow that can easily be fired with one hand.",
+      "sprite_id": "hand-crossbow"
+    },
+    {
+      "name": "battleaxe",
+      "slot": "hand",
+      "base_damage": 6,
+      "damage_dice": "1d8",
+      "attack_ability": "STR",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "SLASHING"
+      ],
+      "silhouette": "axe",
+      "handedness": "one-handed",
+      "alternate_modes": {
+        "two_handed": {
+          "damage_dice": "1d10",
+          "reach": 5,
+          "range_long": 5,
+          "damage_type": "SLASHING"
+        }
+      },
+      "flavor": "A broad-headed martial axe.",
+      "sprite_id": "battleaxe"
+    },
+    {
+      "name": "hunting bow",
+      "slot": "hand",
+      "base_damage": 5,
+      "damage_dice": "1d8",
+      "attack_ability": "DEX",
+      "reach": 5,
+      "range_normal": 150,
+      "range_long": 600,
+      "tags": [
+        "PHYSICAL",
+        "PIERCING"
+      ],
+      "silhouette": "bow",
+      "handedness": "two-handed",
+      "flavor": "A recurve hunting bow, restrung for war.",
+      "sprite_id": "hunting-bow"
+    },
+    {
+      "name": "war pick",
+      "slot": "hand",
+      "base_damage": 5,
+      "damage_dice": "1d8",
+      "attack_ability": "STR",
+      "reach": 5,
+      "range_normal": 5,
+      "range_long": 5,
+      "tags": [
+        "PHYSICAL",
+        "PIERCING"
+      ],
+      "handedness": "one-handed",
+      "flavor": "A narrow spike built to find the seams in plate.",
+      "sprite_id": "war-pick"
+    },
+    {
+      "name": "Ashen Guard helm",
+      "set_name": "Ashen Guard",
+      "slot": "head",
+      "flavor": "Soot-darkened plate with a closed brow.",
+      "sprite_id": "ashen-guard-helm"
+    },
+    {
+      "name": "Ashen Guard cuirass",
+      "set_name": "Ashen Guard",
+      "slot": "armor",
+      "base_ac": 15,
+      "flavor": "The central, soot-darkened plate of the Ashen Guard set, forged to endure immense heat.",
+      "sprite_id": "ashen-guard-cuirass"
+    },
+    {
+      "name": "Ashen Guard gauntlets",
+      "set_name": "Ashen Guard",
+      "slot": "hand",
+      "flavor": "Segmented gloves marked with old fire scars.",
+      "sprite_id": "ashen-guard-gauntlets"
+    },
+    {
+      "name": "Ashen Guard boots",
+      "set_name": "Ashen Guard",
+      "slot": "boots",
+      "flavor": "Heavy boots built for broken stone.",
+      "sprite_id": "ashen-guard-boots"
+    },
+    {
+      "name": "Wayfarer Scale helm",
+      "set_name": "Wayfarer Scale",
+      "slot": "head",
+      "flavor": "Layered leather and overlapping scales protecting the crown and jaw.",
+      "sprite_id": "wayfarer-scale-helm"
+    },
+    {
+      "name": "Wayfarer Scale coat",
+      "set_name": "Wayfarer Scale",
+      "slot": "armor",
+      "base_ac": 14,
+      "dex_cap": 2,
+      "flavor": "A layered scale-mail coat designed for long routes, balancing protection and mobility.",
+      "sprite_id": "wayfarer-scale-coat"
+    },
+    {
+      "name": "Wayfarer Scale gloves",
+      "set_name": "Wayfarer Scale",
+      "slot": "hand",
+      "flavor": "Supple gloves reinforced at the knuckles.",
+      "sprite_id": "wayfarer-scale-gloves"
+    },
+    {
+      "name": "Wayfarer Scale boots",
+      "set_name": "Wayfarer Scale",
+      "slot": "boots",
+      "flavor": "Quiet-soled boots for long routes.",
+      "sprite_id": "wayfarer-scale-boots"
+    }
+  ]
+}

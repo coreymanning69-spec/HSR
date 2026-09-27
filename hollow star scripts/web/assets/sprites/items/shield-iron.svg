@@ -1,0 +1,10 @@
+<svg viewBox="0 0 48 56" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shield -->
+  <polygon points="24,4 40,12 42,28 36,42 24,48 12,42 6,28 8,12" fill="#6b7280"/>
+
+  <!-- Center boss -->
+  <circle cx="24" cy="26" r="7" fill="#3f4650"/>
+
+  <!-- Boss center dot -->
+  <circle cx="24" cy="25" r="3" fill="#52575e"/>
+</svg>

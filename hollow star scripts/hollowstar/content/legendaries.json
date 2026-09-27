@@ -1,0 +1,119 @@
+{
+  "schema": "hollow-star-legendaries-1",
+  "status": "editable DESIGN content; not rolled by any drop table yet. attunement.grant_legendary is the only way in.",
+  "notes": "Each row is a legendary item whose power activates only when decanted into a Legendary attunement slot. Numbers are provisional DESIGN values, not certified balance. Every lattice row carries a tell (DM046_0 section 11).",
+  "legendaries": [
+    {
+      "id": "prismatic-prism",
+      "name": "Prismatic Prism",
+      "descriptor": "a faceted violet lens that hums against the palm",
+      "value": 60,
+      "description": "Weapon blows refract into arcane light before they land.",
+      "lattice": [
+        {
+          "kind": "convert_incoming",
+          "from": [
+            "SLASHING",
+            "PIERCING",
+            "BLUDGEONING"
+          ],
+          "to": "ARCANE",
+          "tell": "The blow bends into a prism of violet light an inch from the skin."
+        }
+      ],
+      "sprite_id": "prismatic-prism"
+    },
+    {
+      "id": "voidborne-shroud",
+      "name": "Voidborne Shroud",
+      "descriptor": "a scrap of cloth darker than the room around it",
+      "value": 60,
+      "description": "Arcane and radiant force sinks into the shroud and does not come out.",
+      "lattice": [
+        {
+          "kind": "damage_immunity",
+          "tags": [
+            "ARCANE",
+            "RADIANT"
+          ],
+          "tier": "ARTIFACT",
+          "tell": "Light and spellfire vanish into the shroud without a sound."
+        }
+      ],
+      "sprite_id": "voidborne-shroud"
+    },
+    {
+      "id": "unyielding-stance",
+      "name": "Unyielding Stance",
+      "descriptor": "an iron boot-plate stamped with a closed fist",
+      "value": 50,
+      "description": "Stuns, paralysis, and disarms slide off a body that refuses them.",
+      "lattice": [
+        {
+          "kind": "deny_condition",
+          "conditions": [
+            "STUNNED",
+            "PARALYZED",
+            "DISARMED"
+          ],
+          "tell": "The body locks, shudders, and simply does not yield."
+        }
+      ],
+      "sprite_id": "unyielding-stance"
+    },
+    {
+      "id": "aegis-of-first-light",
+      "name": "Aegis of First Light",
+      "descriptor": "a warm gold disc that brightens when threatened",
+      "value": 55,
+      "description": "At the instant combat begins, a ward equal to half your health unfolds.",
+      "lattice": [
+        {
+          "kind": "start_of_combat_ward",
+          "percent_max_hp": 50,
+          "tell": "A dome of first light unfolds before anyone draws steel."
+        }
+      ],
+      "sprite_id": "aegis-of-first-light"
+    },
+    {
+      "id": "royal-arrogance",
+      "name": "Royal Arrogance",
+      "descriptor": "a signet ring too heavy for its size",
+      "value": 55,
+      "description": "Before initiative, a pulse of divine contempt strikes every foe. A DEX save halves it.",
+      "lattice": [
+        {
+          "kind": "start_of_combat_strike",
+          "dice": "3d6",
+          "damage_type": "DIVINE",
+          "targets": "all_enemies",
+          "save": {
+            "ability": "DEX",
+            "dc": 15,
+            "half": true
+          },
+          "tell": "A pressure of pure disdain rolls outward before the first breath."
+        }
+      ],
+      "sprite_id": "royal-arrogance"
+    },
+    {
+      "id": "heralds-haste",
+      "name": "Herald's Haste",
+      "descriptor": "a feather that never settles",
+      "value": 45,
+      "description": "The first round begins with the bearer already moving faster than the room.",
+      "lattice": [
+        {
+          "kind": "start_of_combat_condition",
+          "condition": "HASTED",
+          "duration": 1,
+          "scope": "self",
+          "tell": "The bearer is already mid-step when everyone else starts to move."
+        }
+      ],
+      "sprite_id": "heralds-haste"
+    }
+  ]
+}

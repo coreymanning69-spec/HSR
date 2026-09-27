@@ -1,0 +1,13 @@
+<svg viewBox="0 0 24 96" xmlns="http://www.w3.org/2000/svg">
+  <!-- Wooden scales handle -->
+  <rect x="9" y="48" width="6" height="40" rx="2" fill="#5c4033"/>
+  <!-- Brass rivets -->
+  <circle cx="12" cy="56" r="1" fill="#eab308"/>
+  <circle cx="12" cy="68" r="1" fill="#eab308"/>
+  <circle cx="12" cy="80" r="1" fill="#eab308"/>
+  <!-- Bolster -->
+  <rect x="8" y="44" width="8" height="4" fill="#9ca3af"/>
+  <!-- Blunt-tip dinner blade -->
+  <path d="M10,44 L10,14 Q10,8 14,8 L14,44 Z" fill="#cbd5e1"/>
+  <path d="M10,44 L10,14 Q10,8 12,8 L12,44 Z" fill="#94a3b8"/>
+</svg>

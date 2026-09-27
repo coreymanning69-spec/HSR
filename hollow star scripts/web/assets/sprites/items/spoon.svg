@@ -1,0 +1,11 @@
+<svg viewBox="0 0 24 96" xmlns="http://www.w3.org/2000/svg">
+  <!-- Handle -->
+  <polygon points="11,36 13,36 14,88 10,88" fill="#8b5a2b"/>
+  <circle cx="12" cy="90" r="2" fill="#5c3a1e"/>
+  <!-- Bowl neck -->
+  <polygon points="10,36 14,36 13,28 11,28" fill="#a06d3b"/>
+  <!-- Oval spoon bowl -->
+  <ellipse cx="12" cy="18" rx="6" ry="10" fill="#a06d3b"/>
+  <ellipse cx="12" cy="18" rx="4.5" ry="8" fill="#5c3a1e"/>
+  <path d="M9,13 Q12,10 15,13" fill="none" stroke="#d4a373" stroke-width="1"/>
+</svg>

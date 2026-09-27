@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+node_modules/
+.venv/
+.local/*
+!.local/reliquary_runs/
+.local/reliquary_runs/*
+!.local/reliquary_runs/.gitkeep
+!.local/reliquary_profiles/
+.local/reliquary_profiles/*
+!.local/reliquary_profiles/.gitkeep
+.pytest_cache/
+.claude/
+.agents/
+.gemini_dispatch/
+.mcp.json

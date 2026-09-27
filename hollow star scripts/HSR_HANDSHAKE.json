@@ -1,0 +1,20 @@
+{
+  "schema_version": "hollow-star-handshake-2",
+  "result": "pass",
+  "checked_at_utc": "2026-09-27T03:32:56Z",
+  "validated_workspace_root": "C:\\Users\\ACore\\OneDrive\\Desktop\\Soliera and Sera v9.0 - The Divine System",
+  "snapshot": {
+    "schema_version": "hollow-star-party-snapshot-1",
+    "snapshot_version": "2026-09-26+e7827aa27c6c",
+    "source_fingerprint": "e7827aa27c6c"
+  },
+  "artifact_hashes": {
+    "snapshot_sha256": "17709125a3c4e7828e8c86e2e5962eff63a43394c51ce967a50bc1ebd4128679",
+    "config_sha256": "2ffd53daef1904a26741fe4c8d790689ba8abab54081aa76bb919f71bc268911"
+  },
+  "corpus_fingerprint": {
+    "algorithm": "sha256-owner-hash-v1",
+    "source_owner_count": 8,
+    "value": "e7827aa27c6cf4506a8619ea58fe96d8db2fe42299c4658f7b3b65d8575967c2"
+  }
+}

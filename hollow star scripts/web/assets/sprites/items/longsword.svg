@@ -1,0 +1,13 @@
+<svg viewBox="0 0 24 96" xmlns="http://www.w3.org/2000/svg">
+  <!-- Blade -->
+  <polygon points="12,4 16,20 16,72 8,72 8,20" fill="#c0c0c0"/>
+
+  <!-- Cross-guard -->
+  <rect x="4" y="72" width="16" height="4" fill="#8b7355"/>
+
+  <!-- Grip -->
+  <rect x="9" y="76" width="6" height="12" fill="#5c4033"/>
+
+  <!-- Pommel -->
+  <circle cx="12" cy="92" r="2.5" fill="#8b7355"/>
+</svg>

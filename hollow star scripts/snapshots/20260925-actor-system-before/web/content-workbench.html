@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Content Workbench · Hollow Star</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/content-workbench.css">
+</head>
+<body>
+  <header class="masthead">
+    <div><p class="eyebrow">Hollow Star / Local authoring</p><h1>Content Workbench</h1></div>
+    <a class="back" href="/">Return to Hollow Star <span aria-hidden="true">↗</span></a>
+  </header>
+  <div class="intro"><p>Find a source. Shape a scene. Step inside.</p><span>Preview sessions save automatically · Game saves stay separate</span></div>
+  <p id="status" role="status" aria-live="polite">Connecting to the local engine…</p>
+  <main class="workbench">
+    <section class="panel sources" aria-labelledby="sources-title">
+      <div class="panel-heading"><span class="step">01</span><div><p class="eyebrow">Folder-wide access</p><h2 id="sources-title">Source library</h2></div></div>
+      <form id="search-form"><label for="query">Filename, beat, or phrase</label><div class="search-row"><input id="query" name="query" type="search" maxlength="200" placeholder="T550, Mergeverse, a place…"><button type="submit">Find</button></div><label class="check"><input id="archives" type="checkbox"> Include historical archives</label></form>
+      <p id="source-count" class="muted"></p>
+      <div id="source-list" class="scroller" aria-label="Source results"></div>
+      <div class="pager"><button id="source-prev" type="button" disabled>Previous</button><button id="source-next" type="button" disabled>Next</button></div>
+      <p class="footnote">Local text and asset references. Backups, dependencies, and runtime state are excluded.</p>
+    </section>
+    <section class="panel package" aria-labelledby="package-title">
+      <div class="panel-heading"><span class="step">02</span><div><p class="eyebrow">Compiler destination</p><h2 id="package-title">Scene package</h2></div></div>
+      <div class="toolbar"><button id="example" type="button">Load example</button><button id="import" type="button">Import JSON</button><button id="download" type="button">Download</button><a href="/content-package.schema.json" target="_blank" rel="noopener">Schema ↗</a></div>
+      <input id="file" type="file" accept=".json,application/json" hidden>
+      <label for="editor" class="muted">Edit a package or bring one from a compiler</label>
+      <textarea id="editor" spellcheck="false" aria-describedby="package-help"></textarea>
+      <p id="package-help" class="footnote">Descriptions become visible text. Characters and items are inspectable; mechanical effects need an engine binding.</p>
+      <div class="toolbar primary-actions"><button id="validate" type="button">Validate package</button><button id="start" class="primary" type="button">Open preview <span aria-hidden="true">→</span></button></div>
+      <div id="validation" class="validation" aria-live="polite">Load a source excerpt or the example to begin.</div>
+      <div id="interpret-review" class="validation" aria-live="polite"></div>
+    </section>
+    <section class="panel preview" aria-labelledby="preview-title">
+      <div class="panel-heading"><span class="step">03</span><div><p class="eyebrow">Host-backed interaction</p><h2 id="preview-title">Scene preview</h2></div><span class="badge">Non-canon</span></div>
+      <div class="resume"><label for="sessions">Saved previews</label><div class="search-row"><select id="sessions"><option value="">Choose a preview…</option></select><button id="resume" type="button">Resume</button><button id="refresh" type="button" title="Refresh current preview">↻</button></div></div>
+      <div id="stage" class="stage scroller" aria-label="Interactive scene">
+        <div class="empty"><span class="star" aria-hidden="true">✦</span><h3>A place for worlds to take shape.</h3><p>Open a package to explore its scenes, meet its characters, and inspect its objects.</p></div>
+      </div>
+      <div class="preview-footer"><span id="preview-meta">No active preview</span><button id="restore-package" type="button" disabled>Copy package to editor</button></div>
+    </section>
+  </main>
+  <dialog id="source-dialog" aria-labelledby="source-title">
+    <div class="dialog-header"><div><p class="eyebrow">Read-only source</p><h2 id="source-title"></h2></div><button id="close-source" type="button" aria-label="Close source">×</button></div>
+    <p id="source-path" class="muted"></p>
+    <div class="range-controls"><label>Start line <input id="line-start" type="number" value="1" min="1"></label><label>Lines <input id="line-count" type="number" value="100" min="1" max="400"></label><button id="read-range" type="button">Read range</button><label>Section <select id="headings"><option value="">Choose a heading…</option></select></label></div>
+    <pre id="source-text" tabindex="0"></pre><p id="source-receipt" class="footnote"></p>
+    <div class="toolbar"><button id="use-source" type="button">Use excerpt as a screen</button><button id="interpret-source" class="primary" type="button">Interpret as draft</button><span class="footnote">Drafts use explicit Markdown structure and remain preview-only.</span></div>
+  </dialog>
+  <script type="module" src="/content-workbench.js"></script>
+</body>
+</html>

@@ -1,0 +1,446 @@
+{
+  "_note": "ROSTER. Every entry carries provenance. Doran and Wren below are fallback stubs; load_roster replaces them with the validated exporter-owned party snapshot. Their runtime certification and deferred rules come from that snapshot. Other verified:false entries remain placeholders and must not support balance conclusions.",
+  "actors": [
+    {
+      "name": "Doran",
+      "band": "STEWARD",
+      "controller": "player",
+      "max_hp": 1,
+      "armor_class": 1,
+      "attacks_per_action": 1,
+      "natural_tags": [
+        "PHYSICAL"
+      ],
+      "features": [
+        "Level-20 Battle Master Steward",
+        "Gauntlet field authority",
+        "Equipment is inspectable and lootable when earned"
+      ],
+      "equipment": [
+        {
+          "name": "Doran's watchblade",
+          "slot": "hand",
+          "damage_dice": "1d10",
+          "damage_modifier": 5,
+          "attack_bonus": 2,
+          "attack_ability": "STR",
+          "tags": [
+            "PHYSICAL"
+          ],
+          "flavor": "A broad service blade with a polished edge where his hand keeps finding it."
+        },
+        {
+          "name": "Steward's field coat",
+          "slot": "armor",
+          "base_ac": 17,
+          "dex_cap": 2,
+          "flavor": "Layered grey plates over waxed cloth; quiet buckles, practical repairs."
+        },
+        {
+          "name": "Doran's Steward's Signet",
+          "slot": "ring",
+          "ac_bonus": 1,
+          "flavor": "A dark ring cut with a single bright line."
+        }
+      ],
+      "provenance": {
+        "owner_file": "DM041_A",
+        "support_files": [
+          "DM041_A1",
+          "DM044_0"
+        ],
+        "snapshot_version": "none",
+        "verified": false,
+        "note": "Fallback stub. Replaced by the certified party snapshot during roster loading."
+      },
+      "description": "A resolute Steward with an unyielding presence."
+    },
+    {
+      "name": "Wren",
+      "band": "STEWARD",
+      "controller": "player",
+      "max_hp": 1,
+      "armor_class": 1,
+      "attacks_per_action": 1,
+      "natural_tags": [
+        "DIVINE"
+      ],
+      "provenance": {
+        "owner_file": "DM041_B",
+        "support_files": [
+          "DM041_B1",
+          "DM044_1"
+        ],
+        "snapshot_version": "none",
+        "verified": false,
+        "note": "Fallback stub. Replaced by the certified party snapshot during roster loading."
+      },
+      "description": "A divine conduit, crackling with restrained energy."
+    },
+    {
+      "name": "Cassian Ward",
+      "band": "PEAK_MORTAL",
+      "controller": "player",
+      "max_hp": 147,
+      "armor_class": 19,
+      "initiative_bonus": 5,
+      "speed": 30,
+      "attacks_per_action": 2,
+      "reactions": 1,
+      "ability_scores": {
+        "STR": 12,
+        "DEX": 20,
+        "CON": 16,
+        "INT": 18,
+        "WIS": 14,
+        "CHA": 10
+      },
+      "proficiency_bonus": 6,
+      "natural_tags": [
+        "PHYSICAL"
+      ],
+      "features": [
+        "Gravemaker Doctrine",
+        "Sneak Attack 6d6",
+        "Action Surge",
+        "Battle Master maneuvers",
+        "Localized EMP"
+      ],
+      "equipment": [
+        {
+          "name": "MK-Sliver",
+          "slot": "hand",
+          "damage_dice": "1d8",
+          "damage_modifier": 0,
+          "attack_bonus": 2,
+          "attack_ability": "DEX",
+          "range_normal": 30,
+          "range_long": 90,
+          "tags": [
+            "PIERCING"
+          ],
+          "flavor": "Once per turn, designated targets also take 2d6 force in the source rule."
+        }
+      ],
+      "provenance": {
+        "owner_file": "divine mythos set/DM053_0_A_REF_5e-playable-profiles-t4-roster.md",
+        "support_files": [
+          "divine mythos set/DM004_3_A_REF_character-matrix-primeverse-mergeverse.md",
+          "divine mythos set/DM022_0_P_REF_primeverse-character-matrix.md"
+        ],
+        "snapshot_version": "hsr-npc-source-1",
+        "verified": true,
+        "fidelity": "partial",
+        "deferred": [
+          "Gravemaker Doctrine resolver",
+          "Localized EMP resolver",
+          "MK-Sliver once-per-turn force rider"
+        ],
+        "note": "Source-backed proposed 5e translation; generic attacks are runnable, bespoke features remain explicit deferred content."
+      },
+      "description": "A precision operative, moving with absolute economy."
+    },
+    {
+      "name": "Veyren",
+      "band": "PEAK_MORTAL",
+      "controller": "player",
+      "max_hp": 233,
+      "armor_class": 21,
+      "initiative_bonus": 4,
+      "speed": 40,
+      "attacks_per_action": 2,
+      "reactions": 1,
+      "ability_scores": {
+        "STR": 24,
+        "DEX": 18,
+        "CON": 24,
+        "INT": 8,
+        "WIS": 12,
+        "CHA": 14
+      },
+      "proficiency_bonus": 6,
+      "natural_tags": [
+        "PHYSICAL"
+      ],
+      "features": [
+        "Regeneration 20",
+        "Armored Charge",
+        "Plate Drop",
+        "Crater Jump",
+        "Maximum Effort",
+        "Grapple Lock"
+      ],
+      "equipment": [
+        {
+          "name": "Hooked Gauntlet",
+          "slot": "hand",
+          "damage_dice": "1d10",
+          "damage_modifier": 7,
+          "attack_bonus": 0,
+          "attack_ability": "STR",
+          "tags": [
+            "BLUDGEONING"
+          ],
+          "flavor": "Source attack also carries 1d6 piercing."
+        },
+        {
+          "name": "Full Plate Rig",
+          "slot": "armor",
+          "base_ac": 21,
+          "flavor": "360-pound armored charge rig."
+        }
+      ],
+      "provenance": {
+        "owner_file": "divine mythos set/DM053_0_A_REF_5e-playable-profiles-t4-roster.md",
+        "support_files": [
+          "divine mythos set/DM004_3_A_REF_character-matrix-primeverse-mergeverse.md",
+          "divine mythos set/DM004_3a_A_REF_character-matrix-primeverse-mergeverse-part2.md"
+        ],
+        "snapshot_version": "hsr-npc-source-1",
+        "verified": true,
+        "fidelity": "partial",
+        "deferred": [
+          "Regeneration timing and radiant suppression",
+          "Armored Charge and Plate Drop stance resolver",
+          "Crater Jump resolver",
+          "Grapple Lock resolver",
+          "resonant-frequency counterplay"
+        ],
+        "note": "Source-backed proposed 5e translation; generic gauntlet attacks are runnable."
+      },
+      "description": "A massive armored enforcer carrying a brutally utilitarian aesthetic."
+    },
+    {
+      "name": "Kiyuru",
+      "band": "CHAMPION",
+      "controller": "player",
+      "max_hp": 220,
+      "armor_class": 22,
+      "initiative_bonus": 7,
+      "speed": 120,
+      "attacks_per_action": 5,
+      "reactions": 5,
+      "ability_scores": {
+        "STR": 18,
+        "DEX": 24,
+        "CON": 18,
+        "INT": 12,
+        "WIS": 20,
+        "CHA": 12
+      },
+      "proficiency_bonus": 6,
+      "natural_tags": [
+        "PHYSICAL"
+      ],
+      "features": [
+        "Kusanagi five-attack runtime",
+        "Yata reflection",
+        "Called and return strikes",
+        "Three-d20 removal protection",
+        "Unstoppable movement"
+      ],
+      "equipment": [
+        {
+          "name": "Kusanagi",
+          "slot": "hand",
+          "damage_dice": "2d10",
+          "damage_modifier": 10,
+          "attack_bonus": 6,
+          "attack_ability": "DEX",
+          "reach": 5,
+          "tags": [
+            "SLASHING"
+          ],
+          "flavor": "Artifact-owned locked runtime; five attacks and five reactions are preserved on the actor."
+        }
+      ],
+      "provenance": {
+        "owner_file": "divine mythos set/DM043_D1_A_REF_kiyuru-champion-runtime-and-called-strike-system.md",
+        "support_files": [
+          "divine mythos set/DM004_3_A_REF_character-matrix-primeverse-mergeverse.md",
+          "divine mythos set/DM053_0_A_REF_5e-playable-profiles-t4-roster.md"
+        ],
+        "snapshot_version": "hsr-npc-source-1",
+        "verified": true,
+        "fidelity": "partial",
+        "deferred": [
+          "Kusanagi sheathe timing",
+          "Yata reflection",
+          "called-number d8 strikes",
+          "five-reaction special resolution",
+          "condition immunities"
+        ],
+        "note": "Kiyuru is the canonical spelling; locked runtime values are source-backed, while proposed class fields remain translation data."
+      },
+      "description": "A master of the blade, quiet and intensely focused."
+    },
+    {
+      "name": "Korin",
+      "band": "CHAMPION",
+      "controller": "player",
+      "max_hp": 250,
+      "armor_class": 24,
+      "initiative_bonus": 5,
+      "speed": 40,
+      "attacks_per_action": 2,
+      "reactions": 1,
+      "ability_scores": {
+        "STR": 20,
+        "DEX": 20,
+        "CON": 20,
+        "INT": 20,
+        "WIS": 20,
+        "CHA": 20
+      },
+      "proficiency_bonus": 7,
+      "natural_tags": [
+        "PHYSICAL"
+      ],
+      "features": [
+        "Level 25 Ranger/Grandmaster chassis",
+        "Grandmaster tracking",
+        "Sweep all four",
+        "Party Anchor",
+        "Perfectly formed warrior body"
+      ],
+      "equipment": [
+        {
+          "name": "Obsidian Ranger Knife",
+          "slot": "hand",
+          "damage_dice": "1d6",
+          "damage_modifier": 5,
+          "attack_bonus": 0,
+          "attack_ability": "DEX",
+          "tags": [
+            "PIERCING"
+          ]
+        },
+        {
+          "name": "Reforged Dark Leather",
+          "slot": "armor",
+          "base_ac": 24
+        }
+      ],
+      "provenance": {
+        "owner_file": "divine mythos set/DM004_2b_T_REF_character-matrix-divineverse-household-and-staff.md",
+        "support_files": [
+          "divine mythos set/DM005_0b_T_STY_t19-letha-joins.md"
+        ],
+        "snapshot_version": "hsr-npc-source-1",
+        "verified": true,
+        "fidelity": "partial",
+        "deferred": [
+          "Level 25 Ranger/Grandmaster feature resolver",
+          "tracking and sweep actions",
+          "exact HP source value",
+          "armor and movement stance"
+        ],
+        "note": "All six ability scores and AC are source-backed; HP is a temporary HSR normalization pending an explicit author ruling."
+      },
+      "description": "A swift and silent shadow, eyes constantly darting."
+    },
+    {
+      "name": "Letha",
+      "band": "CHAMPION",
+      "controller": "player",
+      "max_hp": 180,
+      "armor_class": 19,
+      "initiative_bonus": 5,
+      "speed": 30,
+      "attacks_per_action": 1,
+      "reactions": 1,
+      "ability_scores": {
+        "STR": 10,
+        "DEX": 18,
+        "CON": 14,
+        "INT": 12,
+        "WIS": 14,
+        "CHA": 24
+      },
+      "proficiency_bonus": 6,
+      "natural_tags": [
+        "PHYSICAL"
+      ],
+      "features": [
+        "Sunset triple-cast",
+        "Flat item DC 30",
+        "Vesper 600 ft precision shot",
+        "Sing the Shot",
+        "Travel Arc Reader"
+      ],
+      "equipment": [
+        {
+          "name": "Sunset",
+          "slot": "hand",
+          "flavor": "Three spells simultaneously as one action; one slot; range 300 ft; flat save DC 30."
+        },
+        {
+          "name": "Vesper",
+          "slot": "hand",
+          "base_damage": 30,
+          "attack_bonus": 8,
+          "attack_ability": "DEX",
+          "range_normal": 600,
+          "range_long": 600,
+          "tags": [
+            "PIERCING"
+          ],
+          "flavor": "Divine-steel penetrator; loud and operationally consequential."
+        }
+      ],
+      "provenance": {
+        "owner_file": "divine mythos set/DM004_2b_T_REF_character-matrix-divineverse-household-and-staff.md",
+        "support_files": [
+          "divine mythos set/DM005_0b_T_STY_t19-letha-joins.md",
+          "divine mythos set/DM047_0_A_REF_the-blessed-permission-tier-framework.md"
+        ],
+        "snapshot_version": "hsr-npc-source-1",
+        "verified": true,
+        "fidelity": "partial",
+        "deferred": [
+          "Sunset triple-cast resolver",
+          "Vesper loading and exact shot resolver",
+          "Sing the Shot bardic rider",
+          "explicit HSR HP/AC normalization"
+        ],
+        "note": "The HSR numeric chassis is explicitly a normalization placeholder; Sunset's flat DC and one-slot rule must not be recalculated."
+      },
+      "description": "Radiates an intimidating, operational focus. Moves like an engine."
+    },
+    {
+      "name": "Townsperson",
+      "band": "MORTAL",
+      "controller": "npc",
+      "max_hp": 12,
+      "armor_class": 12,
+      "attacks_per_action": 1,
+      "natural_tags": [
+        "PHYSICAL"
+      ],
+      "provenance": {
+        "owner_file": "generated",
+        "verified": true,
+        "note": "Floor One filler. Dangerous through coordination and items, not stats."
+      },
+      "description": "A local citizen going about their daily routine."
+    },
+    {
+      "name": "Wailing Spirit",
+      "band": "HEROIC",
+      "controller": "npc",
+      "max_hp": 40,
+      "armor_class": 14,
+      "attacks_per_action": 1,
+      "natural_tags": [
+        "NECROTIC"
+      ],
+      "gate": "requires_divine_or_ethereal",
+      "provenance": {
+        "owner_file": "generated",
+        "verified": true,
+        "note": "Demonstrates the PERMISSION gate and its tell."
+      },
+      "description": "A translucent echo of past violence, bound to the Reliquary."
+    }
+  ]
+}

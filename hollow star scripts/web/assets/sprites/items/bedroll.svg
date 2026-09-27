@@ -1,0 +1,15 @@
+<svg viewBox="0 0 48 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Cylindrical roll body -->
+  <rect x="10" y="8" width="32" height="16" rx="3" fill="#3f3f46"/>
+  <!-- Rolled side spiral end -->
+  <ellipse cx="10" cy="16" rx="4" ry="8" fill="#52525b"/>
+  <ellipse cx="10" cy="16" rx="2.5" ry="5" fill="#27272a"/>
+  <!-- Canvas outer blanket highlight -->
+  <rect x="14" y="9" width="26" height="4" fill="#71717a"/>
+  <!-- Leather tying straps -->
+  <rect x="18" y="7" width="3" height="18" rx="1" fill="#78350f"/>
+  <rect x="32" y="7" width="3" height="18" rx="1" fill="#78350f"/>
+  <!-- Buckles -->
+  <rect x="17.5" y="14" width="4" height="3" fill="#ca8a04"/>
+  <rect x="31.5" y="14" width="4" height="3" fill="#ca8a04"/>
+</svg>

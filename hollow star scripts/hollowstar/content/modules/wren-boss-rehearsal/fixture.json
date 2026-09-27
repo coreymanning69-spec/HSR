@@ -1,0 +1,14 @@
+{
+  "schema_version":"hsr-module-data-1",
+  "note":"Custom DESIGN boss fixture; unbalanced pending playtest. Not an SKT giant, no registry scaling, no story canon.",
+  "floors":[{"name":"The Brass Gallery","apparent_function":"An equipment trial","true_function":"combat","observation_dc":12,"posture":"The castellan guards the extraction stair.","resident":"Brass Castellan","motive":"Hold the gallery until the challengers withdraw.","law":"The castellan yields when its remaining strength falls below one fifth.","terrain":"A broad gallery with room to fly and an open extraction stair.","tell":"A silver cloak overlays brass plate. The ward glows once before it breaks; four amber beads power extra spear attacks.","secret":"The ward stops one breaking hit; separate attacks exhaust it.","hazard":"The spear reaches airborne targets.","enemy":{"name":"Brass Castellan","hp":480,"ac":23,"attack":17,"dice":"4d8+10","type":"PIERCING","speed":40,"band":40,"attacks":3}}],
+  "rooms":[{"floor":1,"kind":"combat","title":"The Brass Castellan","actor_id":"brass-castellan","arcade_enemy_count":1,"counterplay":["fight","escape"],"escape_routes":["extraction stair"],"tell":"The returning spear threatens flyers. Plate, ring, and cloak stack to AC 23. Four amber beads buy four extra attacks."}],
+  "actors":[{"actor_id":"brass-castellan","name":"Brass Castellan","hp":480,"ac":23,"derive_ac_from_equipment":true,"size":"huge","speed":40,"attacks":3,"attack":17,"dice":"4d8+10","type":"PIERCING","band":40,"initiative_bonus":8,"abilities":{"STR":26,"DEX":14,"CON":24,"INT":14,"WIS":18,"CHA":16},"saves":{"STR":14,"DEX":8,"CON":13,"INT":8,"WIS":10,"CHA":9},"resources":{"ward":75,"amber_beads":4},"bonus_attack_resource":"amber_beads","retreat_threshold":0.2,"trait":"Returning spear, layered armor, a single breaking ward, and four amber follow-up charges.","equipment_ids":["castellan-spear","castellan-plate","castellan-ring","castellan-cloak"]}],
+  "equipment":[
+    {"equipment_id":"castellan-spear","name":"Castellan's Returning Spear","slot":"hand","damage_dice":"4d8","damage_modifier":10,"attack_bonus":17,"reach":15,"range_normal":120,"range_long":240,"type":"PIERCING","flavor":"A long brass spear returns after each throw; its etched range marks remain visible."},
+    {"equipment_id":"castellan-plate","name":"Reinforced Brass Plate","slot":"armor","base_ac":20,"flavor":"Heavy brass plates form the base defense."},
+    {"equipment_id":"castellan-ring","name":"Ring of Layered Guard","slot":"ring","ac_bonus":2,"flavor":"Two nested bands reinforce the plate."},
+    {"equipment_id":"castellan-cloak","name":"Silver Guard Cloak","slot":"cloak","ac_bonus":1,"flavor":"Silver wire adds the final layer of protection."}
+  ],
+  "spells":[],"encounter_tables":[],"rules":[],"authored_tells":[]
+}

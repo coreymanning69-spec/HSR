@@ -1,0 +1,11 @@
+{
+  "name": "The Hollow Star Reliquary",
+  "short_name": "Hollow Star",
+  "description": "A local, host-authoritative Reliquary interface.",
+  "start_url": "/web/index.html",
+  "display": "fullscreen",
+  "display_override": ["window-controls-overlay", "fullscreen", "standalone"],
+  "background_color": "#080a10",
+  "theme_color": "#080a10",
+  "icons": [{ "src": "assets/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

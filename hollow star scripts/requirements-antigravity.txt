@@ -1,0 +1,2 @@
+# Optional Antigravity SDK runtime for tools/antigravity_api.py.
+google-antigravity>=0.1,<0.2

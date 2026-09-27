@@ -1,0 +1,22 @@
+{
+  "schema": "hollow-star-runes-1",
+  "status": "editable DESIGN content",
+  "runes": [
+    {"name": "Vitality Seal", "descriptor": "a warm copper disc", "rarity": "uncommon", "value": 8,
+     "modifiers": [{"effect": "healing_bonus", "value": 2}], "prefix": "Vital", "suffix": null},
+    {"name": "Frostward Rune", "descriptor": "a cold blue shard", "rarity": "uncommon", "value": 10,
+     "modifiers": [{"effect": "resistance", "value": "ICE"}], "prefix": null, "suffix": "of Frostbite"},
+    {"name": "Unseen Step", "descriptor": "a glassy black thread", "rarity": "rare", "value": 16,
+     "modifiers": [{"effect": "navigation_protection", "value": 1}], "prefix": null, "suffix": "of the Unseen Step"}
+  ],
+  "identification": {"floors": [1, 2, 3, 4], "cost": 5},
+  "relics": [
+    {"name": "Wellkeeper's Key", "descriptor": "a key that remembers doors", "value": 25, "modifier": {"effect": "navigation_protection", "value": 1}},
+    {"name": "Relay Heart", "descriptor": "a humming blue heart", "value": 30, "modifier": {"effect": "resistance", "value": "PIERCING"}}
+  ],
+  "conducts": [
+    {"id": "clean-machine-works", "name": "Clean Hands", "description": "Clear the Machine Works without killing a Cleaner.", "requires": {"floor": 2, "kind": "combat"}},
+    {"id": "never-rest", "name": "No Rest for the Living", "description": "Clear a run without resting."},
+    {"id": "rune-blind", "name": "Trust the Consequence", "description": "Clear a run without identifying a Rune."}
+  ]
+}

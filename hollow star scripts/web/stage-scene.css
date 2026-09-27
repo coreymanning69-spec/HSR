@@ -1,0 +1,85 @@
+/* stage-scene.css — the main display (stage-view.js) and the Actor Toolbox.
+   =========================================================================
+   The world stage is one persistent element: a baked painted set, an animated
+   back layer, figures and props on a depth plane, an FX layer, and a lighting
+   pass multiplied over all of it. Figures are positioned with transforms by
+   the stage each frame, so the older per-figure CSS (fixed left/bottom, the
+   0.75 room scale, drop-shadow filter, transform transition) is switched off
+   inside it. Nothing is lit or gold until hovered or focused. */
+
+.world-stage{position:relative;overflow:hidden;background:#0b0e16;isolation:isolate;user-select:none;-webkit-user-select:none;touch-action:manipulation;
+  height:clamp(330px,48vw,520px);border:1px solid var(--line);box-shadow:0 22px 55px #0008}
+.world-stage .ws-cam{position:absolute;inset:0}
+.world-stage canvas.ws-bake,.world-stage canvas.ws-live,.world-stage canvas.ws-fx,.world-stage canvas.ws-light,.world-stage canvas.ws-glow{position:absolute;left:0;top:0;pointer-events:none;display:block}
+.world-stage canvas.ws-fx{z-index:5000}
+.world-stage canvas.ws-light{z-index:5100;mix-blend-mode:multiply}
+.world-stage canvas.ws-glow{z-index:5200;mix-blend-mode:screen}
+.world-stage .ws-things{position:absolute;inset:0;pointer-events:none}
+.world-stage .ws-things>*{position:absolute;left:0;top:0;pointer-events:none;will-change:transform}
+.world-stage .scene-frame-label{z-index:5300;pointer-events:none}
+
+/* Old per-figure rules that fight the stage's own placement. */
+.world-stage .scene-character{scale:none!important;filter:none;transition:none!important;bottom:auto!important;right:auto!important}
+.world-stage .scene-character.paperdoll-character{animation:none}
+.world-stage .scene-character.is-down{filter:saturate(.55) brightness(.8)!important}
+.world-stage .scene-character.is-hit{filter:brightness(2.4) saturate(.25)!important}
+.world-stage .ws-actor>.actor-nameplate{opacity:0;bottom:-4px;transition:opacity .15s;white-space:nowrap;left:50%;right:auto;transform:translateX(-50%)}
+.world-stage .ws-actor.is-hover>.actor-nameplate,.world-stage .ws-actor.is-selected>.actor-nameplate,.world-stage .ws-actor:focus-visible>.actor-nameplate{opacity:1}
+.world-stage .ws-actor:focus{outline:none}
+.world-stage .ws-actor:focus-visible{outline:2px solid var(--gold);outline-offset:-40px}
+/* Hover is the only highlight. */
+.world-stage .ws-actor.is-hover{filter:drop-shadow(0 0 5px rgba(242,215,140,.85)) drop-shadow(0 0 1px rgba(242,215,140,.9))!important}
+.world-stage .ws-prop.is-hover{filter:drop-shadow(0 0 5px rgba(242,215,140,.85)) drop-shadow(0 0 1px rgba(242,215,140,.9))}
+
+/* Real buttons over doors and objects: invisible until focused by keyboard. */
+.world-stage .ws-hotspots{position:absolute;inset:0;pointer-events:none;z-index:6000}
+.world-stage .ws-hot{position:absolute;display:block;margin:0;padding:0;border:0;background:none;pointer-events:none;color:var(--paper);font:inherit;transform:none}
+.world-stage .ws-hot small{position:absolute;left:50%;bottom:calc(100% + 4px);transform:translateX(-50%);padding:2px 7px;border-radius:3px;background:#0d1320e6;color:var(--gold);
+  font-size:10px;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;opacity:0;transition:opacity .15s}
+.world-stage .ws-hot:focus{outline:none}
+.world-stage .ws-hot:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.world-stage .ws-hot:focus-visible small{opacity:1}
+
+/* The HUD scales and lifts [data-stage-actor] for the older CSS scene; the stage places figures itself. */
+.world-stage [data-stage-actor],.world-stage [data-object],.world-stage [data-stage-actor]:hover,.world-stage [data-object]:hover,
+.world-stage [data-stage-actor]:focus-visible,.world-stage [data-stage-actor]:active{scale:none!important;translate:none!important;transition:none!important}
+
+/* What a click would do, beside the pointer. */
+.world-stage .ws-tip{position:absolute;z-index:6500;max-width:220px;padding:3px 8px;border:1px solid var(--gold-a40,#d9b56e66);border-radius:3px;background:#0d1320ec;color:var(--gold);
+  font-size:11px;letter-spacing:.06em;white-space:nowrap;pointer-events:none}
+.world-stage .ws-tip[hidden]{display:none}
+
+@keyframes ws-arrive{from{opacity:.0;filter:brightness(.4)}to{opacity:1;filter:none}}
+.world-stage.ws-arrive{animation:ws-arrive .34s ease-out}
+.reduced-motion .world-stage.ws-arrive,body.reduced-motion .world-stage.ws-arrive{animation:none}
+
+/* ---- Actor Toolbox ----------------------------------------------------- */
+.toolbox{display:grid;grid-template-columns:minmax(0,1fr) 352px;gap:var(--s5,14px);height:100%;min-height:0;padding:var(--s5,14px);box-sizing:border-box}
+.toolbox-main{display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:var(--s3,8px);min-width:0;min-height:0}
+.toolbox-head{display:flex;align-items:baseline;gap:var(--s5,14px);flex-wrap:wrap}
+.toolbox-head h2{margin:0;font-size:var(--t-h2,22px);font-weight:400}
+.toolbox-head p{margin:0;color:var(--muted);font-size:var(--t-micro,11px)}
+.toolbox-head .toolbox-close{margin-left:auto}
+.toolbox .world-stage{height:100%;min-height:300px}
+.toolbox-foot{display:flex;gap:var(--s5,14px);flex-wrap:wrap;color:var(--muted);font-size:var(--t-micro,11px)}
+.toolbox-foot kbd{padding:0 5px;border:1px solid var(--gold-a22,#d9b56e38);border-radius:3px;background:rgba(var(--surface-rgb,20,26,40),.7);font:inherit;color:var(--paper)}
+.toolbox-panel{display:grid;align-content:start;gap:var(--s4,10px);min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-right:4px;scrollbar-width:thin}
+.tb-sec{display:grid;gap:var(--s3,8px);padding:var(--s4,10px) var(--s5,12px);border:1px solid var(--gold-a22,#d9b56e38);border-radius:var(--r-sm,6px);background:rgba(var(--surface-rgb,20,26,40),.55)}
+.tb-sec>h3{margin:0;font-size:var(--t-micro,11px);font-weight:400;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.tb-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tb-row>label{display:grid;gap:2px;flex:1 1 120px;min-width:0;color:var(--muted);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.tb-row select,.tb-row input[type=range],.tb-row input[type=text]{width:100%;min-width:0;box-sizing:border-box;padding:4px 6px;border:1px solid var(--line,#ffffff22);border-radius:4px;background:rgb(var(--surface-rgb,20,26,40));color:var(--paper);font:inherit;font-size:12px}
+.tb-row input[type=range]{padding:0}
+.tb-btn{padding:5px 9px;border:1px solid var(--gold-a22,#d9b56e38);border-radius:4px;background:rgba(var(--surface-rgb,20,26,40),.7);color:var(--paper);font:inherit;font-size:12px;cursor:pointer;transition:border-color .15s,background .15s}
+.tb-btn:hover,.tb-btn:focus-visible{border-color:var(--gold);background:var(--gold-a08,#d9b56e14);outline:none}
+.tb-btn[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+.tb-btn.wide{flex:1 1 30%}
+.tb-read{margin:0;font:11px/1.55 var(--font-mono,ui-monospace,monospace);color:var(--mint,#7fd6b2);white-space:pre-wrap}
+.tb-log{margin:0;max-height:118px;overflow:auto;font:10.5px/1.5 var(--font-mono,ui-monospace,monospace);color:var(--muted);white-space:pre-wrap}
+@media(max-width:1100px){.toolbox{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(300px,56vh) auto;height:auto}}
+
+/* Inside the app the top bar overlays the screen; leave room for it. */
+#app .toolbox-slot,#app .toolbox{height:100%}
+#app .toolbox{padding-top:64px;box-sizing:border-box}
+
+.world-stage .scene-frame-label[data-action]{pointer-events:auto;cursor:pointer}

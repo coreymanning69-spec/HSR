@@ -1,0 +1,14 @@
+<svg viewBox="0 0 24 96" xmlns="http://www.w3.org/2000/svg">
+  <!-- Wooden shaft -->
+  <polygon points="10,34 14,34 13,92 11,92" fill="#78350f"/>
+  <polygon points="10,34 12,34 11,92 11,92" fill="#582407"/>
+  <!-- Pitch/linen wrap head -->
+  <rect x="8" y="20" width="8" height="16" rx="2" fill="#27272a"/>
+  <!-- Cross binding twine -->
+  <line x1="8" y1="23" x2="16" y2="33" stroke="#d97706" stroke-width="1.5"/>
+  <line x1="8" y1="33" x2="16" y2="23" stroke="#d97706" stroke-width="1.5"/>
+  <!-- Flame outer -->
+  <path d="M12,4 Q18,12 16,20 Q12,24 8,20 Q6,12 12,4 Z" fill="#ea580c"/>
+  <!-- Flame inner core -->
+  <path d="M12,8 Q15,14 14,19 Q12,21 10,19 Q9,14 12,8 Z" fill="#facc15"/>
+</svg>

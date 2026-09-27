@@ -1,0 +1,1149 @@
+{
+    "schema_version":  "hollow-star-staged-affixes-1",
+    "activation":  "staged",
+    "source":  "Sera Dungeon Game/data/affixes.json",
+    "affixes":  [
+                    {
+                        "name":  "Petty",
+                        "affix_type":  "prefix",
+                        "description":  "Sera hits harder when they haven\u0027t suffered yet.",
+                        "effects":  [
+                                        {
+                                            "name":  "Petty flat bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "enemy_full_hp",
+                                            "flat_bonus":  2
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "enemy_full_hp",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  null,
+                                                 "inflicts_status":  null
+                                             }
+                    },
+                    {
+                        "name":  "of Silence",
+                        "affix_type":  "suffix",
+                        "description":  "Shut up. x2 damage to anything mid-cast.",
+                        "effects":  [
+                                        {
+                                            "name":  "of Silence multiplier",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "enemy_casting",
+                                            "multiplier":  2
+                                        },
+                                        {
+                                            "name":  "of Silence status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "SILENCED",
+                                            "status_duration":  2,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "enemy_casting",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  null,
+                                                 "inflicts_status":  "SILENCED"
+                                             }
+                    },
+                    {
+                        "name":  "Cruel",
+                        "affix_type":  "prefix",
+                        "description":  "Kicks them when they\u0027re down. +3 below half HP.",
+                        "effects":  [
+                                        {
+                                            "name":  "Cruel flat bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "enemy_below_half",
+                                            "flat_bonus":  3
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "enemy_below_half",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  null,
+                                                 "inflicts_status":  null
+                                             }
+                    },
+                    {
+                        "name":  "of Agony",
+                        "affix_type":  "suffix",
+                        "description":  "Every debuff is another reason to hurt.",
+                        "effects":  [
+                                        {
+                                            "name":  "of Agony stack bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "per_stack_bonus":  1,
+                                            "per_stack_source":  "debuffs_on_target"
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "debuffs_on_target",
+                                                 "granted_tag":  null,
+                                                 "inflicts_status":  null
+                                             }
+                    },
+                    {
+                        "name":  "Moonlit",
+                        "affix_type":  "prefix",
+                        "description":  "Touched by moonlight. Grants Divine permission.",
+                        "effects":  [
+                                        {
+                                            "name":  "Moonlit flat bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "always",
+                                            "flat_bonus":  1
+                                        },
+                                        {
+                                            "name":  "Moonlit tag",
+                                            "phase":  "PERMISSION",
+                                            "direction":  "GRANT",
+                                            "grants_tags":  [
+                                                                "DIVINE"
+                                                            ]
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  "DIVINE",
+                                                 "inflicts_status":  null
+                                             }
+                    },
+                    {
+                        "name":  "of Hemorrhage",
+                        "affix_type":  "suffix",
+                        "description":  "Makes them bleed. Then hits harder because they\u0027re bleeding.",
+                        "effects":  [
+                                        {
+                                            "name":  "of Hemorrhage multiplier",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "enemy_has_debuffs",
+                                            "multiplier":  1.5
+                                        },
+                                        {
+                                            "name":  "of Hemorrhage tag",
+                                            "phase":  "PERMISSION",
+                                            "direction":  "GRANT",
+                                            "grants_tags":  [
+                                                                "BLEED"
+                                                            ]
+                                        },
+                                        {
+                                            "name":  "of Hemorrhage status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "BLEEDING",
+                                            "status_duration":  3,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "enemy_has_debuffs",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  "BLEED",
+                                                 "inflicts_status":  "BLEEDING"
+                                             }
+                    },
+                    {
+                        "name":  "Venomous",
+                        "affix_type":  "prefix",
+                        "description":  "Corrodes armor and dignity alike.",
+                        "effects":  [
+                                        {
+                                            "name":  "Venomous tag",
+                                            "phase":  "PERMISSION",
+                                            "direction":  "GRANT",
+                                            "grants_tags":  [
+                                                                "CORROSIVE"
+                                                            ]
+                                        },
+                                        {
+                                            "name":  "Venomous status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "CORRODED",
+                                            "status_duration":  3,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  "CORROSIVE",
+                                                 "inflicts_status":  "CORRODED"
+                                             }
+                    },
+                    {
+                        "name":  "of Execution",
+                        "affix_type":  "suffix",
+                        "description":  "x2 damage below half HP. Finish what you started.",
+                        "effects":  [
+                                        {
+                                            "name":  "of Execution multiplier",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "enemy_below_half",
+                                            "multiplier":  2
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "enemy_below_half",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  null,
+                                                 "inflicts_status":  null
+                                             }
+                    },
+                    {
+                        "name":  "Spectral",
+                        "affix_type":  "prefix",
+                        "description":  "Phases through the material. Grants Ethereal permission.",
+                        "effects":  [
+                                        {
+                                            "name":  "Spectral tag",
+                                            "phase":  "PERMISSION",
+                                            "direction":  "GRANT",
+                                            "grants_tags":  [
+                                                                "ETHEREAL"
+                                                            ]
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  "ETHEREAL",
+                                                 "inflicts_status":  null
+                                             }
+                    },
+                    {
+                        "name":  "of the First Strike",
+                        "affix_type":  "suffix",
+                        "description":  "+5 on the opening hit. Make an entrance.",
+                        "effects":  [
+                                        {
+                                            "name":  "of the First Strike flat bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "first_hit",
+                                            "flat_bonus":  5
+                                        },
+                                        {
+                                            "name":  "of the First Strike status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "MARKED",
+                                            "status_duration":  3,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "first_hit",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  null,
+                                                 "inflicts_status":  "MARKED"
+                                             }
+                    },
+                    {
+                        "name":  "Enfeebling",
+                        "affix_type":  "prefix",
+                        "description":  "Saps their will. Their attacks barely register.",
+                        "effects":  [
+                                        {
+                                            "name":  "Enfeebling flat bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "always",
+                                            "flat_bonus":  1
+                                        },
+                                        {
+                                            "name":  "Enfeebling status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "WEAKENED",
+                                            "status_duration":  3,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  null,
+                                                 "inflicts_status":  "WEAKENED"
+                                             }
+                    },
+                    {
+                        "name":  "of Frost",
+                        "affix_type":  "suffix",
+                        "description":  "Freezes them solid. One turn of blessed silence.",
+                        "effects":  [
+                                        {
+                                            "name":  "of Frost status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "FROZEN",
+                                            "status_duration":  2,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  null,
+                                                 "inflicts_status":  "FROZEN"
+                                             }
+                    },
+                    {
+                        "name":  "of Doom",
+                        "affix_type":  "suffix",
+                        "description":  "Marks them for death. When it fades, they pay.",
+                        "effects":  [
+                                        {
+                                            "name":  "of Doom status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "DOOMED",
+                                            "status_duration":  3,
+                                            "status_potency":  2
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  null,
+                                                 "inflicts_status":  "DOOMED"
+                                             }
+                    },
+                    {
+                        "name":  "Glacial",
+                        "affix_type":  "prefix",
+                        "description":  "Cold focus. Grants Ice and punishes full-health targets.",
+                        "effects":  [
+                                        {
+                                            "name":  "Glacial flat bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "enemy_full_hp",
+                                            "flat_bonus":  2
+                                        },
+                                        {
+                                            "name":  "Glacial tag",
+                                            "phase":  "PERMISSION",
+                                            "direction":  "GRANT",
+                                            "grants_tags":  [
+                                                                "ICE"
+                                                            ]
+                                        },
+                                        {
+                                            "name":  "Glacial status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "SLOWED",
+                                            "status_duration":  2,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "enemy_full_hp",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  "ICE",
+                                                 "inflicts_status":  "SLOWED"
+                                             }
+                    },
+                    {
+                        "name":  "Blazing",
+                        "affix_type":  "prefix",
+                        "description":  "Everything burns eventually. Grants Fire.",
+                        "effects":  [
+                                        {
+                                            "name":  "Blazing flat bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "always",
+                                            "flat_bonus":  1
+                                        },
+                                        {
+                                            "name":  "Blazing multiplier",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "enemy_has_debuffs",
+                                            "multiplier":  1.5
+                                        },
+                                        {
+                                            "name":  "Blazing tag",
+                                            "phase":  "PERMISSION",
+                                            "direction":  "GRANT",
+                                            "grants_tags":  [
+                                                                "FIRE"
+                                                            ]
+                                        },
+                                        {
+                                            "name":  "Blazing status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "BURNING",
+                                            "status_duration":  2,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "enemy_has_debuffs",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  "FIRE",
+                                                 "inflicts_status":  "BURNING"
+                                             }
+                    },
+                    {
+                        "name":  "of Kindling",
+                        "affix_type":  "suffix",
+                        "description":  "Casting targets ignite beautifully.",
+                        "effects":  [
+                                        {
+                                            "name":  "of Kindling multiplier",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "enemy_casting",
+                                            "multiplier":  2
+                                        },
+                                        {
+                                            "name":  "of Kindling status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "BURNING",
+                                            "status_duration":  3,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "enemy_casting",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  null,
+                                                 "inflicts_status":  "BURNING"
+                                             }
+                    },
+                    {
+                        "name":  "of Winter",
+                        "affix_type":  "suffix",
+                        "description":  "Below half HP, they freeze and break.",
+                        "effects":  [
+                                        {
+                                            "name":  "of Winter flat bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "enemy_below_half",
+                                            "flat_bonus":  2
+                                        },
+                                        {
+                                            "name":  "of Winter stack bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "per_stack_bonus":  1,
+                                            "per_stack_source":  "debuffs_on_target"
+                                        },
+                                        {
+                                            "name":  "of Winter tag",
+                                            "phase":  "PERMISSION",
+                                            "direction":  "GRANT",
+                                            "grants_tags":  [
+                                                                "ICE"
+                                                            ]
+                                        },
+                                        {
+                                            "name":  "of Winter status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "SLOWED",
+                                            "status_duration":  2,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "enemy_below_half",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "debuffs_on_target",
+                                                 "granted_tag":  "ICE",
+                                                 "inflicts_status":  "SLOWED"
+                                             }
+                    },
+                    {
+                        "name":  "Ruthless",
+                        "affix_type":  "prefix",
+                        "description":  "No hesitation. +2 always.",
+                        "effects":  [
+                                        {
+                                            "name":  "Ruthless flat bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "always",
+                                            "flat_bonus":  2
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  null,
+                                                 "inflicts_status":  null
+                                             }
+                    },
+                    {
+                        "name":  "Spiteful",
+                        "affix_type":  "prefix",
+                        "description":  "Spite sharpens the first blow.",
+                        "effects":  [
+                                        {
+                                            "name":  "Spiteful flat bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "first_hit",
+                                            "flat_bonus":  3
+                                        },
+                                        {
+                                            "name":  "Spiteful status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "MARKED",
+                                            "status_duration":  2,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "first_hit",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  null,
+                                                 "inflicts_status":  "MARKED"
+                                             }
+                    },
+                    {
+                        "name":  "Razorwind",
+                        "affix_type":  "prefix",
+                        "description":  "Sonic edge. Casting targets take the hint.",
+                        "effects":  [
+                                        {
+                                            "name":  "Razorwind multiplier",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "enemy_casting",
+                                            "multiplier":  1.5
+                                        },
+                                        {
+                                            "name":  "Razorwind tag",
+                                            "phase":  "PERMISSION",
+                                            "direction":  "GRANT",
+                                            "grants_tags":  [
+                                                                "SONIC"
+                                                            ]
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "enemy_casting",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  "SONIC",
+                                                 "inflicts_status":  null
+                                             }
+                    },
+                    {
+                        "name":  "Gravetouched",
+                        "affix_type":  "prefix",
+                        "description":  "Decay clings to every hit.",
+                        "effects":  [
+                                        {
+                                            "name":  "Gravetouched flat bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "always",
+                                            "flat_bonus":  1
+                                        },
+                                        {
+                                            "name":  "Gravetouched status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "CURSED",
+                                            "status_duration":  2,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  null,
+                                                 "inflicts_status":  "CURSED"
+                                             }
+                    },
+                    {
+                        "name":  "Jagged",
+                        "affix_type":  "prefix",
+                        "description":  "Every cut opens wider below half.",
+                        "effects":  [
+                                        {
+                                            "name":  "Jagged flat bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "enemy_below_half",
+                                            "flat_bonus":  2
+                                        },
+                                        {
+                                            "name":  "Jagged tag",
+                                            "phase":  "PERMISSION",
+                                            "direction":  "GRANT",
+                                            "grants_tags":  [
+                                                                "BLEED"
+                                                            ]
+                                        },
+                                        {
+                                            "name":  "Jagged status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "BLEEDING",
+                                            "status_duration":  2,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "enemy_below_half",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  "BLEED",
+                                                 "inflicts_status":  "BLEEDING"
+                                             }
+                    },
+                    {
+                        "name":  "Hallowed",
+                        "affix_type":  "prefix",
+                        "description":  "Divine weight. No theatrics.",
+                        "effects":  [
+                                        {
+                                            "name":  "Hallowed flat bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "always",
+                                            "flat_bonus":  1
+                                        },
+                                        {
+                                            "name":  "Hallowed multiplier",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "enemy_has_debuffs",
+                                            "multiplier":  1.25
+                                        },
+                                        {
+                                            "name":  "Hallowed tag",
+                                            "phase":  "PERMISSION",
+                                            "direction":  "GRANT",
+                                            "grants_tags":  [
+                                                                "DIVINE"
+                                                            ]
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "enemy_has_debuffs",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  "DIVINE",
+                                                 "inflicts_status":  null
+                                             }
+                    },
+                    {
+                        "name":  "Vengeful",
+                        "affix_type":  "prefix",
+                        "description":  "Punishes dodgers with certainty.",
+                        "effects":  [
+                                        {
+                                            "name":  "Vengeful flat bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "enemy_full_hp",
+                                            "flat_bonus":  2
+                                        },
+                                        {
+                                            "name":  "Vengeful status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "WEAKENED",
+                                            "status_duration":  2,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "enemy_full_hp",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  null,
+                                                 "inflicts_status":  "WEAKENED"
+                                             }
+                    },
+                    {
+                        "name":  "Stormforged",
+                        "affix_type":  "prefix",
+                        "description":  "Arcane thunder threaded through steel.",
+                        "effects":  [
+                                        {
+                                            "name":  "Stormforged flat bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "always",
+                                            "flat_bonus":  1
+                                        },
+                                        {
+                                            "name":  "Stormforged stack bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "per_stack_bonus":  1,
+                                            "per_stack_source":  "debuffs_on_target"
+                                        },
+                                        {
+                                            "name":  "Stormforged tag",
+                                            "phase":  "PERMISSION",
+                                            "direction":  "GRANT",
+                                            "grants_tags":  [
+                                                                "ARCANE"
+                                                            ]
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "debuffs_on_target",
+                                                 "granted_tag":  "ARCANE",
+                                                 "inflicts_status":  null
+                                             }
+                    },
+                    {
+                        "name":  "Merciless",
+                        "affix_type":  "prefix",
+                        "description":  "The wounded are already dead.",
+                        "effects":  [
+                                        {
+                                            "name":  "Merciless multiplier",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "enemy_below_half",
+                                            "multiplier":  1.5
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "enemy_below_half",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  null,
+                                                 "inflicts_status":  null
+                                             }
+                    },
+                    {
+                        "name":  "Dreadbound",
+                        "affix_type":  "prefix",
+                        "description":  "Fear sticks. So does damage.",
+                        "effects":  [
+                                        {
+                                            "name":  "Dreadbound flat bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "always",
+                                            "flat_bonus":  1
+                                        },
+                                        {
+                                            "name":  "Dreadbound stack bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "per_stack_bonus":  1,
+                                            "per_stack_source":  "debuffs_on_target"
+                                        },
+                                        {
+                                            "name":  "Dreadbound tag",
+                                            "phase":  "PERMISSION",
+                                            "direction":  "GRANT",
+                                            "grants_tags":  [
+                                                                "ETHEREAL"
+                                                            ]
+                                        },
+                                        {
+                                            "name":  "Dreadbound status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "TERRIFIED",
+                                            "status_duration":  2,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "debuffs_on_target",
+                                                 "granted_tag":  "ETHEREAL",
+                                                 "inflicts_status":  "TERRIFIED"
+                                             }
+                    },
+                    {
+                        "name":  "of Ruin",
+                        "affix_type":  "suffix",
+                        "description":  "Debuffed targets crumble faster.",
+                        "effects":  [
+                                        {
+                                            "name":  "of Ruin multiplier",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "enemy_has_debuffs",
+                                            "multiplier":  1.5
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "enemy_has_debuffs",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  null,
+                                                 "inflicts_status":  null
+                                             }
+                    },
+                    {
+                        "name":  "of Venom",
+                        "affix_type":  "suffix",
+                        "description":  "Corrosion follows every strike.",
+                        "effects":  [
+                                        {
+                                            "name":  "of Venom tag",
+                                            "phase":  "PERMISSION",
+                                            "direction":  "GRANT",
+                                            "grants_tags":  [
+                                                                "CORROSIVE"
+                                                            ]
+                                        },
+                                        {
+                                            "name":  "of Venom status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "CORRODED",
+                                            "status_duration":  3,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  "CORROSIVE",
+                                                 "inflicts_status":  "CORRODED"
+                                             }
+                    },
+                    {
+                        "name":  "of Cinders",
+                        "affix_type":  "suffix",
+                        "description":  "Burn first. Ask nothing.",
+                        "effects":  [
+                                        {
+                                            "name":  "of Cinders flat bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "always",
+                                            "flat_bonus":  1
+                                        },
+                                        {
+                                            "name":  "of Cinders tag",
+                                            "phase":  "PERMISSION",
+                                            "direction":  "GRANT",
+                                            "grants_tags":  [
+                                                                "FIRE"
+                                                            ]
+                                        },
+                                        {
+                                            "name":  "of Cinders status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "BURNING",
+                                            "status_duration":  2,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  "FIRE",
+                                                 "inflicts_status":  "BURNING"
+                                             }
+                    },
+                    {
+                        "name":  "of the Hunt",
+                        "affix_type":  "suffix",
+                        "description":  "Opening hit lands like a verdict.",
+                        "effects":  [
+                                        {
+                                            "name":  "of the Hunt flat bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "first_hit",
+                                            "flat_bonus":  4
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "first_hit",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  null,
+                                                 "inflicts_status":  null
+                                             }
+                    },
+                    {
+                        "name":  "of Echoes",
+                        "affix_type":  "suffix",
+                        "description":  "Sonic aftershocks punish casters.",
+                        "effects":  [
+                                        {
+                                            "name":  "of Echoes multiplier",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "enemy_casting",
+                                            "multiplier":  2
+                                        },
+                                        {
+                                            "name":  "of Echoes tag",
+                                            "phase":  "PERMISSION",
+                                            "direction":  "GRANT",
+                                            "grants_tags":  [
+                                                                "SONIC"
+                                                            ]
+                                        },
+                                        {
+                                            "name":  "of Echoes status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "SILENCED",
+                                            "status_duration":  1,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "enemy_casting",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  "SONIC",
+                                                 "inflicts_status":  "SILENCED"
+                                             }
+                    },
+                    {
+                        "name":  "of the Abyss",
+                        "affix_type":  "suffix",
+                        "description":  "Ethereal pressure breaks resolve.",
+                        "effects":  [
+                                        {
+                                            "name":  "of the Abyss flat bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "always",
+                                            "flat_bonus":  1
+                                        },
+                                        {
+                                            "name":  "of the Abyss multiplier",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "enemy_has_debuffs",
+                                            "multiplier":  1.25
+                                        },
+                                        {
+                                            "name":  "of the Abyss tag",
+                                            "phase":  "PERMISSION",
+                                            "direction":  "GRANT",
+                                            "grants_tags":  [
+                                                                "ETHEREAL"
+                                                            ]
+                                        },
+                                        {
+                                            "name":  "of the Abyss status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "HUMILIATED",
+                                            "status_duration":  2,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "enemy_has_debuffs",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  "ETHEREAL",
+                                                 "inflicts_status":  "HUMILIATED"
+                                             }
+                    },
+                    {
+                        "name":  "of Dismantling",
+                        "affix_type":  "suffix",
+                        "description":  "Armor means less each turn.",
+                        "effects":  [
+                                        {
+                                            "name":  "of Dismantling stack bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "per_stack_bonus":  1,
+                                            "per_stack_source":  "debuffs_on_target"
+                                        },
+                                        {
+                                            "name":  "of Dismantling status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "CORRODED",
+                                            "status_duration":  2,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "debuffs_on_target",
+                                                 "granted_tag":  null,
+                                                 "inflicts_status":  "CORRODED"
+                                             }
+                    },
+                    {
+                        "name":  "of Dread",
+                        "affix_type":  "suffix",
+                        "description":  "Marked prey stays marked.",
+                        "effects":  [
+                                        {
+                                            "name":  "of Dread flat bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "enemy_below_half",
+                                            "flat_bonus":  2
+                                        },
+                                        {
+                                            "name":  "of Dread status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "MARKED",
+                                            "status_duration":  3,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "enemy_below_half",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  null,
+                                                 "inflicts_status":  "MARKED"
+                                             }
+                    },
+                    {
+                        "name":  "of Collapse",
+                        "affix_type":  "suffix",
+                        "description":  "When doom lands, it lands hard.",
+                        "effects":  [
+                                        {
+                                            "name":  "of Collapse status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "DOOMED",
+                                            "status_duration":  2,
+                                            "status_potency":  2
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "always",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  null,
+                                                 "inflicts_status":  "DOOMED"
+                                             }
+                    },
+                    {
+                        "name":  "of Frostbite",
+                        "affix_type":  "suffix",
+                        "description":  "Slow them, then break them.",
+                        "effects":  [
+                                        {
+                                            "name":  "of Frostbite flat bonus",
+                                            "phase":  "MAGNITUDE",
+                                            "direction":  "MODIFY",
+                                            "condition":  "enemy_full_hp",
+                                            "flat_bonus":  1
+                                        },
+                                        {
+                                            "name":  "of Frostbite tag",
+                                            "phase":  "PERMISSION",
+                                            "direction":  "GRANT",
+                                            "grants_tags":  [
+                                                                "ICE"
+                                                            ]
+                                        },
+                                        {
+                                            "name":  "of Frostbite status",
+                                            "phase":  "CONSEQUENCE",
+                                            "direction":  "GRANT",
+                                            "inflicts_status":  "SLOWED",
+                                            "status_duration":  3,
+                                            "status_potency":  1
+                                        }
+                                    ],
+                        "staged":  true,
+                        "source_semantics":  {
+                                                 "flat_condition":  "enemy_full_hp",
+                                                 "multiplier_condition":  "always",
+                                                 "per_stack_source":  "",
+                                                 "granted_tag":  "ICE",
+                                                 "inflicts_status":  "SLOWED"
+                                             }
+                    }
+                ]
+}

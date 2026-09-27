@@ -1,0 +1,704 @@
+{
+  "schema": "hollow-star-salience-1",
+  "version": "2026-09-25",
+  "note": "What people notice about a figure at a glance, and what town residents say about it. Presentation and flavour only: a salience tag never changes a disposition, a price, a roll or a number. Tags are derived from public appearance, equipped items' presentation blocks and visible condition, so every new item is noticed without being listed here.",
+  "how_to_extend": {
+    "rules": "Each rule is {tag, label, weight, any: [condition, ...]}; the rule fires when ANY condition matches. Conditions: {\"gear\": {key: value}} matches an equipped (or costume) item's presentation block, every key must match and a list means any-of (for `fx`, the value must appear in the item's fx list); {\"appearance\": {field: id-or-list}} matches the creator option id; {\"colour\": {\"field\": f, \"family\": family-or-list}} matches the hue family of a colour field (red, orange, yellow, green, blue, purple, white, grey, black); {\"race\": id-or-list}; {\"age\": \"child\"}; {\"hp_below\": fraction}. Higher weight is noticed first; at most max_tags are kept.",
+    "reactions": "reactions[tag] maps a resident class (floor_one_life.json `class`: townsfolk, trader, guard, labourer, clergy, bandit, goblin, child) or `default` to a list of lines. {name} is the resident, {lead} the figure being noticed, {label} the tag's label. A line is chosen from a stable hash, so the same resident says the same thing about the same look.",
+    "verify": "tests/test_looks_and_salience.py; the Actor Lab (/web/actor-lab.html) shows the client's read of a look.",
+    "champions": "Champion identity -> tags always noticed on them. Restate only what that champion's rig already draws from its canon design locks (web/doran-rig.js, web/wren-rig.js header comments); add nothing new about a canon character here."
+  },
+  "max_tags": 6,
+  "rules": [
+    {
+      "tag": "wounded",
+      "label": "fresh wounds",
+      "weight": 10,
+      "any": [
+        {
+          "hp_below": 0.5
+        }
+      ]
+    },
+    {
+      "tag": "enclosed-helm",
+      "label": "an enclosed helm",
+      "weight": 9,
+      "any": [
+        {
+          "gear": {
+            "silhouette": "helm",
+            "coverage": "full"
+          }
+        },
+        {
+          "appearance": {
+            "headgear_style": "full-helm"
+          }
+        }
+      ]
+    },
+    {
+      "tag": "relic",
+      "label": "relic-bright gear",
+      "weight": 9,
+      "any": [
+        {
+          "gear": {
+            "rarity": [
+              "artifact",
+              "blessed"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "tag": "star-crown",
+      "label": "a crown of stars",
+      "weight": 9,
+      "any": []
+    },
+    {
+      "tag": "fire",
+      "label": "a fire-touched weapon",
+      "weight": 8,
+      "any": [
+        {
+          "gear": {
+            "fx": "ember"
+          }
+        }
+      ]
+    },
+    {
+      "tag": "frost",
+      "label": "a frost-rimed weapon",
+      "weight": 8,
+      "any": [
+        {
+          "gear": {
+            "fx": "frost"
+          }
+        }
+      ]
+    },
+    {
+      "tag": "holy",
+      "label": "holy light on their gear",
+      "weight": 8,
+      "any": [
+        {
+          "gear": {
+            "fx": [
+              "radiant",
+              "hallow"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "tag": "wither",
+      "label": "a weapon that smokes with rot",
+      "weight": 8,
+      "any": [
+        {
+          "gear": {
+            "fx": "wither"
+          }
+        }
+      ]
+    },
+    {
+      "tag": "arcane",
+      "label": "arcane light",
+      "weight": 7,
+      "any": [
+        {
+          "gear": {
+            "fx": [
+              "arcane",
+              "force",
+              "mind",
+              "phase"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "tag": "storm",
+      "label": "a weapon that hums with weather",
+      "weight": 7,
+      "any": [
+        {
+          "gear": {
+            "fx": [
+              "gale",
+              "resonant",
+              "tide"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "tag": "plate",
+      "label": "plate armour",
+      "weight": 7,
+      "any": [
+        {
+          "gear": {
+            "silhouette": "armor",
+            "material": "plate"
+          }
+        }
+      ]
+    },
+    {
+      "tag": "goblin",
+      "label": "a goblin",
+      "weight": 6,
+      "any": [
+        {
+          "race": "goblin"
+        }
+      ]
+    },
+    {
+      "tag": "greatweapon",
+      "label": "a two-handed weapon",
+      "weight": 6,
+      "any": [
+        {
+          "gear": {
+            "handedness": "two-handed",
+            "silhouette": [
+              "sword",
+              "axe",
+              "mace"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "tag": "war-paint",
+      "label": "war paint",
+      "weight": 6,
+      "any": [
+        {
+          "appearance": {
+            "facial_marks": "war-paint"
+          }
+        }
+      ]
+    },
+    {
+      "tag": "orc",
+      "label": "an orc",
+      "weight": 5,
+      "any": [
+        {
+          "race": "orc"
+        }
+      ]
+    },
+    {
+      "tag": "hooded",
+      "label": "a raised hood",
+      "weight": 5,
+      "any": [
+        {
+          "appearance": {
+            "headgear_style": "hood"
+          }
+        },
+        {
+          "appearance": {
+            "cloak_style": "hooded-cloak"
+          }
+        }
+      ]
+    },
+    {
+      "tag": "lantern",
+      "label": "a lit lantern",
+      "weight": 5,
+      "any": [
+        {
+          "appearance": {
+            "offhand_style": "lantern"
+          }
+        }
+      ]
+    },
+    {
+      "tag": "temple-mark",
+      "label": "a temple mark",
+      "weight": 5,
+      "any": [
+        {
+          "appearance": {
+            "facial_marks": "temple-mark"
+          }
+        }
+      ]
+    },
+    {
+      "tag": "mail",
+      "label": "mail",
+      "weight": 4,
+      "any": [
+        {
+          "gear": {
+            "silhouette": "armor",
+            "material": "chain"
+          }
+        }
+      ]
+    },
+    {
+      "tag": "scarred",
+      "label": "a scarred cheek",
+      "weight": 4,
+      "any": [
+        {
+          "appearance": {
+            "facial_marks": "cheek-scar"
+          }
+        }
+      ]
+    },
+    {
+      "tag": "spear",
+      "label": "a spear",
+      "weight": 4,
+      "any": [
+        {
+          "gear": {
+            "silhouette": "polearm"
+          }
+        }
+      ]
+    },
+    {
+      "tag": "bow",
+      "label": "a bow",
+      "weight": 4,
+      "any": [
+        {
+          "gear": {
+            "silhouette": "bow"
+          }
+        }
+      ]
+    },
+    {
+      "tag": "staff",
+      "label": "a staff",
+      "weight": 4,
+      "any": [
+        {
+          "gear": {
+            "silhouette": "staff"
+          }
+        }
+      ]
+    },
+    {
+      "tag": "circlet",
+      "label": "a circlet",
+      "weight": 4,
+      "any": [
+        {
+          "appearance": {
+            "headgear_style": "circlet"
+          }
+        }
+      ]
+    },
+    {
+      "tag": "shield",
+      "label": "a shield",
+      "weight": 3,
+      "any": [
+        {
+          "gear": {
+            "silhouette": "shield"
+          }
+        },
+        {
+          "appearance": {
+            "offhand_style": [
+              "kite-shield",
+              "buckler"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "tag": "robed",
+      "label": "robes",
+      "weight": 3,
+      "any": [
+        {
+          "appearance": {
+            "outfit": "robe"
+          }
+        },
+        {
+          "gear": {
+            "silhouette": "armor",
+            "material": [
+              "robe",
+              "cloth"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "tag": "broad",
+      "label": "a broad frame",
+      "weight": 3,
+      "any": [
+        {
+          "appearance": {
+            "body_type": "broad"
+          }
+        }
+      ]
+    },
+    {
+      "tag": "red-hair",
+      "label": "red hair",
+      "weight": 2,
+      "any": [
+        {
+          "appearance": {
+            "hair_color": "auburn"
+          }
+        },
+        {
+          "colour": {
+            "field": "hair_color",
+            "family": [
+              "red",
+              "orange"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "tag": "striking-colours",
+      "label": "striking colours",
+      "weight": 2,
+      "any": [
+        {
+          "colour": {
+            "field": "cloth_color",
+            "family": [
+              "red",
+              "purple",
+              "yellow"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "tag": "elven",
+      "label": "elven ears",
+      "weight": 2,
+      "any": [
+        {
+          "race": [
+            "elf",
+            "half-elf"
+          ]
+        }
+      ]
+    },
+    {
+      "tag": "child",
+      "label": "a child",
+      "weight": 2,
+      "any": [
+        {
+          "age": "child"
+        }
+      ]
+    }
+  ],
+  "reactions": {
+    "wounded": {
+      "default": [
+        "{name} looks at the blood on you first and the face second.",
+        "{name} steps closer, then thinks about who did that to you and steps back."
+      ],
+      "clergy": [
+        "{name} is already reaching for clean linen before you say a word."
+      ],
+      "guard": [
+        "{name} asks who you were fighting, and whether they are still breathing."
+      ],
+      "child": [
+        "{name} stares at the blood and goes very quiet."
+      ]
+    },
+    "enclosed-helm": {
+      "default": [
+        "{name} talks to the visor, since there is no face to talk to.",
+        "{name} waits a beat, as if expecting the helm to come off."
+      ],
+      "guard": [
+        "{name} keeps a hand near the whistle until you speak."
+      ],
+      "child": [
+        "{name} knocks on the air in front of your helm and grins."
+      ]
+    },
+    "relic": {
+      "default": [
+        "{name}'s eyes keep sliding back to the glow of your gear.",
+        "{name} lowers their voice, the way people do near something old and valuable."
+      ],
+      "trader": [
+        "{name} names a price for your gear before you have said hello.",
+        "{name} is doing sums behind their eyes, and the answer is large."
+      ],
+      "bandit": [
+        "{name} takes a long, careful look at your gear, and then does not look again."
+      ]
+    },
+    "fire": {
+      "default": [
+        "{name} steps back from your blade, the way you step back from a hearth that is too high."
+      ],
+      "townsfolk": [
+        "{name} glances at the thatch overhead, then at your weapon."
+      ]
+    },
+    "frost": {
+      "default": [
+        "{name} rubs their arms without meaning to."
+      ]
+    },
+    "holy": {
+      "default": [
+        "{name} squints into the light off your gear."
+      ],
+      "clergy": [
+        "{name} bows their head a fraction before they catch themselves."
+      ],
+      "bandit": [
+        "{name} would rather you took that light somewhere else."
+      ]
+    },
+    "wither": {
+      "default": [
+        "{name} wrinkles their nose at the rot-smoke off your weapon.",
+        "{name} keeps the well between you and that weapon."
+      ],
+      "clergy": [
+        "{name} makes a small warding sign at your blade."
+      ]
+    },
+    "arcane": {
+      "default": [
+        "{name} watches the glow on your gear the way you watch a dog you do not know."
+      ]
+    },
+    "storm": {
+      "default": [
+        "{name} looks up, half-expecting rain."
+      ]
+    },
+    "plate": {
+      "default": [
+        "{name} hears you coming well before you arrive.",
+        "{name} sizes up the plate and decides to be polite."
+      ],
+      "guard": [
+        "{name} straightens a little. Plate like that usually means someone important is paying."
+      ],
+      "labourer": [
+        "{name} wonders aloud who has to carry all that when you fall over."
+      ]
+    },
+    "goblin": {
+      "default": [
+        "{name} checks their purse, then checks it again.",
+        "{name} speaks slowly and a little too loudly."
+      ],
+      "goblin": [
+        "{name} flashes you a quick, conspiratorial grin."
+      ],
+      "guard": [
+        "{name} watches your hands the whole time."
+      ]
+    },
+    "greatweapon": {
+      "default": [
+        "{name} gives your weapon the kind of room you give a cart horse."
+      ],
+      "guard": [
+        "{name} asks, politely, that you keep that thing peace-bonded in town."
+      ]
+    },
+    "war-paint": {
+      "default": [
+        "{name} reads the paint on your face and decides not to ask."
+      ],
+      "bandit": [
+        "{name} nods at the paint like it is a password."
+      ]
+    },
+    "orc": {
+      "default": [
+        "{name} has to tilt their head back to meet your eyes."
+      ],
+      "child": [
+        "{name} asks if you can lift a whole cart. It is a real question."
+      ]
+    },
+    "hooded": {
+      "default": [
+        "{name} tries to get a look under your hood.",
+        "{name} speaks to the shadow where your face should be."
+      ],
+      "guard": [
+        "{name} asks you to lower the hood. It is not quite a request."
+      ],
+      "bandit": [
+        "{name} approves of the hood without saying so."
+      ]
+    },
+    "lantern": {
+      "default": [
+        "{name} steps into the circle of your lantern light."
+      ],
+      "child": [
+        "{name} follows the lantern light with their whole face."
+      ]
+    },
+    "temple-mark": {
+      "default": [
+        "{name} notices the mark at your temple."
+      ],
+      "clergy": [
+        "{name} asks, quietly, which shrine gave you that mark."
+      ]
+    },
+    "mail": {
+      "default": [
+        "{name} hears the mail shift as you move."
+      ],
+      "guard": [
+        "{name} gives your mail a professional once-over."
+      ]
+    },
+    "scarred": {
+      "default": [
+        "{name}'s eyes go to the scar, then politely away."
+      ],
+      "guard": [
+        "{name} asks where you earned the scar."
+      ]
+    },
+    "spear": {
+      "default": [
+        "{name} keeps an eye on the point of your spear."
+      ]
+    },
+    "bow": {
+      "default": [
+        "{name} notes the bow and does not stand in front of you."
+      ]
+    },
+    "staff": {
+      "default": [
+        "{name} glances at the staff and wonders what it is for."
+      ],
+      "clergy": [
+        "{name} asks what the staff is carved from."
+      ]
+    },
+    "circlet": {
+      "default": [
+        "{name} wonders what the circlet means, and whether they should bow."
+      ]
+    },
+    "shield": {
+      "default": [
+        "{name} notes the shield and the colours painted on it."
+      ]
+    },
+    "robed": {
+      "default": [
+        "{name} takes you for some kind of scholar, or worse, a priest."
+      ],
+      "clergy": [
+        "{name} studies the cut of your robes for a moment."
+      ]
+    },
+    "broad": {
+      "default": [
+        "{name} steps aside to let you through a door that suddenly looks small."
+      ]
+    },
+    "red-hair": {
+      "default": [
+        "{name} remembers the red hair, which is going to make you easy to describe later."
+      ]
+    },
+    "striking-colours": {
+      "default": [
+        "{name} will remember those colours."
+      ],
+      "trader": [
+        "{name} wants to know who dyed that cloth, and what they charge."
+      ]
+    },
+    "elven": {
+      "default": [
+        "{name} catches sight of your ears and looks again."
+      ]
+    },
+    "child": {
+      "default": [
+        "{name} looks around for whoever is meant to be watching you."
+      ]
+    },
+    "star-crown": {
+      "default": [
+        "{name} follows the little stars circling your head and forgets what they were saying.",
+        "{name} squints at the crown of stars, trying to decide if it is a trick."
+      ],
+      "clergy": [
+        "{name} goes very still under the light of your crown."
+      ],
+      "child": [
+        "{name} tries to count the stars over your head, twice."
+      ]
+    }
+  },
+  "champions": {
+    "doran": [
+      "enclosed-helm",
+      "plate",
+      "greatweapon",
+      "shield"
+    ],
+    "wren": [
+      "star-crown",
+      "robed",
+      "staff",
+      "red-hair"
+    ]
+  }
+}

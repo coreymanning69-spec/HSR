@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Actor Toolbox · The Hollow Star Reliquary</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="ui-components.css">
+  <link rel="stylesheet" href="stage-scene.css">
+  <style>html,body{height:100%;margin:0;background:var(--bg,#0a0d16)}body{overflow:hidden}#root{height:100vh}.toolbox{height:100%}</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="ui-components.js"></script>
+  <script type="module">
+    import {createToolbox} from './actor-toolbox.js';
+    const tb = createToolbox({standalone: true});
+    document.getElementById('root').append(tb.el);
+    tb.start();
+    window.toolbox = tb;
+  </script>
+</body>
+</html>

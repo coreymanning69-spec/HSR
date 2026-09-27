@@ -1,0 +1,14 @@
+<svg viewBox="0 0 48 56" xmlns="http://www.w3.org/2000/svg">
+  <!-- Rim -->
+  <polygon points="24,4 42,12 42,30 36,44 24,52 12,44 6,30 6,12" fill="#4b5563"/>
+  <!-- Inner face right -->
+  <polygon points="24,7 39,14 39,29 34,41 24,48" fill="#1e3a8a"/>
+  <!-- Inner face left -->
+  <polygon points="24,7 9,14 9,29 14,41 24,48" fill="#2563eb"/>
+  <!-- Golden charge / cross -->
+  <polygon points="24,10 26,24 36,24 36,28 26,28 26,45 22,45 22,28 12,28 12,24 22,24 22,10" fill="#d4af37"/>
+  <!-- Center steel boss -->
+  <circle cx="24" cy="26" r="6" fill="#9ca3af"/>
+  <circle cx="24" cy="26" r="4" fill="#4b5563"/>
+  <circle cx="24" cy="25" r="1.5" fill="#f3f4f6"/>
+</svg>

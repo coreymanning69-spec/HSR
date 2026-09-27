@@ -1,0 +1,151 @@
+/* Side-view battle HUD, expedition route map, gambit editor.
+   Menus never pre-light an option: gold appears only on hover, focus or
+   a choice the player made (is-open / is-selected). */
+
+/* ---- FF battle stage ---- */
+.ff-stage .battle-actor{transition:left .35s ease,bottom .35s ease,translate .22s ease-out}
+/* FF step-in: the attacker leaves the line on windup, strikes, and returns
+   when the director clears the beat. `translate` composes with the mirrored
+   `transform` opponents already carry. */
+.ff-stage .battle-actor:is([data-beat="windup"],[data-beat="strike"]){translate:clamp(40px,9vw,120px) 0}
+.ff-stage .battle-actor.opponent:is([data-beat="windup"],[data-beat="strike"]){translate:calc(-1 * clamp(40px,9vw,120px)) 0}
+.ff-stage .battle-actor:is([data-beat="hit"],[data-beat="impact"]){translate:-10px 0}
+.ff-stage .battle-actor.opponent:is([data-beat="hit"],[data-beat="impact"]){translate:10px 0}
+@media (prefers-reduced-motion:reduce){.ff-stage .battle-actor{transition:none;translate:none!important}}
+.ff-order{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:30;display:flex;gap:4px;margin:0;padding:4px 6px;list-style:none;background:#0d1320cc;border:1px solid var(--line);border-radius:var(--r-pill,999px);max-width:calc(100% - 32px);overflow-x:auto}
+.ff-order-cell{display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:var(--r-pill,999px);font-size:11px;white-space:nowrap;color:#d9dce4;border:1px solid transparent}
+.ff-order-cell small{opacity:.6}
+.ff-order-cell.ff-enemy{color:#e6b7b7}
+.ff-order-cell.is-current{border-color:var(--gold);color:#fff}
+.ff-order-cell.is-down{opacity:.4;text-decoration:line-through}
+
+.ff-hud{display:grid;grid-template-columns:minmax(240px,1.1fr) minmax(220px,1fr);gap:12px;margin-top:12px}
+.ff-command,.ff-status{background:linear-gradient(#18203a,#0e1426);border:2px solid #c9ccd8;border-radius:8px;box-shadow:inset 0 0 0 2px #0e1426,0 10px 26px #0007;padding:10px 12px;color:#eef0f6}
+.ff-command header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;font:600 15px Cinzel,Georgia,serif}
+.ff-pips{display:flex;align-items:center;gap:4px}
+.ff-pips small{margin-left:4px;font:11px "JetBrains Mono",monospace;opacity:.8}
+.ff-pip{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;font:10px "JetBrains Mono",monospace;border:1px solid #6d7385;color:#6d7385}
+.ff-pip.is-ready{border-color:#9fd3a8;color:#cfeed4}
+.ff-command-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 10px}
+.ff-cmd{all:unset;box-sizing:border-box;cursor:pointer;padding:5px 8px 5px 20px;position:relative;font:14px Georgia,serif;color:#eef0f6;border-radius:4px}
+.ff-cmd::before{content:'';position:absolute;left:5px;top:50%;width:0;height:0;border-left:8px solid transparent;border-top:5px solid transparent;border-bottom:5px solid transparent;transform:translateY(-50%)}
+.ff-cmd:hover,.ff-cmd:focus-visible,.ff-cmd.is-open{background:#ffffff12}
+.ff-cmd:hover::before,.ff-cmd:focus-visible::before,.ff-cmd.is-open::before{border-left-color:var(--gold)}
+.ff-cmd:disabled{opacity:.38;cursor:not-allowed}
+.ff-submenu{margin-top:8px;padding-top:8px;border-top:1px solid #ffffff22;display:flex;flex-wrap:wrap;gap:4px}
+.ff-submenu .signature-actions{display:flex;flex-wrap:wrap;gap:4px}
+.ff-command-row{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+.ff-command-row:empty{display:none}
+.ff-hint{margin:6px 0 0;font-size:12px;color:#aeb3c2}
+.ff-status ul{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+.ff-status-row{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;padding:3px 6px;border-radius:4px;border:1px solid transparent}
+.ff-status-row.is-current{border-color:var(--gold)}
+.ff-status-row.is-down{opacity:.45}
+.ff-status-name{font:14px Georgia,serif}
+.ff-status-hp{font:12px "JetBrains Mono",monospace}
+.ff-status-hp b{font-size:14px}
+.ff-bar{grid-column:1/-1;height:5px;background:#ffffff1a;border-radius:3px;overflow:hidden}
+.ff-bar i{display:block;height:100%;background:#8fd39a;transition:width .4s ease}
+.ff-bar[data-tone="low"] i{background:#e3c46b}
+.ff-bar[data-tone="crit"] i{background:#e07a6b}
+.ff-detail{margin-top:10px;border:1px solid var(--line);border-radius:6px;padding:6px 10px}
+.ff-detail summary{cursor:pointer;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#aeb3c2)}
+
+/* ---- Expedition route ---- */
+.xp-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:10px}
+.xp-legend{display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--muted,#aeb3c2)}
+.xp-map-wrap{margin:12px 0;overflow-x:auto;padding:6px;border:1px solid var(--line);border-radius:8px;background:radial-gradient(ellipse at 50% 40%,#252c46,#0d1221)}
+.xp-map{display:block;width:100%;min-width:520px;height:auto;max-height:340px}
+.xp-map.is-compact{min-width:360px;max-height:200px}
+.xp-link{stroke:#ffffff2a;stroke-width:2;stroke-dasharray:4 5}
+.xp-link.is-walked{stroke:#d8c79a99;stroke-dasharray:none}
+.xp-node circle{fill:#1a2136;stroke:#565d73;stroke-width:2}
+.xp-node text{fill:#8d93a6;font:15px Georgia,serif;pointer-events:none}
+.xp-node.is-visited circle{fill:#2b2a2a;stroke:#8a7d5c}
+.xp-node.is-visited text{fill:#8a7d5c}
+.xp-node.is-current circle{fill:#3a3322;stroke:#d8c79a}
+.xp-node.is-current text{fill:#f3e7c4}
+.xp-node.is-available circle{stroke:#cfd4e2;fill:#222b45}
+.xp-node.is-available text{fill:#eef0f6}
+.xp-node.is-available{cursor:pointer}
+.xp-node.is-available:hover circle,.xp-node.is-available:focus-visible circle,.xp-node.is-selected circle{stroke:var(--gold);stroke-width:3}
+.xp-node:focus{outline:none}
+.xp-elite.is-available circle,.xp-boss.is-available circle{fill:#3a1f2a}
+.xp-node-card{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;padding:12px;border:1px solid var(--line);border-radius:8px;background:#0d142088}
+.xp-node-glyph{display:grid;place-items:center;width:52px;height:52px;border-radius:50%;border:1px solid #ffffff33;font-size:24px}
+.xp-node-card h3{margin:2px 0 6px}
+.xp-ladder{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+.xp-ladder span{font:11px "JetBrains Mono",monospace;padding:2px 8px;border:1px solid #ffffff2a;border-radius:var(--r-pill,999px)}
+.xp-afk{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.xp-afk .label{width:100%;margin:0}
+.xp-afk label{display:flex;align-items:center;gap:6px;font-size:13px}
+.xp-afk small{color:var(--muted,#aeb3c2)}
+.xp-summary{margin-top:12px;padding:10px 12px;border-left:2px solid var(--gold);background:#0d142066}
+.xp-summary p{margin:4px 0}
+.xp-trail{display:flex;flex-wrap:wrap;gap:8px;font-size:12px}
+
+/* ---- Party: formation and gambits ---- */
+.formation-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.formation-grid ul{margin:0;padding:8px 10px;list-style:none;border:1px dashed var(--line);border-radius:6px;min-height:44px;display:grid;gap:4px}
+.gambit-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.gambit-list{display:grid;gap:6px;margin:8px 0}
+.gambit-row{display:grid;grid-template-columns:24px minmax(120px,1.3fr) 70px minmax(110px,1fr) minmax(120px,1fr) auto;gap:6px;align-items:center}
+.gambit-row input[hidden]{display:block;visibility:hidden}
+.gambit-priority{font:12px "JetBrains Mono",monospace;text-align:center;color:var(--muted,#aeb3c2)}
+.sanctum-links{margin-top:10px}
+
+@media (max-width:760px){
+  .ff-hud{grid-template-columns:1fr}
+  .ff-order{top:6px}
+  .gambit-row{grid-template-columns:24px 1fr 64px;grid-auto-rows:auto}
+  .gambit-row select[data-gambit-field="then"],.gambit-row select[data-gambit-field="target"]{grid-column:2/4}
+  .gambit-row button{grid-column:3}
+  .formation-grid{grid-template-columns:1fr}
+}
+
+/* Eight combatants and ten host-reported effect slots per figure. */
+.combat-stage.is-crowded{height:560px;min-height:560px}
+.combat-stage.is-crowded[data-max-side="5"],.combat-stage.is-crowded[data-max-side="6"],.combat-stage.is-crowded[data-max-side="7"]{height:640px;min-height:640px}
+.combat-stage.is-crowded [data-stage-actor]{scale:.66;transform-origin:50% 100%}
+.combat-stage.is-crowded .scene-frame-label{bottom:4px;padding:4px 8px}
+.combat-stage.is-crowded .scene-frame-label strong{font-size:12px}
+.doll-chips{display:grid;grid-template-columns:repeat(5,22px);gap:3px;top:-62px;width:122px}
+.doll-chips .doll-effect{position:relative;display:flex;align-items:center;justify-content:center;gap:1px;min-width:0;height:20px;padding:0;border:1px solid #c8b8e055;font:700 9px/1 var(--font-mono);box-shadow:0 2px 4px #0006}
+.doll-effect small{font-size:8px;color:#fff}
+.doll-effect[data-effect-kind="concentration"]{background:#204854;border-color:#7bcedc77}
+.doll-effect[data-effect-kind="equipment"],.doll-effect[data-effect-kind="inherent"]{background:#414027;border-color:#ded18266}
+.doll-chips em{position:absolute;right:-18px;top:14px;font:700 10px var(--font-mono);color:#fff}
+.flight-actor .doll-chips{top:-56px}
+.ff-status-teams{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ff-status h3{margin:0 0 6px;font:12px var(--font-mono);color:var(--muted)}
+.ff-status-name{overflow-wrap:anywhere}
+.ff-effects{grid-column:1/-1;min-width:0;font-size:11px}
+.ff-effects summary{cursor:pointer;color:#cbbddd;padding:3px 0}
+.ff-effects ul{padding:5px!important;gap:5px!important;background:#080d1aaa;overflow-wrap:anywhere}
+@container (max-width:720px){.combat-stage.is-crowded [data-stage-actor]{scale:.58}}
+@container (max-width:520px){.combat-stage.is-crowded [data-stage-actor]{scale:.45}}
+@container (max-width:380px){.combat-stage.is-crowded [data-stage-actor]{scale:.36}}
+@media(max-width:480px){.ff-status-teams{grid-template-columns:1fr}}
+
+/* Keep the entire cast in the main display; the combat roster provides selection. */
+body:not([data-layout="idle"]) #app.app-shell .play-surface .center-stage > .combat-stage.is-crowded:first-child{height:560px;min-height:560px;max-height:none}
+body:not([data-layout="idle"]) #app.app-shell .play-surface .center-stage > .combat-stage.is-crowded:is([data-max-side="5"],[data-max-side="6"],[data-max-side="7"]):first-child{height:640px;min-height:640px}
+#app.app-shell .play-surface:has(.combat-stage.is-crowded) > .master-grid > .left-rail{display:none}
+.combat-stage .doll-chips{left:50%;right:auto;bottom:auto;height:auto;align-content:start;grid-auto-rows:20px}
+
+.combat-stage.is-crowded .battle-actor{margin-left:-92px}
+.combat-stage.is-crowded .flight-actor{margin-left:-59px}
+.combat-stage.is-crowded:is([data-max-side="5"],[data-max-side="6"],[data-max-side="7"]) [data-stage-actor]{scale:.4}
+
+/* Puppet canvases reserve space above the painted head. Attach racks to the
+   visible figure rather than the empty top of that canvas. */
+.combat-stage .battle-actor .doll-chips{top:56px}
+.combat-stage .battle-actor .doll-hp{left:50%;right:auto;top:46px;bottom:auto}
+.combat-stage .battle-actor .doll-turn{left:50%;right:auto;top:24px;bottom:auto}
+
+.combat-stage .doll-effect :is(span,small){position:static;inset:auto;transform:none;background:none;padding:0;border:0;width:auto;height:auto;line-height:1}
+@container(max-width:380px){
+  .combat-stage.is-crowded [data-stage-actor]{scale:.65}
+  .combat-stage.is-crowded:is([data-max-side="5"],[data-max-side="6"],[data-max-side="7"]) [data-stage-actor]{scale:.55}
+}
+@container(max-width:340px){.combat-stage.is-crowded [data-stage-actor]{scale:.55}}

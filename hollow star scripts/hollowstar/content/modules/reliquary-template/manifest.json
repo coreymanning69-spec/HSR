@@ -1,0 +1,28 @@
+{
+  "schema_version": "hollow-star-module-1",
+  "module_id": "reliquary-template",
+  "version": "0.1.0",
+  "title": "Hollow Star Reliquary: First Threshold",
+  "ruleset": "5e-certified-runtime",
+  "status": "candidate",
+  "entry_fixture": {
+    "fixture_id": "reliquary-template-entry",
+    "party_policy": "caller-selected",
+    "seed_required": true
+  },
+  "blind_play": {
+    "sealed_room_boundary": true,
+    "generate_on_reach": true,
+    "future_room_contents_hidden": true
+  },
+  "content": {
+    "floors": "floors.json",
+    "rooms": "rooms.json",
+    "actors": "actors.json",
+    "equipment": "equipment.json",
+    "spells": "spells.json",
+    "encounter_tables": "encounter_tables.json",
+    "rules": "rules.json",
+    "authored_tells": "authored_tells.json"
+  }
+}

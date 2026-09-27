@@ -1,0 +1,12 @@
+<svg viewBox="0 0 48 56" xmlns="http://www.w3.org/2000/svg">
+  <!-- Back drape -->
+  <polygon points="24,6 40,16 42,50 32,54 24,52 16,54 6,50 8,16" fill="#1e293b"/>
+  <!-- Front folds -->
+  <polygon points="24,10 36,18 36,46 26,50 24,14" fill="#334155"/>
+  <polygon points="24,10 12,18 12,46 22,50 24,14" fill="#475569"/>
+  <!-- Mantle cowl -->
+  <polygon points="24,6 32,12 24,16 16,12" fill="#64748b"/>
+  <!-- Bronze clasp -->
+  <circle cx="24" cy="12" r="3" fill="#d97706"/>
+  <circle cx="24" cy="12" r="1.5" fill="#fef3c7"/>
+</svg>

@@ -1,0 +1,15 @@
+{
+  "schema_version": "hollow-star-major-npc-roster-1",
+  "catalog_version": "2026-09-06",
+  "entries": [
+    {"name": "Letha", "selector": "hsr:Letha", "status": "runnable_partial", "mode": "ordinary_party", "owner_file": "divine mythos set/DM004_2b_T_REF_character-matrix-divineverse-household-and-staff.md"},
+    {"name": "Korin", "selector": "hsr:Korin", "status": "runnable_partial", "mode": "ordinary_party", "owner_file": "divine mythos set/DM004_2b_T_REF_character-matrix-divineverse-household-and-staff.md"},
+    {"name": "Veyren", "selector": "hsr:Veyren", "status": "runnable_partial", "mode": "ordinary_party", "owner_file": "divine mythos set/DM053_0_A_REF_5e-playable-profiles-t4-roster.md"},
+    {"name": "Cassian Ward", "selector": "hsr:Cassian Ward", "status": "runnable_partial", "mode": "ordinary_party", "owner_file": "divine mythos set/DM053_0_A_REF_5e-playable-profiles-t4-roster.md"},
+    {"name": "Kiyuru", "selector": "hsr:Kiyuru", "status": "runnable_partial", "mode": "ordinary_party", "owner_file": "divine mythos set/DM043_D1_A_REF_kiyuru-champion-runtime-and-called-strike-system.md"},
+    {"name": "Velin", "selector": "hsr:Velin", "status": "author_gate", "mode": "not_runnable", "owner_file": "divine mythos set/DM004_2_T_REF_character-matrix-divineverse-inner-circle.md", "deferred": ["playable chassis", "level band", "ability scores", "equipment", "HSR role"]},
+    {"name": "Gable", "selector": "hsr:Gable", "status": "author_gate", "mode": "not_runnable", "owner_file": "divine mythos set/DM004_3a_A_REF_character-matrix-primeverse-mergeverse-part2.md", "deferred": ["remaining ability scores", "action package", "defenses", "movement", "counterplay boundaries", "depletion and recharge"]},
+    {"name": "Sera", "selector": "scenario:Sera", "status": "controlled_only", "mode": "boss_or_author", "owner_file": "divine mythos set/DM027_0_A_REF_sera-character-sheet.md", "deferred": ["explicit controlled-mode authorization"]},
+    {"name": "Ember", "selector": "scenario:Ember", "status": "controlled_only", "mode": "scenario_or_author", "owner_file": "divine mythos set/DM028_3b_A_REF_ember-spec.md", "deferred": ["explicit controlled-mode authorization"]}
+  ]
+}

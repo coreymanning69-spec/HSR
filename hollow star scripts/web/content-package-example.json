@@ -1,0 +1,97 @@
+{
+  "schema_version": "hollow-star-content-package-1",
+  "id": "workbench-example",
+  "version": "0.1.0",
+  "title": "The Unwritten Crossing",
+  "universe": "Demonstration",
+  "notes": "Original non-canon authoring fixture. These are presentation entities with no combat statistics or inventory effects.",
+  "entry_scene": "crossing",
+  "sources": [],
+  "entities": [
+    {
+      "id": "guide",
+      "kind": "character",
+      "name": "The Cartographer",
+      "description": "A placeholder character studies a map whose edges are still blank. A compiler can supply a sourced identity here; this demonstration supplies no canonical person.",
+      "source_ids": [],
+      "interactions": [
+        {
+          "id": "map",
+          "label": "Study the map",
+          "text": "Two places are linked: this crossing and a quiet archive. The links are part of the package; Python decides which exits are available from the current scene."
+        }
+      ],
+      "asset_id": "townsperson"
+    },
+    {
+      "id": "lantern",
+      "kind": "item",
+      "name": "Unlit Lantern",
+      "description": "A brass lantern waiting for a story. Inspecting it changes this preview's inspection state; it does not add an item to a player's inventory.",
+      "source_ids": [],
+      "interactions": []
+    },
+    {
+      "id": "folio",
+      "kind": "prop",
+      "name": "Blank Folio",
+      "description": "A place for the next packet. Source references will retain the file path, line range, and hash of the material that informed it.",
+      "source_ids": [],
+      "interactions": [
+        {
+          "id": "read",
+          "label": "Read the margin",
+          "text": "Meaning is supplied by the author or compiler. The engine validates the resulting structure, preserves its provenance, and renders only the current scene."
+        }
+      ]
+    },
+    {
+      "id": "practice-sword",
+      "kind": "item",
+      "name": "Plain Longsword",
+      "description": "Existing local inventory art gives this presentation item a visible form. It has no attack statistics, equipment slot, price, or grant behavior until an explicit engine binding supplies them.",
+      "source_ids": [],
+      "asset_id": "longsword"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "crossing",
+      "kind": "scene",
+      "theme": "astral",
+      "title": "The Unwritten Crossing",
+      "description": "A narrow bridge rests beneath a sky of pale stars. Beyond it, an archive waits to be filled.\n\nThis is a non-canon demonstration: inspect the character and item, then follow the path to another scene.",
+      "entities": [
+        "guide",
+        "lantern",
+        "practice-sword"
+      ],
+      "source_ids": [],
+      "exits": [
+        {
+          "id": "archive",
+          "label": "Enter the archive",
+          "target": "archive"
+        }
+      ]
+    },
+    {
+      "id": "archive",
+      "kind": "scene",
+      "theme": "stone",
+      "title": "The Quiet Archive",
+      "description": "Shelves disappear into a soft silver haze. On the only occupied desk lies a folio.\n\nRefresh the page or return later: the engine will remember which scene this preview reached.",
+      "entities": [
+        "folio"
+      ],
+      "source_ids": [],
+      "exits": [
+        {
+          "id": "crossing",
+          "label": "Return to the crossing",
+          "target": "crossing"
+        }
+      ]
+    }
+  ]
+}

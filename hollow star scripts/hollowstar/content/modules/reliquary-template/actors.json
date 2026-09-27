@@ -1,0 +1,1 @@
+{"schema_version":"hsr-module-data-1","actors":[{"actor_id":"marked-sentinel","name":"marked sentinel","hp":22,"ac":14,"speed":30,"attacks":1,"attack":5,"dice":"1d8+2","type":"SLASHING","band":10,"equipment_id":"chalkblade"}]}

@@ -4,7 +4,7 @@ import {createArcadeCanvas} from './arcade-canvas.js';
 import {bindArcadeInput} from './arcade-input.js';
 import {createArcadeLoop} from './arcade-loop.js';
 import {createCombatDirector, DEFAULT_COMBAT_SETTINGS, damageMath, healMath} from './combat-director.js?v=director-12';
-import {combatStyle, styleAllows, isTypingTarget, stepDestination, groundDestination, withinMovement, threatenedBy, hotbarSlots, spaceIntent, radialItems, radialLayout, gridDistance} from './combat-input.js?v=input-1';
+import {combatStyle, styleAllows, isTypingTarget, stepDestination, groundDestination, flightDestination, withinMovement, avoidOccupied, threatenedBy, hotbarSlots, spaceIntent, radialItems, radialLayout, gridDistance} from './combat-input.js?v=input-1';
 import {createVoiceFeed, DEFAULT_VOICE_SETTINGS} from './voice-feed.js?v=2';
 import {ffLayout, effectRack, visibleEffects, effectLabel, turnOrderStrip, commandWindow, partyStatusPanel} from './battle-scene.js?v=effects-2';
 import {routeMap, nodeGlyph} from './expedition-map.js?v=xp-2';
@@ -3941,7 +3941,7 @@ function formationStep(origin, fraction) {
   return [Math.max(0, Math.min(120, origin[0] - toward * Number(currentEconomy().movement || 0))), origin[1], origin[2]];
 }
 function bindStageTargeting() {
-  const liveStage = document.querySelector('#app .combat-stage:not(.demo-stage):not(.flight-stage)');
+  const liveStage = document.querySelector('#app .combat-stage:not(.demo-stage)');
   if (liveStage && !groundBoundStages.has(liveStage)) {
     groundBoundStages.add(liveStage);
     liveStage.addEventListener('click', event => {
@@ -3953,7 +3953,8 @@ function bindStageTargeting() {
       const rect = liveStage.getBoundingClientRect();
       if (!rect.width) return;
       const fraction = (event.clientX - rect.left) / rect.width;
-      const destination = liveStage.classList.contains('ff-stage') ? formationStep(origin, fraction) : groundDestination(origin, fraction);
+      const destination = liveStage.classList.contains('flight-stage') ? flightDestination(origin, fraction, (event.clientY - rect.top) / rect.height)
+        : liveStage.classList.contains('ff-stage') ? formationStep(origin, fraction) : groundDestination(origin, fraction);
       if (destination) stepTo(destination, 'Walk');
     });
   }
@@ -3992,7 +3993,9 @@ async function stepTo(destination, label = 'Move') {
   if (!destination || !myTacticalTurn()) return false;
   const who = currentCombatant();
   const origin = combatPosition(who.id);
-  const capped = withinMovement(origin, destination, currentEconomy().movement);
+  const others = [...party(), ...livingOpponents()].filter(row => row.id !== who.id && row.alive !== false && Number(row.hp ?? 1) > 0)
+    .map(row => combatPosition(row.id)).filter(Boolean);
+  const capped = avoidOccupied(origin, withinMovement(origin, destination, currentEconomy().movement), others);
   if (!capped) { state.note = 'No movement left this turn.'; addMessage(state.note); render(); return false; }
   const threats = state.preferences.combat.threatWarn === false ? [] : threatenedBy(origin, capped, foeRows(), {disengaged: (who.statuses || []).includes('DISENGAGED')});
   const warned = state.threatWarning;

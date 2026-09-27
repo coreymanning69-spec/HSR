@@ -35,6 +35,9 @@ combat = run.context['combat']
 combat['cursor'] = combat['order'].index('p0')
 combat['positions'].update({'p0': [20, 20, 0], 'p1': [10, 30, 0], 'e0': [50, 20, 0]})
 save_run(run, run_id, data / 'reliquary_runs' / f'{run_id}.json')
+# The same fight with host auto-play off: only the client's drain moves NPCs.
+run.context['manual_opposition'] = True
+save_run(run, run_id + '-manual', data / 'reliquary_runs' / f'{run_id}-manual.json')
 `});assert.equal(seed.status,0,seed.stderr);
   const s=net.createServer();s.listen(0,'127.0.0.1');await new Promise(r=>s.once('listening',r));const port=s.address().port;await new Promise(r=>s.close(r));
   const base=`http://127.0.0.1:${port}`;
@@ -48,13 +51,16 @@ save_run(run, run_id, data / 'reliquary_runs' / f'{run_id}.json')
   const view=()=>page.evaluate(()=>HollowStarUI.getPublicView());
   const status=()=>page.evaluate(()=>HollowStarUI.getCombatStatus());
   async function settled(){await page.waitForFunction(()=>HollowStarUI.getStatus().phase==='ready'&&!HollowStarUI.getStatus().busy&&!HollowStarUI.getCombatStatus().draining,null,{timeout:20000});await delay(80);}
-  await page.goto(base+'/web/index.html');
-  await page.getByRole('button',{name:'Simulation Mode',exact:true}).click();
-  if(await page.locator('[data-action="start-engine"]').count()){await page.locator('[data-action="start-engine"]').click();await page.getByRole('button',{name:'Simulation Mode',exact:true}).click();}
-  await page.locator('[data-action="continue:SANDBOX"]').click();
-  await page.locator(`[data-action="load:${runId}"]`).click();await settled();
-  await page.evaluate(()=>HollowStarUI.navigate('encounter'));await settled();
-  await page.locator('#app .combat-stage').waitFor();
+  async function open(id){
+    await page.goto(base+'/web/index.html');
+    await page.getByRole('button',{name:'Simulation Mode',exact:true}).click();
+    if(await page.locator('[data-action="start-engine"]').count()){await page.locator('[data-action="start-engine"]').click();await page.getByRole('button',{name:'Simulation Mode',exact:true}).click();}
+    await page.locator('[data-action="continue:SANDBOX"]').click();
+    await page.locator(`[data-action="load:${id}"]`).click();await settled();
+    await page.evaluate(()=>HollowStarUI.navigate('encounter'));await settled();
+    await page.locator('#app .combat-stage').waitFor();
+  }
+  await open(runId);
   const results=[];
   let v=await view();assert.equal(v.combat.current,'p0',JSON.stringify(v.combat));
   assert.equal((await status()).style,'hybrid');
@@ -108,6 +114,34 @@ save_run(run, run_id, data / 'reliquary_runs' / f'{run_id}.json')
   const history=(await status()).history;
   results.push(`director beats: ${history.length} (${history.filter(b=>b.style==='banner').map(b=>b.detail).join(', ')||'no banners'})`);
   await page.screenshot({path:path.join(out,'after-enemy-turn.png')});
+
+  // Host auto-play off: ending the heroes' turns leaves the watch holding the
+  // turn, and the client drains it by itself with design_drain_npc.
+  await open(runId+'-manual');
+  const drainsBefore=commands.filter(c=>c==='design_drain_npc').length;
+  // Left-click the ground on the foes' half closes on the watch.
+  v=await view();const start=v.combat.positions.p0;
+  const box=await page.locator('#app .combat-stage').boundingBox();
+  await page.mouse.click(box.x+box.width*0.8,box.y+box.height*0.35);await settled();
+  v=await view();
+  if(v.combat.current==='p0')assert.notDeepEqual(v.combat.positions.p0,start,'ground click did not move Doran');
+  results.push(`left-click on the ground walks Doran from ${start} to ${v.combat.positions.p0}`);
+  for(let i=0;i<6;i++){
+    v=await view();if(v.combat.complete)break;
+    const who=v.combat.pending?.[0]?.reactor||v.combat.current;
+    if(!String(who).startsWith('p'))break;
+    if(v.combat.pending?.length)await page.locator(`[data-action="reaction:decline_reaction"][data-reactor="${who}"]`).first().click();
+    else await page.keyboard.press('e');
+    await settled();
+    if(commands.filter(c=>c==='design_drain_npc').length>drainsBefore)break;
+  }
+  await settled();v=await view();
+  const manualDrains=commands.filter(c=>c==='design_drain_npc').length-drainsBefore;
+  assert(manualDrains>0,`client never drained the NPC turn: ${JSON.stringify(v.combat)}`);
+  const holder=v.combat.complete?null:(v.combat.pending?.[0]?.reactor||v.combat.current);
+  assert(v.combat.complete||String(holder).startsWith('p'),JSON.stringify(v.combat));
+  results.push(`manual-opposition run: client drained the enemy turn itself (${manualDrains} design_drain_npc call(s)); ${holder||'combat over'} decides next`);
+  await page.screenshot({path:path.join(out,'after-client-drain.png')});
   assert.equal(errors.length,0,errors.join('\n'));
   fs.writeFileSync(path.join(out,'receipt.json'),JSON.stringify({results,commands,errors},null,2));
   console.log('PASS reactive combat controls:\n - '+results.join('\n - ')+'\n'+out);

@@ -41,10 +41,17 @@ assert.equal(I.stepDestination([20, 20, 0], 'x'), null);
 
 assert.deepEqual(I.groundDestination([20, 30, 0], 0.5), [60, 30, 0]);
 assert.equal(I.groundDestination([60, 30, 0], 0.5), null);
+assert.deepEqual(I.flightDestination([20, 20, 5], 0.5, 0.78), [60, 0, 5]);
+assert.deepEqual(I.flightDestination([20, 20, 0], 0.25, 0.16), [30, 120, 0]);
+assert.equal(I.flightDestination([60, 0, 0], 0.5, 0.78), null);
 assert.deepEqual(I.withinMovement([20, 20, 0], [60, 30, 0], 25), [45, 20, 0]);
 assert.deepEqual(I.withinMovement([20, 20, 0], [25, 30, 0], 30), [25, 30, 0]);
 assert.equal(I.withinMovement([20, 20, 0], [60, 20, 0], 0), null);
 
+assert.deepEqual(I.avoidOccupied([20, 20, 0], [50, 20, 0], [[50, 20, 0]]), [45, 20, 0]);
+assert.deepEqual(I.avoidOccupied([20, 20, 0], [30, 30, 0], [[30, 30, 0], [25, 25, 0]]), null);
+assert.deepEqual(I.avoidOccupied([20, 20, 0], [40, 20, 0], [[90, 90, 0]]), [40, 20, 0]);
+assert.equal(I.avoidOccupied([20, 20, 0], null, []), null);
 assert.equal(I.gridDistance([0, 0, 0], [10, 5, 0]), 10);
 const foes = [{id: 'e0', position: [25, 20, 0]}, {id: 'e1', position: [80, 80, 0]}];
 assert.deepEqual(I.threatenedBy([20, 20, 0], [10, 20, 0], foes), ['e0']);

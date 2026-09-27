@@ -67,6 +67,17 @@ export function groundDestination(position, fraction) {
   return next[0] === clampFeet(position[0]) ? null : next;
 }
 
+// A click on the flight arena, which draws x = feet / 120 across and
+// y from 78% (0 ft) up to 16% (120 ft) of its height (app.js flightActor):
+// both axes map back to the grid; height (z) is kept.
+export function flightDestination(position, fx, fy) {
+  if (!Array.isArray(position) || !Number.isFinite(Number(fx)) || !Number.isFinite(Number(fy))) return null;
+  const x = clampFeet(Math.max(0, Math.min(1, Number(fx))) * GRID_MAX);
+  const y = clampFeet((0.78 - Math.max(0, Math.min(1, Number(fy)))) / 0.62 * GRID_MAX);
+  const next = [x, y, clampFeet(position[2])];
+  return next[0] === clampFeet(position[0]) && next[1] === clampFeet(position[1]) ? null : next;
+}
+
 // Cap a destination to the movement the actor has left, walking from
 // `position` toward it along x then y in whole squares.
 export function withinMovement(position, destination, movement) {
@@ -79,6 +90,21 @@ export function withinMovement(position, destination, movement) {
     out[axis] += step; budget -= Math.abs(step);
   }
   return out[0] === clampFeet(position[0]) && out[1] === clampFeet(position[1]) ? null : out;
+}
+
+// Back a destination off, one square at a time toward `origin`, until no
+// other combatant stands on it. (The host's move does not check occupancy
+// yet; 5e lets you pass through an ally but not end in its square.)
+export function avoidOccupied(origin, destination, occupied = []) {
+  if (!Array.isArray(origin) || !Array.isArray(destination)) return null;
+  const taken = new Set(occupied.filter(Array.isArray).map(p => `${clampFeet(p[0])},${clampFeet(p[1])}`));
+  let [x, y] = [clampFeet(destination[0]), clampFeet(destination[1])];
+  const [ox, oy] = [clampFeet(origin[0]), clampFeet(origin[1])];
+  while (taken.has(`${x},${y}`) && (x !== ox || y !== oy)) {
+    x += Math.sign(ox - x) * GRID_STEP;
+    y += Math.sign(oy - y) * GRID_STEP;
+  }
+  return x === ox && y === oy ? null : [x, y, clampFeet(destination[2])];
 }
 
 // Chebyshev distance in feet, the host's own measure (tactical.distance).

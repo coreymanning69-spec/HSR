@@ -451,7 +451,7 @@ function routeTitle() {
 function topNavigation() {
   if (state.phase === 'title') return '';
   if (state.phase === 'ready') {
-    const tabs = screens.filter(tab => tab !== 'journey').map(tab => `<button type="button" role="tab" class="global-nav-tab ${state.selected === tab ? 'active' : ''}" data-action="tab:${E(tab)}" aria-selected="${state.selected === tab}" aria-controls="screen-${E(tab)}" title="${E(gameplayLabels[tab])}"><span class="nav-tab-icon" aria-hidden="true">${SCREEN_ICONS[tab] || '•'}</span><small class="nav-tab-label">${E(gameplayLabels[tab])}</small></button>`).join('');
+    const tabs = screens.map(tab => `<button type="button" role="tab" class="global-nav-tab ${state.selected === tab ? 'active' : ''}" data-action="tab:${E(tab)}" aria-selected="${state.selected === tab}" aria-controls="screen-${E(tab)}" title="${E(gameplayLabels[tab])}"><span class="nav-tab-icon" aria-hidden="true">${SCREEN_ICONS[tab] || '•'}</span><small class="nav-tab-label">${E(gameplayLabels[tab])}</small></button>`).join('');
     return `<nav class="mobile-topbar global-screen-nav" role="tablist" aria-label="Screen navigation">
       <div class="top-nav-brand"><button type="button" class="top-nav-brand-btn" data-action="toggle-system-menu" title="Open Game Menu (Esc)"><span class="top-nav-sigil" aria-hidden="true">✦</span><strong class="top-nav-title">Reliquary</strong></button><small class="top-nav-screen">${E(gameplayLabels[state.selected] || state.selected)}</small></div>
       <div class="top-nav-tabs">${tabs}</div>
@@ -4340,8 +4340,8 @@ function shellAtmosphereTitle() {
 }
 function shellAtmosphereSubtitle() {
   const subs = {
-    journey: 'Follow the authored route. Social decisions and the descent remain yours.',
-    room: 'Every room is honest about its walls and selective about its motives.',
+    journey: 'Where you’re going: the route ahead, who’s on it, and the way down.',
+    room: 'Where you are: this room’s walls, law, and terrain — nothing beyond it.',
     battle: 'Tactical clarity first; dramatic lighting is merely traditional.',
     equipment: 'A clear armory view of every host-reported item, affix, and visible property.',
     roster: 'Selectable adventurers with readable silhouettes, health, armor, status, and equipment roles.',

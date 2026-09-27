@@ -14,3 +14,6 @@ node_modules/
 .agents/
 .gemini_dispatch/
 .mcp.json
+
+# Generated test output and proof screenshots inside the engine folder
+hollow star scripts/.local/

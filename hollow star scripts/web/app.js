@@ -4072,7 +4072,12 @@ document.addEventListener('keydown', event => {
   const lower = String(key).toLowerCase();
   const direct = styleAllows(style(), 'keys');
   const handled = () => { event.preventDefault(); event.stopPropagation(); };
-  if (key === ']' || (key === 'Tab' && (direct || document.activeElement?.closest?.('.combat-stage')))) { handled(); cycleTarget(event.shiftKey ? -1 : 1); return; }
+  // Tab and Space keep their usual jobs on a focused control (keyboard
+  // navigation, pressing a button); they drive combat from the page or stage.
+  const focus = document.activeElement;
+  const onControl = Boolean(focus && focus !== document.body && !focus.closest?.('.combat-stage')
+    && focus.matches?.('button,a,summary,[role="button"],[tabindex]'));
+  if (key === ']' || (key === 'Tab' && !onControl && (direct || focus?.closest?.('.combat-stage')))) { handled(); cycleTarget(event.shiftKey ? -1 : 1); return; }
   if (key === '[') { handled(); cycleTarget(-1); return; }
   if (direct && lower === 'q') { handled(); cycleTarget(event.shiftKey ? -1 : 1); return; }
   if (key === 'Escape' && (state.focusTarget || state.actionPicker || state.combatRadial || state.threatWarning)) {
@@ -4083,7 +4088,7 @@ document.addEventListener('keydown', event => {
     const destination = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(lower) && !event.shiftKey
       ? stepDestination(combatPosition(who.id), lower) : null;
     if (destination) { handled(); if (myTacticalTurn()) stepTo(destination, 'Step'); return; }
-    if (key === ' ' || event.code === 'Space') { handled(); if (myTacticalTurn()) spaceAction(); return; }
+    if ((key === ' ' || event.code === 'Space') && !onControl) { handled(); if (myTacticalTurn()) spaceAction(); return; }
     if (/^[1-4]$/.test(key)) { handled(); if (myTacticalTurn()) fireHotbar(Number(key)); return; }
   }
   if (styleAllows(style(), 'legacy_keys') && lower === 'a') { if (attackFocused()) handled(); return; }

@@ -188,6 +188,9 @@ The command dock is always on in every style.
   that would leave a foe's reach rings that foe in red and asks for the
   same step again within 2.6 s to commit. This is a warning only; the host
   still decides (Disengage, mobile stance).
+- Tab and Space keep their normal jobs while a control outside the stage
+  has focus (keyboard navigation, pressing that button). They drive combat
+  from the page body or the stage.
 - Hotkeys ignore input while typing (`isTypingTarget`: input, textarea,
   select, contenteditable) and while a dialog, the system menu or the
   bookbag is open. Handled keys stop propagating, so the older global

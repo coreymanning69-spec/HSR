@@ -1,4 +1,4 @@
-"""Local Tkinter launcher for the hostless Web backend."""
+"""Local Tkinter launcher for the Web backend."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ def main() -> int:
 
     def launch_web() -> None:
         subprocess.Popen(
-            [sys.executable, "hollowstar_web_server.py", "--hostless", "--port", "8765"],
+            [sys.executable, "hollowstar_web_server.py", "--port", "8765"],
             cwd=ROOT,
         )
         status.set("Local Web backend started on http://127.0.0.1:8765")

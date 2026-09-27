@@ -1,4 +1,4 @@
-/* Real-host Continue and Statistics smoke check against isolated --hostless data. */
+/* Real-host Continue and Statistics smoke check against isolated --data-root data. */
 const {chromium} = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

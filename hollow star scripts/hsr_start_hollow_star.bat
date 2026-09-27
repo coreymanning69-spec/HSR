@@ -94,8 +94,8 @@ echo.
 echo   ============================================================
 echo.
 
-REM The web server is the one lifecycle owner. It reuses a healthy instance,
-REM starts the singleton watcher, and recovers that watcher after a crash.
+REM The web server is the one lifecycle owner. It reuses a healthy instance
+REM already serving this port, or boots its own in-process engine.
 "%PY%" hollowstar_app.py
 set "HSR_EXIT=%errorlevel%"
 if not "%HSR_EXIT%"=="0" (

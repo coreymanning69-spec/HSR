@@ -219,14 +219,12 @@ def main() -> int:
                         help="launch in borderless fullscreen kiosk mode without OS window frame")
     parser.add_argument("--fullscreen", action="store_true",
                         help="launch in fullscreen mode")
-    args = parser.parse_args([arg for arg in sys.argv[1:] if arg != "--hostless"])
+    args = parser.parse_args()
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     log_path = LOG_DIR / "hsr_app.log"
     logging.basicConfig(filename=log_path, level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     url = f"http://127.0.0.1:{args.port}/web/index.html"
     server_args = [_python(), "hollowstar_web_server.py", "--port", str(args.port)]
-    if "--hostless" in sys.argv:
-        server_args.append("--hostless")
     server = None
     mirror = None
     try:

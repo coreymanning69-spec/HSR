@@ -10,35 +10,20 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-import hsr_bridge_watch as watcher
 import hsr_mcp_server as mcp
 import hollowstar_web_server as web
 from hollowstar.host import HSRHost
 from hollowstar.web_transport import WebHost
 
 
-def test_browser_cli_mcp_share_one_mailbox_host():
+def test_browser_cli_mcp_share_one_host():
     with tempfile.TemporaryDirectory(prefix="hsr-web-test-") as temp:
         root = Path(temp)
         host = HSRHost.from_options(data_root=root / ".local")
-        inbox, outbox = root / "inbox.jsonl", root / "outbox.jsonl"
-        stopped = threading.Event()
-        answered = set()
-
-        def drain():
-            while not stopped.wait(.01):
-                for request in watcher._read_jsonl(inbox):
-                    if request["id"] in answered:
-                        continue
-                    payload, _ = watcher._process(host, request)
-                    watcher._append_jsonl(outbox, payload)
-                    answered.add(request["id"])
-
-        with patch.object(web, "INBOX", inbox), patch.object(web, "OUTBOX", outbox):
+        with patch.object(web, "_host", host):
             with web.ThreadingHTTPServer(("127.0.0.1", 0), web.Handler) as server:
-                threads = [threading.Thread(target=drain), threading.Thread(target=server.serve_forever)]
-                for thread in threads:
-                    thread.start()
+                thread = threading.Thread(target=server.serve_forever)
+                thread.start()
                 try:
                     url = f"http://127.0.0.1:{server.server_port}"
                     client = WebHost(url)
@@ -131,7 +116,7 @@ def test_browser_cli_mcp_share_one_mailbox_host():
                         with urlopen(f"{url}/assets/sprites/characters/doran/doran-{pose}.png") as response:
                             assert response.status == 200
                     assert b"atmosphere" in live_app
-                    for path in ("/host_config.json", "/.local/phone_bridge/outbox.jsonl", "/../readme.md"):
+                    for path in ("/host_config.json", "/.local/hosted_controls.json", "/../readme.md"):
                         try:
                             urlopen(url + path)
                             raise AssertionError("private path exposed")
@@ -144,10 +129,8 @@ def test_browser_cli_mcp_share_one_mailbox_host():
                     except HTTPError as exc:
                         assert exc.code == 403
                 finally:
-                    stopped.set()
                     server.shutdown()
-                    for thread in threads:
-                        thread.join(timeout=5)
+                    thread.join(timeout=5)
 
 
 
@@ -256,21 +239,6 @@ def test_life_world_action_bar_preserves_host_type_affordances():
     assert "life action never degrades into an empty" in app
 
 
-def test_watcher_returns_final_public_frame_after_npc_actions():
-    initial = {"schema": "hollow-star-public-view-1", "round": 1}
-    final = {"schema": "hollow-star-public-view-1", "round": 2}
-    class Host:
-        def handle(self, request):
-            key = "readout" if request["command"] == "readout" else "turn"
-            return {"id": request["id"], "ok": True, "result": {key: {
-                "public_view": final if key == "readout" else initial, "public_receipt": {"round": 2}}}}
-    with patch.object(watcher, "_auto_drain_npc_turns", return_value=[{
-            "ok": True, "result": {"state": {"secret": "not-public"}, "event": {"type": "npc_turn"}}}]):
-        reply, _ = watcher._process(Host(), {"id": "turn", "command": "design_turn", "run_id": "test"})
-    assert reply["view"] == final
-    assert "not-public" not in json.dumps(reply)
-
-
 def test_transport_refuses_nonlocal_url():
     for url in ("https://127.0.0.1", "http://example.com", "http://user@localhost", "http://localhost/private"):
         try:
@@ -278,115 +246,6 @@ def test_transport_refuses_nonlocal_url():
             raise AssertionError("nonlocal or ambiguous URL accepted")
         except ValueError:
             pass
-
-
-def test_webhost_recovers_and_retries_safe_health_request():
-    timeout = {"id": "health", "ok": False, "error": {"code": "ENGINE_TIMEOUT"}}
-    healthy = {"id": "retry", "ok": True, "result": {"local_location": {"approved": True}}}
-    with patch.object(web, "_mailbox_request", side_effect=[timeout, healthy]) as mailbox, \
-         patch.object(web, "_recover_engine") as recover:
-        result = web.request_engine({"id": "health", "command": "health"}, timeout=1)
-    assert result["ok"] and result["id"] == "health"
-    recover.assert_called_once_with()
-    assert mailbox.call_count == 2
-
-
-def test_webhost_recovers_but_never_replays_uncertain_action():
-    timeout = {"id": "turn", "ok": False, "error": {"code": "ENGINE_TIMEOUT"}}
-    with patch.object(web, "_mailbox_request", return_value=timeout) as mailbox, \
-         patch.object(web, "_recover_engine") as recover:
-        result = web.request_engine({"id": "turn", "command": "design_turn"}, timeout=1)
-    assert result["error"]["code"] == "ENGINE_RECOVERED_RETRY_REQUIRED"
-    recover.assert_called_once_with()
-    mailbox.assert_called_once()
-
-
-def test_startup_discards_stale_shutdowns_but_preserves_pending_requests():
-    with tempfile.TemporaryDirectory(prefix="hsr-web-startup-") as temp:
-        inbox = Path(temp) / "inbox.jsonl"
-        inbox.write_text(
-            '{"id":"health","command":"health"}\n'
-            '{"id":"old-stop","command":"shutdown"}\n'
-            '{"id":"readout","command":"readout"}\n',
-            encoding="utf-8",
-        )
-        with patch.object(web, "INBOX", inbox), patch.object(web, "_say"):
-            web._discard_pending_shutdowns()
-        assert inbox.read_text(encoding="utf-8") == (
-            '{"id":"health","command":"health"}\n'
-            '{"id":"readout","command":"readout"}\n'
-        )
-
-
-def test_mailbox_tail_ignores_replies_written_before_the_request():
-    with tempfile.TemporaryDirectory(prefix="hsr-web-tail-") as temp:
-        root = Path(temp)
-        inbox, outbox = root / "inbox.jsonl", root / "outbox.jsonl"
-        outbox.write_text(json.dumps({"id": "reused", "ok": False, "stale": True}) + "\n", encoding="utf-8")
-        done = threading.Event()
-
-        def answer():
-            while not (inbox.exists() and inbox.stat().st_size):
-                if done.wait(.005):
-                    return
-            with outbox.open("a", encoding="utf-8") as stream:
-                stream.write('{"id": "other", "ok": true}\n{"id": "reused", "ok": tr')
-                stream.flush()
-                done.wait(.05)  # the reply is visibly half-written for several tail checks
-                stream.write('ue, "fresh": true}\n')
-
-        with patch.object(web, "INBOX", inbox), patch.object(web, "OUTBOX", outbox):
-            thread = threading.Thread(target=answer)
-            thread.start()
-            try:
-                result = web._mailbox_request({"id": "reused", "command": "health"}, timeout=5)
-            finally:
-                done.set()
-                thread.join(timeout=5)
-        assert result == {"id": "reused", "ok": True, "fresh": True}
-
-
-def test_mailbox_tail_handles_missing_and_truncated_outbox():
-    with tempfile.TemporaryDirectory(prefix="hsr-web-tail-") as temp:
-        root = Path(temp)
-        inbox, outbox = root / "inbox.jsonl", root / "outbox.jsonl"
-
-        def reply(request_id, mode, done):
-            while not done.wait(.005):
-                if inbox.exists() and request_id in inbox.read_text(encoding="utf-8"):
-                    with outbox.open(mode, encoding="utf-8") as stream:
-                        stream.write(json.dumps({"id": request_id, "ok": True}) + "\n")
-                    return
-
-        with patch.object(web, "INBOX", inbox), patch.object(web, "OUTBOX", outbox):
-            for request_id, mode in (("created", "a"), ("truncated", "w")):
-                if mode == "w":
-                    outbox.write_text("".join(json.dumps({"id": f"old-{n}", "ok": True}) + "\n"
-                                              for n in range(50)), encoding="utf-8")
-                else:
-                    assert not outbox.exists()
-                done = threading.Event()
-                thread = threading.Thread(target=reply, args=(request_id, mode, done))
-                thread.start()
-                try:
-                    result = web._mailbox_request({"id": request_id, "command": "health"}, timeout=5)
-                finally:
-                    done.set()
-                    thread.join(timeout=5)
-                assert result == {"id": request_id, "ok": True}
-            timed_out = web._mailbox_request({"id": "never", "command": "health"}, timeout=.05)
-        assert timed_out["error"]["code"] == "ENGINE_TIMEOUT"
-
-
-def test_stale_watcher_source_is_detected():
-    with tempfile.TemporaryDirectory(prefix="hsr-web-watcher-") as temp:
-        info = Path(temp) / "watcher.json"
-        with patch.object(web, "BRIDGE", Path(temp)):
-            assert not web._watcher_current()
-            info.write_text(json.dumps({"pid": 1, "source_sha256": "outdated"}), encoding="utf-8")
-            assert not web._watcher_current()
-            info.write_text(json.dumps({"pid": 1, "source_sha256": watcher._source_sha256()}), encoding="utf-8")
-            assert web._watcher_current()
 
 
 def test_menu_focus_and_secondary_interactions_are_client_only():

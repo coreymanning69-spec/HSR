@@ -22,30 +22,19 @@ from pathlib import Path
 from hollowstar.host import HSRHost
 from hollowstar.session_intent import vocabulary
 from hollowstar.hosted_controls import HostedControls
-import hsr_bridge_watch as watch
+from hollowstar.transfer import capsule
 
 ROOT = Path(__file__).resolve().parent
-BRIDGE = ROOT / ".local" / "phone_bridge"
-INBOX, OUTBOX = BRIDGE / "inbox.jsonl", BRIDGE / "outbox.jsonl"
-_write_lock = threading.Lock()
-_engine_lock = threading.Lock()
 _startup_lock = threading.Lock()
-_watcher = None
-_hostless = None
+_host = None  # the one in-process HSRHost every request is served from
 _server = None  # set once main() binds the port; lets a dead engine stop the host itself
 _shutting_down = threading.Event()
 _hosted_controls = HostedControls(ROOT / ".local" / "hosted_controls.json")
 
-SAFE_RETRY_COMMANDS = {
-    "health", "ready", "status", "inspect", "readout", "list_runs",
-    "character_options", "character_roll", "content_catalog", "affix_catalog",
-    "scenario_catalog", "peek_creation_seed", "allocate_creation_seed", "randomize_build",
-}
-
-TAIL_SECONDS = 0.005    # outbox check interval while a request waits
-PROBE_SECONDS = 0.5     # a live watcher answers within about one host update
-STARTUP_SECONDS = 12
 STATS_SECONDS = 20
+# How often an active Floor One life-sim world advances on its own, so time
+# keeps passing while nobody is actively taking a turn.
+LIFE_TICK_SECONDS = 30
 # Digest of the code this host loaded; the launcher refuses to reuse an older host.
 SERVER_SHA256 = hashlib.sha256(Path(__file__).resolve().read_bytes()).hexdigest()
 # Request-body ceilings: 1 MiB and 8 KiB, each raised by 30% (rounded down)
@@ -56,7 +45,7 @@ MAX_CLIENT_LOG_BYTES = 10_649
 _startup = {}
 _began = time.monotonic()
 _stats_lock = threading.Lock()
-_stats = {"requests": 0, "errors": 0, "timeouts": 0, "total_ms": 0.0, "max_ms": 0.0, "fresh": False}
+_stats = {"requests": 0, "errors": 0, "total_ms": 0.0, "max_ms": 0.0, "fresh": False}
 _recent_ms = deque(maxlen=1000)
 _console = queue.Queue(maxsize=4000)
 _console_lock = threading.Lock()
@@ -101,16 +90,41 @@ def _flush_console(timeout=1.0):
         time.sleep(0.01)
 
 
-def _record(ms, ok=True, timeout=False):
+def _clip(value, limit: int = 120) -> str:
+    """Printable single-line text for log lines, truncated; client text is never trusted."""
+    text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, default=str)
+    text = "".join(ch if ch.isprintable() else " " for ch in text)
+    return text if len(text) <= limit else text[:limit - 3] + "..."
+
+
+def _describe_request(request: dict) -> str:
+    """`command run=... intent="..." action=...` for one request log line."""
+    parts = [_clip(request.get("command"), 60)]
+    if request.get("run_id") is not None:
+        parts.append("run=" + _clip(request["run_id"], 60))
+    if request.get("intent") is not None:
+        parts.append(f'intent="{_clip(request["intent"])}"')
+    action = request.get("action")
+    if isinstance(action, dict) and action.get("type") is not None:
+        parts.append("action=" + _clip(action["type"], 60))
+    return " ".join(parts)
+
+
+def _error_text(response: dict) -> str:
+    """`CODE: message` from a full or compact error response."""
+    error = response.get("error") if isinstance(response, dict) else None
+    if isinstance(error, dict):
+        return _clip(f"{error.get('code', 'UNKNOWN')}: {error.get('message', '')}".rstrip(": "))
+    return _clip(error if error is not None else "no error detail")
+
+
+def _record(ms, ok=True):
     with _stats_lock:
-        if timeout:
-            _stats["timeouts"] += 1
-        else:
-            _stats["requests"] += 1
-            _stats["errors"] += not ok
-            _stats["total_ms"] += ms
-            _stats["max_ms"] = max(_stats["max_ms"], ms)
-            _recent_ms.append(ms)
+        _stats["requests"] += 1
+        _stats["errors"] += not ok
+        _stats["total_ms"] += ms
+        _stats["max_ms"] = max(_stats["max_ms"], ms)
+        _recent_ms.append(ms)
         _stats["fresh"] = True
 
 
@@ -125,7 +139,7 @@ def _stats_line(force=False):
     def rank(q):
         return ordered[max(0, math.ceil(q * len(ordered)) - 1)]
     count, up = stats["requests"], int(time.monotonic() - _began)
-    return (f"[web] stats {count} req, {stats['errors']} err, {stats['timeouts']} timeout | "
+    return (f"[web] stats {count} req, {stats['errors']} err | "
             f"round trip ms avg {stats['total_ms'] / count:.1f} p50 {rank(.5):.1f} "
             f"p95 {rank(.95):.1f} max {stats['max_ms']:.1f} | up {up // 3600}:{up // 60 % 60:02d}:{up % 60:02d}")
 
@@ -137,163 +151,44 @@ def _stats_loop(stop):
             _say(line)
 
 
-def _health_request():
-    return {"id": uuid.uuid4().hex, "command": "health"}
-
-
-def _approved(probe):
-    return bool(probe.get("ok") and probe.get("result", {}).get("local_location", {}).get("approved"))
-
-
-def _watcher_info():
-    try:
-        info = json.loads((BRIDGE / "watcher.json").read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
-    return info if isinstance(info, dict) else {}
-
-
-def _watcher_current():
-    """Current only when the live watcher recorded the digest of today's hsr_bridge_watch.py."""
-    return _watcher_info().get("source_sha256") == watch._source_sha256()
-
-
-def _watcher_running():
-    """True while any process holds the watcher's OS singleton lock."""
-    try:
-        with watch._watcher_lock(BRIDGE / "watcher.lock"):
-            return False
-    except RuntimeError:
-        return True
-
-
-def _echo_engine(stream):
-    """Drain the watcher pipe until it closes, so the watcher never blocks on output."""
-    try:
-        for line in stream:
-            _say("[engine] " + line.rstrip())
-    except (OSError, ValueError):
-        pass
-
-
-def _spawn_watcher():
-    _discard_pending_shutdowns()
-    process = subprocess.Popen([sys.executable, "hsr_bridge_watch.py"], cwd=ROOT,
-        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        text=True, encoding="utf-8", errors="replace",
-        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
-        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-    threading.Thread(target=_echo_engine, args=(process.stdout,), name="hsr-engine-output", daemon=True).start()
-    _say(f"[web] spawned watcher pid {process.pid}")
-    return process
-
-
-def _fatal_shutdown(reason: str) -> None:
-    """The engine is gone and would not come back: stop serving instead of
-    answering every future request with the same failure forever. app.py
-    watches this process and closes the game window once it exits."""
-    if _shutting_down.is_set():
+def _advance_life_worlds(now, last_tick: dict[str, float]) -> None:
+    """Let active Floor One worlds advance through the host on their own."""
+    service = _host._run_service
+    if not _host.booted or service is None:
         return
-    _shutting_down.set()
-    _say(f"[web] stopping: {reason}")
-    if _server is not None:
-        threading.Thread(target=_server.shutdown, daemon=True).start()
+    for run_id, run in list(service._active.items()):
+        if not isinstance(run.context.get("life_world"), dict):
+            continue
+        previous = last_tick.get(run_id, now)
+        elapsed = int(now - previous)
+        if elapsed < LIFE_TICK_SECONDS:
+            continue
+        elapsed = min(elapsed, LIFE_TICK_SECONDS * 120)
+        result = _host.handle({"id": f"life-tick:{run_id}:{int(now)}", "command": "design_action",
+                               "run_id": run_id, "action": {"type": "world_tick", "elapsed_seconds": elapsed}})
+        if result.get("ok"):
+            last_tick[run_id] = now
+            _say(f"[web] life tick {run_id}: {elapsed}s")
+        else:
+            _say(f"[web] life tick failed {run_id}: {result.get('error', {}).get('code', 'unknown')}")
 
 
-def _watch_owned_engine(process):
-    """React the moment an owned watcher exits, instead of waiting for the
-    next request to time out. A deliberate shutdown already set the flag
-    below before the process could exit, so only an unexpected death (crash,
-    kill) reaches the recovery attempt here."""
-    process.wait()
-    if _shutting_down.is_set():
-        return
-    _say(f"[web] engine process pid={process.pid} ended unexpectedly "
-         f"(exit code {process.returncode}); attempting recovery")
-    try:
-        _recover_engine()
-    except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
-        _say(f"[web] engine recovery failed: {watch._clip(str(exc))}")
-        _fatal_shutdown(f"engine recovery failed: {exc}")
-        return
-    _say("[web] engine recovery complete")
+def _life_tick_loop(stop):
+    last_tick: dict[str, float] = {}
+    while not stop.wait(LIFE_TICK_SECONDS):
+        _advance_life_worlds(time.time(), last_tick)
 
 
-def _discard_pending_shutdowns():
-    """Remove control-plane shutdowns left behind by a previous web host."""
-    with _write_lock:
-        try:
-            lines = INBOX.read_bytes().splitlines(keepends=True)
-        except OSError:
-            return
-        kept = []
-        removed = 0
-        for line in lines:
-            try:
-                request = json.loads(line)
-            except (UnicodeDecodeError, ValueError):
-                kept.append(line)
-                continue
-            if isinstance(request, dict) and request.get("command") == "shutdown":
-                removed += 1
-            else:
-                kept.append(line)
-        if not removed:
-            return
-        temporary = INBOX.with_name(INBOX.name + ".startup")
-        try:
-            temporary.write_bytes(b"".join(kept))
-            os.replace(temporary, INBOX)
-        finally:
-            try:
-                temporary.unlink()
-            except FileNotFoundError:
-                pass
-        _say(f"[web] discarded {removed} stale shutdown request(s) before watcher start")
-
-
-def _reuse_watcher():
-    """True when a live watcher runs current code; an outdated one is shut down first."""
-    if _approved(_mailbox_request(_health_request(), timeout=PROBE_SECONDS)):
-        if _watcher_current():
-            return True
-    elif not _watcher_running():
-        return False  # nothing holds the singleton lock: start a fresh watcher
-    elif _watcher_current():
-        # Current code, just busy with a long command: wait rather than race its lock.
-        if _approved(_mailbox_request(_health_request(), timeout=STARTUP_SECONDS)):
-            return True
-        raise RuntimeError("HSR watcher holds the workspace lock but did not answer a health request")
-    _say("[web] running watcher predates the current hsr_bridge_watch.py; asking it to shut down")
-    # Expires with the wait: if this watcher is hung, the request must not
-    # linger in the inbox and stop the fresh watcher spawned next.
-    _mailbox_request({"id": uuid.uuid4().hex, "command": "shutdown",
-                      "expires_at": time.time() + STARTUP_SECONDS}, timeout=STARTUP_SECONDS)
-    deadline = time.monotonic() + 5
-    while _watcher_running():
-        if time.monotonic() >= deadline:
-            raise RuntimeError("outdated HSR watcher did not exit after a shutdown request")
-        time.sleep(0.05)
-    _say("[web] outdated watcher stopped")
-    return False
-
-
-def start_engine(hostless=False, data_root=None):
-    """Serialize startup/recovery so concurrent health requests cannot race
-    watcher metadata creation and shut down a freshly spawned watcher."""
+def start_engine(data_root=None):
+    """Serialize startup so a concurrent request cannot race host construction."""
     with _startup_lock:
-        return _start_engine(hostless, data_root=data_root)
+        return _start_engine(data_root=data_root)
 
 
-def _start_engine(hostless=False, data_root=None):
-    """Refresh owner evidence, then verify the singleton with a fresh roundtrip."""
-    global _watcher, _hostless
-    BRIDGE.mkdir(parents=True, exist_ok=True)
-    if hostless:
-        _hostless = HSRHost.from_options(data_root=data_root or ROOT / ".local")
-        _say("[web] engine: hostless in-process HSRHost, no watcher | local-check not used")
-        return
-    # The launcher's passing check covers the first start only; recovery re-runs it.
+def _start_engine(data_root=None):
+    global _host
+    # The launcher's passing check covers the first start only; a manual
+    # restart re-runs it.
     if os.environ.pop("HSR_LOCAL_CHECK_DONE", "") == "1":
         checked = "skipped (launcher already passed it)"
     else:
@@ -302,143 +197,33 @@ def _start_engine(hostless=False, data_root=None):
         if check.returncode:
             raise RuntimeError("HSR local-check failed: " + (check.stdout + check.stderr).strip())
         checked = "ran and passed"
-    # Probe an existing watcher before starting one. A stale log is not readiness.
-    if _reuse_watcher():
-        engine = f"watcher reused (pid {_watcher_info().get('pid', '?')})"
-    else:
-        _watcher = _spawn_watcher()
-        probe = _mailbox_request(_health_request(), timeout=STARTUP_SECONDS)
-        if not _approved(probe):
-            if _watcher.poll() is None:
-                _watcher.terminate()
-                _watcher.wait(timeout=5)
-            raise RuntimeError("HSR watcher did not answer a fresh health request")
-        if _watcher.poll() is not None:
-            _watcher = None  # A concurrent launcher won the OS singleton lock.
-            engine = f"watcher reused (pid {_watcher_info().get('pid', '?')}, concurrent launcher)"
-        else:
-            engine = f"watcher owned (pid {_watcher.pid})"
-            threading.Thread(target=_watch_owned_engine, args=(_watcher,),
-                              name="hsr-engine-watchdog", daemon=True).start()
-    poll = _watcher_info().get("poll_seconds", watch.POLL_SECONDS)
-    _startup.update(engine=engine, local_check=checked, poll_seconds=poll)
-    _say(f"[web] engine: {engine} | host update {poll}s | local-check {checked}")
+    _host = HSRHost.from_options(data_root=data_root or ROOT / ".local")
+    _startup.update(engine="in-process HSRHost", local_check=checked)
+    _say(f"[web] engine: in-process HSRHost | local-check {checked}")
 
 
-def _file_size(path):
-    try:
-        return path.stat().st_size
-    except OSError:
-        return 0
-
-
-def _tail_outbox(path, offset, request_id):
-    """Scan complete outbox lines past `offset`; return (matching reply or None, next offset)."""
-    size = _file_size(path)
-    if size < offset:
-        offset = 0  # truncated or replaced: everything in it is new
-    if size == offset:
-        return None, offset
-    try:
-        with path.open("rb") as stream:
-            stream.seek(offset)
-            chunk = stream.read()
-    except OSError:
-        return None, offset
-    end = chunk.rfind(b"\n")
-    if end < 0:
-        return None, offset  # a reply is still being written
-    for line in chunk[:end].split(b"\n"):
-        try:
-            row = json.loads(line)
-        except ValueError:
-            continue
-        if isinstance(row, dict) and row.get("id") == request_id:
-            return row, offset + end + 1
-    return None, offset + end + 1
-
-
-def _mailbox_request(request, timeout=35):
-    if _hostless is not None:
-        return _hostless.handle(request)
-    request_id = request["id"]
-    inbox, outbox = INBOX, OUTBOX
-    with _write_lock:
-        # A reply to this fresh id can only land after this point, so tail from here.
-        offset = _file_size(outbox)
-        with inbox.open("a", encoding="utf-8") as stream:
-            stream.write(json.dumps(request, ensure_ascii=False) + "\n")
-            stream.flush()
-    deadline = time.monotonic() + timeout
-    while True:
-        result, offset = _tail_outbox(outbox, offset, request_id)
-        if result is not None:
-            return result
-        if time.monotonic() >= deadline:
-            break
-        time.sleep(TAIL_SECONDS)
-    return {"id": request_id, "ok": False, "error": {"code": "ENGINE_TIMEOUT", "message": "Watcher did not answer; refresh before retrying an uncertain action"}}
-
-
-def _recover_engine():
-    """Restore the single watcher after a crash or an intentional shutdown."""
-    global _watcher
-    if _hostless is not None:
-        return
-    with _engine_lock:
-        probe = _mailbox_request({"id": uuid.uuid4().hex, "command": "health"}, timeout=1)
-        if probe.get("ok") and probe.get("result", {}).get("local_location", {}).get("approved"):
-            return
-        if _watcher is not None and _watcher.poll() is not None:
-            _watcher = None
-        start_engine(False)
-
-
-def request_engine(request, timeout=35):
-    """Send one request and self-heal the watcher without replaying uncertain writes."""
-    result = _mailbox_request(request, timeout=timeout)
-    if result.get("ok") or request.get("command") == "shutdown":
-        return result
-    if result.get("error", {}).get("code") != "ENGINE_TIMEOUT":
-        return result
-    command = watch._clip(request.get("command"), 60)
-    _record(0, timeout=True)
-    _say(f"[web] TIMEOUT {command}: no engine answer in {timeout}s; recovering engine")
-    try:
-        _recover_engine()
-    except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
-        _say(f"[web] engine recovery failed: {watch._clip(str(exc))}")
-        _fatal_shutdown(f"engine recovery failed: {exc}")
-        return {"id": request.get("id"), "ok": False, "error": {
-            "code": "ENGINE_RECOVERY_FAILED", "message": str(exc)}}
-    _say("[web] engine recovery complete")
-    if request.get("command") in SAFE_RETRY_COMMANDS:
-        _say(f"[web] retrying safe read {command} once")
-        retry = {**request, "id": uuid.uuid4().hex}
-        result = _mailbox_request(retry, timeout=timeout)
-        result["id"] = request.get("id")
-        return result
-    return {"id": request.get("id"), "ok": False, "error": {
-        "code": "ENGINE_RECOVERED_RETRY_REQUIRED",
-        "message": "The engine restarted after the request timed out. Retry the action once; it was not replayed automatically."}}
-
-
-def _engine(request, timeout=35, route="POST /api/host"):
-    """request_engine plus one IN line, one OUT line and a stats sample."""
-    command = watch._clip(request.get("command"), 60)
-    _say(f"[web] IN  {route} {watch._describe_request(request)}")
+def _engine(request, route="POST /api/host"):
+    command = _clip(request.get("command"), 60)
+    _say(f"[web] IN  {route} {_describe_request(request)}")
     began = time.perf_counter()
     try:
-        result = request_engine(request, timeout=timeout)
+        result = _host.handle(request)
     except Exception as exc:
         ms = (time.perf_counter() - began) * 1000
         _record(ms, ok=False)
-        _say(f"[web] OUT {route} {command} failed {type(exc).__name__}: {watch._clip(str(exc))} {ms:.1f}ms")
+        _say(f"[web] OUT {route} {command} failed {type(exc).__name__}: {_clip(str(exc))} {ms:.1f}ms")
         raise
     ms = (time.perf_counter() - began) * 1000
     ok = bool(result.get("ok"))
     _record(ms, ok=ok)
-    _say(f"[web] OUT {route} {command} {'ok' if ok else 'ERR ' + watch._error_text(result)} {ms:.1f}ms")
+    _say(f"[web] OUT {route} {command} {'ok' if ok else 'ERR ' + _error_text(result)} {ms:.1f}ms")
+    # design_turn/readout are sent through the narrator-safe capsule by
+    # default: it is the one thing standing between the browser and a raw
+    # dump of visible_state, which is debug/audit-only and never narrator
+    # source. A caller may opt out with an explicit "compact": false.
+    compact = request.get("compact", command in {"design_turn", "readout"})
+    if compact and command in {"design_turn", "readout"}:
+        return capsule(result, request=request)
     return result
 
 
@@ -587,8 +372,8 @@ class Handler(BaseHTTPRequestHandler):
         except self.NETWORK_ERRORS:
             pass  # the client went away mid-response; nothing left to send
         except Exception as exc:
-            _say(f"[web] ERROR GET {watch._clip(self.path)}: {type(exc).__name__}: {watch._clip(str(exc))}")
-            _say(watch._clip(traceback.format_exc(), 4000))
+            _say(f"[web] ERROR GET {_clip(self.path)}: {type(exc).__name__}: {_clip(str(exc))}")
+            _say(_clip(traceback.format_exc(), 4000))
             self._safe_error(500, "INTERNAL_ERROR", str(exc))
 
     def do_POST(self):
@@ -597,15 +382,15 @@ class Handler(BaseHTTPRequestHandler):
         except self.NETWORK_ERRORS:
             pass
         except Exception as exc:
-            _say(f"[web] ERROR POST {watch._clip(self.path)}: {type(exc).__name__}: {watch._clip(str(exc))}")
-            _say(watch._clip(traceback.format_exc(), 4000))
+            _say(f"[web] ERROR POST {_clip(self.path)}: {type(exc).__name__}: {_clip(str(exc))}")
+            _say(_clip(traceback.format_exc(), 4000))
             self._safe_error(500, "INTERNAL_ERROR", str(exc))
 
     def _handle_client_log(self):
         """Sink for browser-side errors, so a client-only crash still shows up
         in this console instead of only in DevTools no one has open."""
         if not self._trusted_origin():
-            _say(f"[web] 403 POST {watch._clip(self.path)}")
+            _say(f"[web] 403 POST {_clip(self.path)}")
             self.send_error(403)
             return
         try:
@@ -619,14 +404,14 @@ class Handler(BaseHTTPRequestHandler):
             self._safe_error(400, "INVALID_REQUEST", str(exc))
             return
         level = payload.get("level") if payload.get("level") in {"error", "warn"} else "error"
-        message = watch._clip(payload.get("message", ""), 500)
-        where = watch._clip(payload.get("where", ""), 200)
+        message = _clip(payload.get("message", ""), 500)
+        where = _clip(payload.get("where", ""), 200)
         _say(f"[client] {level}: {message}" + (f" ({where})" if where else ""))
         self._json({"ok": True})
 
     def _route_get(self):
         if not self._trusted_origin():
-            _say(f"[web] 403 GET {watch._clip(self.path)}")
+            _say(f"[web] 403 GET {_clip(self.path)}")
             self.send_error(403)
             return
         route = urlsplit(self.path)
@@ -651,15 +436,15 @@ class Handler(BaseHTTPRequestHandler):
             return
         if route.path == "/api/affixes":
             self._json(_engine({"id": "http-get-" + uuid.uuid4().hex,
-                                "command": "affix_catalog"}, timeout=5, route="GET /api/affixes"))
+                                "command": "affix_catalog"}, route="GET /api/affixes"))
             return
         if route.path == "/api/content":
             self._json(_engine({"id": "http-get-" + uuid.uuid4().hex,
-                                "command": "content_catalog"}, timeout=10, route="GET /api/content"))
+                                "command": "content_catalog"}, route="GET /api/content"))
             return
         if route.path == "/api/capabilities":
             self._json(_engine({"id": "http-get-" + uuid.uuid4().hex, "command": "inspect",
-                                "target": "capabilities"}, timeout=5, route="GET /api/capabilities"))
+                                "target": "capabilities"}, route="GET /api/capabilities"))
             return
         if route.path in {"/api/health", "/api/readout"}:
             request = {"id": "http-get-" + uuid.uuid4().hex, "command": "health"}
@@ -671,8 +456,7 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 request.update(command="readout", run_id=run_id, public_only=True, compact=False)
             try:
-                result = _engine(request, timeout=5 if request["command"] == "health" else 35,
-                                 route="GET " + route.path)
+                result = _engine(request, route="GET " + route.path)
             except OSError:
                 result = {"ok": False, "error": {"code": "ENGINE_UNAVAILABLE"}}
             self._json(result, 200 if result.get("ok") else 503)
@@ -690,7 +474,7 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError:
                 pass
         if rel is None or not (ROOT / rel).is_file():
-            _say(f"[web] 404 GET {watch._clip(self.path)}")
+            _say(f"[web] 404 GET {_clip(self.path)}")
             self.send_error(404)
             return
         path = ROOT / rel
@@ -715,11 +499,11 @@ class Handler(BaseHTTPRequestHandler):
             self._hosted_request()
             return
         if self.path != "/api/host":
-            _say(f"[web] 404 POST {watch._clip(self.path)}")
+            _say(f"[web] 404 POST {_clip(self.path)}")
             self.send_error(404)
             return
         if not self._trusted_origin():
-            _say(f"[web] 403 POST {watch._clip(self.path)}")
+            _say(f"[web] 403 POST {_clip(self.path)}")
             self.send_error(403)
             return
         request_id = None
@@ -737,7 +521,9 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError("Request requires a nonempty string id of at most 256 characters")
             if not isinstance(request.get("command"), str):
                 raise ValueError("Request requires a command")
-            # Unique mailbox IDs avoid collisions between CLI/MCP/browser sessions.
+            # A fresh internal id per call keeps concurrent CLI/MCP/browser
+            # callers that reuse the same client-side id from colliding in
+            # the console log or in any host-side per-id bookkeeping.
             wire = {**request, "id": "http-" + uuid.uuid4().hex}
             result = _engine(wire)
             result["id"] = request_id
@@ -747,7 +533,7 @@ class Handler(BaseHTTPRequestHandler):
                 _shutting_down.set()
                 threading.Thread(target=self.server.shutdown, daemon=True).start()
         except (ValueError, OSError) as exc:
-            _say(f"[web] POST /api/host rejected INVALID_REQUEST: {watch._clip(str(exc))}")
+            _say(f"[web] POST /api/host rejected INVALID_REQUEST: {_clip(str(exc))}")
             result = {"id": request_id, "ok": False, "error": {"code": "INVALID_REQUEST", "message": str(exc)}}
         data = json.dumps(result).encode("utf-8")
         self.send_response(200)
@@ -781,23 +567,22 @@ class LoopbackServer(ThreadingHTTPServer):
             _say(f"[web] client {client_address} disconnected mid-request")
             return
         _say(f"[web] ERROR handling request from {client_address}:")
-        _say(watch._clip(traceback.format_exc(), 4000))
+        _say(_clip(traceback.format_exc(), 4000))
 
 
 def main():
     global _server
     parser = argparse.ArgumentParser(description="Hollow Star loopback web host")
-    parser.add_argument("--hostless", action="store_true",
-                        help="serve the UI with an in-process HSRHost and no watcher")
     parser.add_argument("--data-root", type=Path, default=ROOT / ".local",
-                        help="override host data in --hostless mode (useful for isolated runs and tests)")
+                        help="override host data root (useful for isolated runs and tests)")
     parser.add_argument("--port", type=int, default=int(os.environ.get("HSR_WEB_PORT", "8765")),
                         help="loopback port (default: HSR_WEB_PORT or 8765)")
     args = parser.parse_args()
     began = time.monotonic()
     try:
         try:
-            # Bind before launching anything so a second web launcher cannot orphan a watcher.
+            # Bind before booting the engine so a second web launcher cannot
+            # race this one for the port.
             server = LoopbackServer(("127.0.0.1", args.port), Handler)
         except OSError as exc:
             _say(f"[web] could not bind port {args.port}: {exc}")
@@ -806,12 +591,13 @@ def main():
             return 1
         _server = server
         with server:
-            start_engine(args.hostless, data_root=args.data_root)
-            _say(f"HSR 2D client + shared watcher: http://127.0.0.1:{args.port}")
+            start_engine(data_root=args.data_root)
+            _say(f"HSR 2D client: http://127.0.0.1:{args.port}")
             _say(f"[web] ready on port {server.server_port} in {(time.monotonic() - began) * 1000:.0f} ms"
                  f" | stats every {STATS_SECONDS}s while active")
             stop = threading.Event()
             threading.Thread(target=_stats_loop, args=(stop,), name="hsr-stats", daemon=True).start()
+            threading.Thread(target=_life_tick_loop, args=(stop,), name="hsr-life-tick", daemon=True).start()
             try:
                 server.serve_forever()
             except KeyboardInterrupt:
@@ -823,13 +609,6 @@ def main():
                 final = _stats_line(force=True)
                 if final:
                     _say(final)
-                if _watcher and _watcher.poll() is None:
-                    _say("HSR server stopping watcher")
-                    _watcher.terminate()
-                    try:
-                        _watcher.wait(timeout=5)
-                    except subprocess.TimeoutExpired:
-                        _watcher.kill()
                 _say("HSR server stopped")
     finally:
         _flush_console()

@@ -3,20 +3,13 @@
 Speaks the Model Context Protocol (stdio transport: newline-delimited JSON-RPC
 2.0) directly, using only the standard library -- no `mcp` pip package, no
 new dependency, same "pure Python" posture as the rest of this engine. It is a
-thin adapter, exactly like hsr_bridge_watch.py: it does no dice/rules math of
-its own, and only ever calls into the existing HSRHost. Every tool result
-carries the host's own structured JSON verbatim, so narrate only what comes
-back -- never invent rolls, hidden state, or divine dialogue.
+thin adapter: it does no dice/rules math of its own, and only ever calls into
+the existing HSRHost. Every tool result carries the host's own structured
+JSON verbatim, so narrate only what comes back -- never invent rolls, hidden
+state, or divine dialogue.
 
-Why this exists (vs. the phone_bridge JSONL mailbox)
-------------------------------------------------------
-hsr_bridge_watch.py is a polling mailbox: a client appends to inbox.jsonl and
-waits, at 0.12-second granularity (the watcher's host update interval), for a
-matching line in outbox.jsonl. That
-works, but only while somebody remembers to double-click the watcher first,
-and it never gives an MCP client (Claude Desktop, or any MCP-aware Codex
-build) a first-class tool-call surface.
-
+Why this exists
+----------------
 This process, once registered as a local MCP server with a client that runs
 ON THIS DESKTOP, is spawned by that client as a native Windows subprocess --
 so it inherits the real workspace path and clears HSRHost's own location

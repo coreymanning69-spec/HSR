@@ -15,7 +15,7 @@ async function request(base,command,fields={}){const response=await fetch(base+'
   try{
     assert(fs.existsSync(python),`Python runtime not found: ${python}`);
     const port=await freePort(),base=hostBase=`http://127.0.0.1:${port}`;
-    child=spawn(python,[path.join(root,'hollowstar_web_server.py'),'--hostless','--data-root',path.join(temp,'.local'),'--port',String(port)],{cwd:root,stdio:['ignore','pipe','pipe']});
+    child=spawn(python,[path.join(root,'hollowstar_web_server.py'),'--data-root',path.join(temp,'.local'),'--port',String(port)],{cwd:root,stdio:['ignore','pipe','pipe']});
     let logs='';child.stdout.on('data',chunk=>logs+=chunk);child.stderr.on('data',chunk=>logs+=chunk);
     let ready=false;for(let i=0;i<100;i++){if(child.exitCode!==null)throw Error(`isolated host exited early:\n${logs}`);try{const response=await fetch(base+'/api/health');if(response.ok){ready=true;break;}}catch{}await wait(100);}
     assert(ready,`isolated host did not become ready:\n${logs}`);

@@ -1,4 +1,4 @@
-"""Optional loopback transport to the existing webhost/watcher; no local engine."""
+"""Optional loopback transport to the existing webhost; no local engine."""
 from __future__ import annotations
 
 import json

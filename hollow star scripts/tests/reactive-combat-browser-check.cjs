@@ -41,7 +41,7 @@ save_run(run, run_id + '-manual', data / 'reliquary_runs' / f'{run_id}-manual.js
 `});assert.equal(seed.status,0,seed.stderr);
   const s=net.createServer();s.listen(0,'127.0.0.1');await new Promise(r=>s.once('listening',r));const port=s.address().port;await new Promise(r=>s.close(r));
   const base=`http://127.0.0.1:${port}`;
-  child=spawn(python,['-B',path.join(root,'hollowstar_web_server.py'),'--hostless','--data-root',data,'--port',String(port)],{cwd:root,stdio:['ignore','pipe','pipe'],env:{...process.env,PYTHONIOENCODING:'utf-8'}});
+  child=spawn(python,['-B',path.join(root,'hollowstar_web_server.py'),'--data-root',data,'--port',String(port)],{cwd:root,stdio:['ignore','pipe','pipe'],env:{...process.env,PYTHONIOENCODING:'utf-8'}});
   child.stdout.on('data',c=>logs+=c);child.stderr.on('data',c=>logs+=c);
   for(let i=0;i<150;i++){if(child.exitCode!==null)throw Error(logs);try{if((await fetch(base+'/api/health')).ok)break;}catch{}await delay(100);}
   browser=await launch();

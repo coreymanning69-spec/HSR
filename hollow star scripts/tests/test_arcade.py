@@ -117,13 +117,6 @@ class ArcadeTest(unittest.TestCase):
         self.assertIsNone(entered["state"].get("arcade"))
         self.assertIsNotNone(entered["state"].get("combat"))
 
-    def test_bridge_marks_arcade_actions_as_non_turn_updates(self):
-        from hsr_bridge_watch import _is_arcade_action
-
-        self.assertTrue(_is_arcade_action({"action": {"type": "arcade_tick"}}))
-        self.assertTrue(_is_arcade_action({"action": {"type": "arcade_set_movement_mode"}}))
-        self.assertFalse(_is_arcade_action({"action": {"type": "end_turn"}}))
-
     def test_jump_rises_then_lands_back_to_run(self):
         run_id, _ = self.start_room()
         self.service.design_action(run_id, {

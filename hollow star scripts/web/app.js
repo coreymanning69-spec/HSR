@@ -5216,7 +5216,6 @@ function championAbilities() {
   return resourceSheet(actor()) + card('Champion abilities', `<p class="notice">Host-reported options for ${E(actor().name || 'the selected champion')}. The host still decides when each option is legal and what it does.</p><div class="ability-option-grid">${options.map(option => `<details class="ability-option"><summary><strong>${E(option.label || option.id)}</strong><small>${E(option.kind || 'ability')} · ${E(option.phase || 'available')}</small></summary><p>${E(option.phase === 'social check' ? 'Available during a host-resolved social check.' : 'Available when the relevant host encounter or exploration state opens.')}</p></details>`).join('')}</div>`);
 }
 function bind() {
-  document.querySelectorAll('[data-action=\"champion-rehearsal\"]').forEach(n => n.onclick = beginChampionRehearsal);
   document.querySelectorAll('#engine-help').forEach(n => n.ontoggle = event => { state.engineHelpOpen = event.currentTarget.open; });
   const app = document.querySelector('#app');
   const tooltipSelector = '[data-tooltip],[data-tooltip-rich]';
@@ -5691,7 +5690,8 @@ function bind() {
   window.onkeydown = event => {
     if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) { event.preventDefault(); openContextAt(document.activeElement || app); return; }
     if (event.defaultPrevented) return;
-    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName) && !['Escape', 'F11'].includes(event.key)) return;
+    const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+    if (typing && !['Escape', 'F11'].includes(event.key)) return;
     if (event.key === 'F11') {
       event.preventDefault();
       toggleFullscreen();
@@ -5731,6 +5731,8 @@ function bind() {
       if (state.contextMenu || document.querySelector('#hsr-tooltip')) { dismissContextMenu(); hideTooltip(); return; }
       const openDialog = document.querySelector('dialog[open]');
       if (openDialog) { openDialog.close(); return; }
+      // Escape in a text field only leaves the field; the System menu needs a second press.
+      if (typing) { document.activeElement.blur(); return; }
       if (state.phase === 'ready') { state.systemMenuOpen = true; render(); return; }
     }
   };
@@ -5886,6 +5888,7 @@ function bind() {
   });
   document.querySelectorAll('[data-action]').forEach(node => node.onclick = async () => {
     const action = node.dataset.action;
+    if (action === 'champion-rehearsal') { await beginChampionRehearsal(); return; }
     if (action.startsWith('set-action-mode:')) {
       state.preferences.actionMode = action.slice('set-action-mode:'.length);
       savePreferences();

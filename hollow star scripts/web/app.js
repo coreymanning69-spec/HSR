@@ -590,6 +590,12 @@ function disconnectOverlay() {
 }
 function mobileNavigation() {
   if (state.phase !== 'ready') return '';
+  // Turn-based combat has its own command set and no "back a screen" concept
+  // mid-turn, so the generic Back/collapsible-Actions chrome is dropped in
+  // favor of the tactical controls, shown inline and already open.
+  if (tacticalActive(state.view)) {
+    return `<nav class="mobile-game-nav global-action-footer combat-action-footer" aria-label="Combat actions">${actionBar()}</nav>`;
+  }
   return `<nav class="mobile-game-nav global-action-footer" aria-label="Screen actions"><button type="button" class="mobile-nav-item" data-action="back" aria-label="Go back"><span aria-hidden="true">‹</span><span>Back</span></button>${actionBar()}</nav>`;
 }
 function partyHud() {
@@ -4037,6 +4043,62 @@ async function engineSubmit(type, target = null, label = '') {
   });
   return true;
 }
+// The one front door for "the player chose action `id`", from any entry
+// point (a [data-engine-action] click, a digit hotkey, or a future combat/
+// turn-flow controller): decide whether it needs a target picker or can
+// submit immediately, and do it. Exploration actions have no tactical turn
+// economy, so this submits directly via designTurn rather than through
+// engineSubmit (which requires myTacticalTurn() and is combat-only).
+async function dispatchAction(id, {label = ''} = {}) {
+  state.engineHelpOpen = false;
+  if (id === 'cast') {
+    await work(async () => {
+      const reply = result(await state.client.request('spell_catalog', {run_id: state.runId}));
+      const spells = reply.result?.spells || [];
+      state.spellPicker = {spells, id: spells.find(row => row.display_name === 'Magic Missile')?.id || spells[0]?.id,
+        actor: encounterStepActor() || actor().id};
+    });
+    return;
+  }
+  if (id === 'idle_tick') {
+    if (!floorOneWorld()) { selectGameplayScreen('room'); render(); return; }
+    await work(async () => {
+      result(await state.client.idleTick(state.runId, 1));
+      selectGameplayScreen('journey');
+      state.note = state.receipt?.pause ? `Idle paused: ${state.receipt.pause.message}` : 'Idle advanced one safe step.';
+      render();
+    });
+    return;
+  }
+  if (id === 'resolve_reaction' || id === 'decline_reaction') {
+    const window = (state.view?.combat?.pending || []).find(row => String(row.reactor || '').startsWith('p')) || state.view?.combat?.pending?.[0];
+    if (!window) { fail('No reaction window is open.'); return; }
+    const defense = (window.options || [])[0];
+    const fields = id === 'resolve_reaction' && defense
+      ? {type: 'reaction', actor: window.reactor, defense}
+      : {type: 'decline_reaction', actor: window.reactor};
+    await work(async () => {
+      result(await state.client.designAction(state.runId, fields));
+      await loadReadout(state.runId);
+      state.note = fields.type === 'reaction' ? `${defense} reaction submitted to the host.` : 'Reaction declined through the host.';
+      addMessage(state.note);
+    });
+    return;
+  }
+  if (id === 'attack' && state.preferences.combat.attackUsesFocus && attackFocused()) return;
+  if (['inspect', 'inspect_object', 'search_object', 'open_object', 'take', 'talk', 'attack', 'move', 'move_room', 'enter',
+    ...CONTEXTUAL_TARGETED, 'decant'].includes(id) || id.startsWith('maneuver_')) {
+    state.actionPicker = {action: id, label: label || id};
+    render();
+    return;
+  }
+  await work(async () => {
+    const reply = await state.client.designTurn(state.runId, label || id, {type: id, actor: actingActorId()});
+    result(reply);
+    state.note = `${label || id} submitted to the engine.`;
+    addMessage(state.note);
+  });
+}
 function clickEngineButton(id) {
   const node = [...document.querySelectorAll(`[data-engine-action="${CSS.escape(id)}"]`)].find(button => !button.disabled);
   if (node) { node.click(); return true; }
@@ -4642,6 +4704,25 @@ function mountArcade() {
     updateArcadeStatus();
   }
 }
+// The Tactical Menu's command tree — shared by the combat-forced inline
+// layout and the exploration-time "Tactical Menu" mode chip.
+function renderTacticalContent(actions) {
+  const attackAction = actions.find(a => (a.id || a.action || a.type) === 'attack');
+  const moveAction = actions.find(a => (a.id || a.action || a.type) === 'move');
+  const castAction = actions.find(a => (a.id || a.action || a.type) === 'cast');
+  const endAction = actions.find(a => (a.id || a.action || a.type) === 'end_turn');
+
+  const maneuvers = actions.filter(a => a.category === 'tactical' || a.category === 'maneuver');
+
+  return `<div class="tactical-command-tree">
+    <button type="button" class="tactical-command-btn" data-engine-action="attack" data-hotkey="1" ${attackAction ? '' : 'disabled'}><span style="font-size:18px;">⚔️</span><span>Attack [1]</span></button>
+    <button type="button" class="tactical-command-btn" data-engine-action="move" data-hotkey="2" ${moveAction ? '' : 'disabled'}><span style="font-size:18px;">⇢</span><span>Move [2]</span></button>
+    <button type="button" class="tactical-command-btn" data-engine-action="cast" data-hotkey="3" ${castAction ? '' : 'disabled'}><span style="font-size:18px;">✧</span><span>Magic [3]</span></button>
+    <button type="button" class="tactical-command-btn" data-action="toggle-bookbag"><span style="font-size:18px;">🎒</span><span>Items [I]</span></button>
+    ${maneuvers.length ? `<button type="button" class="tactical-command-btn" data-engine-action="${E(maneuvers[0].id || maneuvers[0].type)}" data-hotkey="4"><span style="font-size:18px;">⚡</span><span>Maneuver [4]</span></button>` : ''}
+    <button type="button" class="tactical-command-btn" data-engine-action="end_turn" ${endAction ? '' : 'disabled'} style="border-color:var(--gold);"><span style="font-size:18px;">⏳</span><span>End Turn [Space]</span></button>
+  </div>`;
+}
 function actionBar() {
   if (state.phase !== 'ready') return '';
   // A life action never degrades into an empty affordance set; the host's type, label, and category are preserved.
@@ -4657,6 +4738,13 @@ function actionBar() {
   });
   if (!state.runId) return '';
 
+  // Turn-based combat forces the Tactical layout inline (no popup, no mode
+  // switcher) regardless of the player's exploration-mode preference: the
+  // other three modes have no wiring for combat's turn economy/targeting.
+  if (tacticalActive()) {
+    return `<div class="hsr-dock-container combat-inline">${renderTacticalContent(actions)}</div>`;
+  }
+
   const activeMode = state.preferences.actionMode || 'unified';
 
   const modeChips = [
@@ -4671,27 +4759,13 @@ function actionBar() {
   let contentHtml = '';
 
   if (activeMode === 'tactical') {
-    const attackAction = actions.find(a => (a.id || a.action || a.type) === 'attack');
-    const moveAction = actions.find(a => (a.id || a.action || a.type) === 'move');
-    const castAction = actions.find(a => (a.id || a.action || a.type) === 'cast');
-    const endAction = actions.find(a => (a.id || a.action || a.type) === 'end_turn');
-
-    const maneuvers = actions.filter(a => a.category === 'tactical' || a.category === 'maneuver');
-
-    contentHtml = `<div class="tactical-command-tree">
-      <button type="button" class="tactical-command-btn" data-engine-action="attack" ${attackAction ? '' : 'disabled'}><span style="font-size:18px;">⚔️</span><span>Attack [1]</span></button>
-      <button type="button" class="tactical-command-btn" data-engine-action="move" ${moveAction ? '' : 'disabled'}><span style="font-size:18px;">⇢</span><span>Move [2]</span></button>
-      <button type="button" class="tactical-command-btn" data-engine-action="cast" ${castAction ? '' : 'disabled'}><span style="font-size:18px;">✧</span><span>Magic [3]</span></button>
-      <button type="button" class="tactical-command-btn" data-action="toggle-bookbag"><span style="font-size:18px;">🎒</span><span>Items [I]</span></button>
-      ${maneuvers.length ? `<button type="button" class="tactical-command-btn" data-engine-action="${E(maneuvers[0].id || maneuvers[0].type)}"><span style="font-size:18px;">⚡</span><span>Maneuver [4]</span></button>` : ''}
-      <button type="button" class="tactical-command-btn" data-engine-action="end_turn" ${endAction ? '' : 'disabled'} style="border-color:var(--gold);"><span style="font-size:18px;">⏳</span><span>End Turn [Space]</span></button>
-    </div>`;
+    contentHtml = renderTacticalContent(actions);
   } else if (activeMode === 'contextual') {
     const topActions = actions.slice(0, 6);
     contentHtml = `<div class="actions" style="padding:10px;justify-content:center;flex-wrap:wrap;">${topActions.map((row, idx) => {
       const id = row.id || row.action || row.type;
       const cost = row.cost && row.cost !== 'free' ? ` · ${String(row.cost).replaceAll('_', ' ')}` : '';
-      return `<button class="action engine-action" data-engine-action="${E(id)}" title="${E((row.help || FLAVOR.actions[id] || row.label || id) + cost)}"><span class="action-glyph" aria-hidden="true">${E(ACTION_ICONS[id] || '·')}</span><span class="action-text">${E(row.label || id)}</span><span class="hotkey-badge">${idx + 1}</span></button>`;
+      return `<button class="action engine-action" data-engine-action="${E(id)}" data-hotkey="${idx + 1}" title="${E((row.help || FLAVOR.actions[id] || row.label || id) + cost)}"><span class="action-glyph" aria-hidden="true">${E(ACTION_ICONS[id] || '·')}</span><span class="action-text">${E(row.label || id)}</span><span class="hotkey-badge">${idx + 1}</span></button>`;
     }).join('')}</div>`;
   } else if (activeMode === 'console') {
     contentHtml = `<form class="inline-console-mode" id="inline-action-console" onsubmit="event.preventDefault();"><input type="text" id="inline-console-input" placeholder="Type command (e.g. 'attack e0', 'move 10,10', 'cast shield', 'end turn')..." autocomplete="off"><button type="submit" class="action primary" style="min-height:36px;padding:6px 14px;">Execute [Enter]</button></form>`;
@@ -4711,7 +4785,8 @@ function actionBar() {
       const id = row.id || row.action || row.type;
       const cost = row.cost && row.cost !== 'free' ? ` · ${String(row.cost).replaceAll('_', ' ')}` : '';
       const hotkey = id === 'end_turn' ? 'Space' : actionIndex <= 9 ? String(actionIndex++) : '';
-      return `<button class="action engine-action" data-engine-action="${E(id)}" title="${E((row.help || FLAVOR.actions[id] || row.label || id) + cost)}"><span class="action-glyph" aria-hidden="true">${E(ACTION_ICONS[id] || '·')}</span><span class="action-text">${E(row.label || id)}</span>${hotkey ? `<span class="hotkey-badge">${hotkey}</span>` : ''}</button>`;
+      const hotkeyAttr = /^[1-9]$/.test(hotkey) ? ` data-hotkey="${hotkey}"` : '';
+      return `<button class="action engine-action" data-engine-action="${E(id)}"${hotkeyAttr} title="${E((row.help || FLAVOR.actions[id] || row.label || id) + cost)}"><span class="action-glyph" aria-hidden="true">${E(ACTION_ICONS[id] || '·')}</span><span class="action-text">${E(row.label || id)}</span>${hotkey ? `<span class="hotkey-badge">${hotkey}</span>` : ''}</button>`;
     }).join('')}`).join('');
 
     contentHtml = `<nav class="engine-action-bar" data-panel="actions" aria-label="Engine actions">${buttons}<button type="button" class="action secondary engine-help-print" data-action="help-print" title="Print what each action does, and the console commands, into the log">Print help to log</button></nav>`;
@@ -5725,11 +5800,12 @@ function bind() {
       if (firstAction) { firstAction.click(); return; }
     }
     if (event.key >= '1' && event.key <= '9') {
-      const idx = Number(event.key);
-      const btns = [...document.querySelectorAll('.engine-action:not(:disabled), .tactical-command-btn:not(:disabled)')];
-      if (btns[idx - 1]) {
+      // Read the hotkey the render assigned (data-hotkey) rather than
+      // re-deriving DOM order, so this can't desync from the badge shown.
+      const node = document.querySelector(`[data-hotkey="${event.key}"]:not(:disabled)`);
+      if (node) {
         event.preventDefault();
-        btns[idx - 1].click();
+        node.click();
         return;
       }
     }
@@ -6303,62 +6379,8 @@ function bind() {
     else if (key === 'showActionDock' || key === 'showStatusMessages' || key === 'showTickIndicator') state.preferences[key] = node.checked;
     savePreferences(); render();
   });
-  document.querySelectorAll('[data-engine-action]').forEach(node => node.onclick = async () => {
-    const action = node.dataset.engineAction;
-    if (action === 'cast') {
-      await work(async () => {
-        const reply = result(await state.client.request('spell_catalog', {run_id: state.runId}));
-        const spells = reply.result?.spells || [];
-        state.spellPicker = {spells, id: spells.find(row => row.display_name === 'Magic Missile')?.id || spells[0]?.id,
-          actor: encounterStepActor() || actor().id};
-      });
-      return;
-    }
-    if (action === 'idle_tick') {
-      if (!floorOneWorld()) { selectGameplayScreen('room'); render(); return; }
-      await work(async () => {
-        result(await state.client.idleTick(state.runId, 1));
-      selectGameplayScreen('journey');
-        state.note = state.receipt?.pause ? `Idle paused: ${state.receipt.pause.message}` : 'Idle advanced one safe step.';
-        render();
-      });
-      return;
-    }
-    // The host's affordance ids for a reaction window are labels, not action
-    // types: resolving is {type:'reaction', defense} and declining is
-    // {type:'decline_reaction'}, both from the window's reactor.
-    if (action === 'resolve_reaction' || action === 'decline_reaction') {
-      const window = (state.view?.combat?.pending || []).find(row => String(row.reactor || '').startsWith('p')) || state.view?.combat?.pending?.[0];
-      if (!window) { fail('No reaction window is open.'); return; }
-      const defense = (window.options || [])[0];
-      const fields = action === 'resolve_reaction' && defense
-        ? {type: 'reaction', actor: window.reactor, defense}
-        : {type: 'decline_reaction', actor: window.reactor};
-      await work(async () => {
-        result(await state.client.designAction(state.runId, fields));
-        await loadReadout(state.runId);
-        state.note = fields.type === 'reaction' ? `${defense} reaction submitted to the host.` : 'Reaction declined through the host.';
-        addMessage(state.note);
-      });
-      return;
-    }
-    if (action === 'attack' && state.preferences.combat.attackUsesFocus && attackFocused()) return;
-    if (['inspect', 'inspect_object', 'search_object', 'open_object', 'take', 'talk', 'attack', 'move', 'move_room', 'enter',
-      ...CONTEXTUAL_TARGETED, 'decant'].includes(action) || action.startsWith('maneuver_')) {
-      state.engineHelpOpen = false;
-      state.actionPicker = {action, label: node.querySelector('.action-text')?.textContent || action};
-      render();
-      return;
-    }
-    state.engineHelpOpen = false;
-    await work(async () => {
-      const label = node.querySelector('.action-text')?.textContent || action;
-      const reply = await state.client.designTurn(state.runId, label, {type: action, actor: actingActorId()});
-      result(reply);
-      state.note = `${node.querySelector('.action-text')?.textContent || action} submitted to the engine.`;
-      addMessage(state.note);
-    });
-  });
+  document.querySelectorAll('[data-engine-action]').forEach(node => node.onclick = () =>
+    dispatchAction(node.dataset.engineAction, {label: node.querySelector('.action-text')?.textContent || node.dataset.engineAction}));
   document.querySelectorAll('[data-action^="target-choice:"]').forEach(node => node.onclick = async () => {
     const parts = node.dataset.action.split(':');
     await submitTarget(parts[1], parts[2], parts.slice(3).join(':'), node.textContent.trim());

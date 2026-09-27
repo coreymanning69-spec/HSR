@@ -2624,8 +2624,26 @@ dialog#examine-dialog::backdrop {
 .global-action-footer .engine-help>summary::-webkit-details-marker{display:none}
 .global-action-footer{position:relative}
 .global-action-footer::before{content:'';position:absolute;top:8px;bottom:8px;left:50%;width:1px;background:var(--line)}
-.global-action-footer .engine-help{display:flex;min-width:0}
-.global-action-footer .engine-help[open]>.hsr-dock-container{padding:16px;border:1px solid var(--gold-a20);border-radius:16px;background:rgba(var(--surface-rgb),.97);box-shadow:0 16px 48px #0009;max-height:60vh;overflow:auto}
+.global-action-footer .engine-help{position:relative;display:flex;min-width:0}
+/* Anchor the popup upward from the fixed bottom bar (mirrors the .hsr-dock
+   widget's own anchor-upward rule below), instead of letting it expand
+   downward in normal flow, off the bottom of the viewport. The combat
+   variant (no <details>, always visible) reuses the exact same panel look. */
+.global-action-footer .engine-help[open]>.hsr-dock-container,
+.global-action-footer.combat-action-footer>.hsr-dock-container{
+  position:absolute;right:8px;left:8px;bottom:calc(100% + 8px);
+  padding:16px;border:1px solid var(--gold-a20);border-radius:16px;
+  background:rgba(var(--surface-rgb),.97);box-shadow:0 16px 48px #0009;
+  max-height:min(60vh,560px);overflow:auto;
+}
+/* The @media(max-width:720px) .engine-action-bar{flex-wrap:nowrap;overflow-x:auto}
+   rule above is meant for the docked widget's horizontal strip; inside this
+   footer popup (which already scrolls vertically) it hid most row labels
+   behind an unlabeled horizontal scroller. Restore wrapping here specifically. */
+@media(max-width:720px){
+  .global-action-footer .engine-action-bar{flex-wrap:wrap;overflow-x:visible}
+  .global-action-footer .engine-action{flex:1 1 140px}
+}
 
 .location-details{position:absolute;top:72px;left:16px;z-index:20;width:min(360px,calc(100% - 32px));max-height:65%;overflow:auto;padding:18px;border:1px solid var(--gold-a20);border-radius:14px;background:rgba(var(--surface-rgb),.97);box-shadow:0 12px 40px #0008}
 .scene-frame-label[data-action]{cursor:pointer;pointer-events:auto}

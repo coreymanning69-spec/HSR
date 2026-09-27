@@ -5102,6 +5102,7 @@ async function withSandboxRecovery(attempt) {
     if (created) {
       result(await state.client.designStart(created));
       state.runId = created;
+      state.route = ['title'];
       await loadReadout(created);
       await state.afterRunStart?.();
     } else await attempt();
@@ -5158,6 +5159,11 @@ async function beginChampionRun(name, startingLocation = 'market') {
       ...(mode === 'FORGE' ? {module_id: 'reliquary-template'} : {}),
     }));
     state.runId = runId;
+    // A run actually starting discards the party-select/create/entry-select
+    // trail behind it -- none of those screens are valid to return to once a
+    // lead is locked in and the descent is underway, so Back from gameplay
+    // must not be able to walk back into them.
+    state.route = ['title'];
     await initializeRunScene(mode, runId);
     await loadReadout(runId);
     if (scenario === 'reliquary_city') {
@@ -5181,6 +5187,10 @@ async function beginCustomRun(profileId, startingLocation = 'market') {
       ...(mode === 'FORGE' ? {module_id: 'reliquary-template'} : {}),
     }));
     state.runId = runId;
+    // See beginChampionRun: once the custom lead's descent actually begins,
+    // Back must never be able to walk back into the workshop/lead-select
+    // screens behind it -- they're finished business, not undo history.
+    state.route = ['title'];
     await initializeRunScene(mode, runId);
     await loadReadout(runId);
     if (scenario === 'reliquary_city') {

@@ -2614,8 +2614,17 @@ dialog#examine-dialog::backdrop {
 
 /* The host command line stays above navigation and action disclosures. */
 #app.app-shell>.hsr-command-bar{z-index:250;bottom:calc(var(--frame-bottombar-h) + 16px)}
-.global-action-footer .engine-help>summary{display:flex;flex-direction:row;gap:8px;padding:10px 18px;border:1px solid var(--gold-a20);border-radius:12px;background:rgba(var(--surface-rgb),.88);list-style:none}
+/* Back and Actions are the two halves of one bottom bar, not two separate
+   floating pill buttons: the summary used to carry its own box (border,
+   background, radius) that visually collided with Back's own box right next
+   to it. Drop that so both halves share the bar's own flat background, with
+   a single hairline divider between them instead of two competing edges. */
+.global-action-footer .engine-help>summary{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:8px;height:100%;padding:10px 18px;border:0;border-radius:0;background:transparent;color:var(--muted);list-style:none;transition:color .15s var(--ease)}
+.global-action-footer .engine-help>summary:hover,.global-action-footer .engine-help>summary:focus-visible{color:var(--gold)}
 .global-action-footer .engine-help>summary::-webkit-details-marker{display:none}
+.global-action-footer{position:relative}
+.global-action-footer::before{content:'';position:absolute;top:8px;bottom:8px;left:50%;width:1px;background:var(--line)}
+.global-action-footer .engine-help{display:flex;min-width:0}
 .global-action-footer .engine-help[open]>.hsr-dock-container{padding:16px;border:1px solid var(--gold-a20);border-radius:16px;background:rgba(var(--surface-rgb),.97);box-shadow:0 16px 48px #0009;max-height:60vh;overflow:auto}
 
 .location-details{position:absolute;top:72px;left:16px;z-index:20;width:min(360px,calc(100% - 32px));max-height:65%;overflow:auto;padding:18px;border:1px solid var(--gold-a20);border-radius:14px;background:rgba(var(--surface-rgb),.97);box-shadow:0 12px 40px #0008}

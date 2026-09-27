@@ -1,3 +1,15 @@
+// A rejected fetch() (offline, refused) and a reply.json() parse failure
+// (reachable server, empty/malformed body -- a proxy 502, a truncated
+// response) both land in the same catch block, but only the first is a
+// real "can't reach the host" case. Surfacing a raw SyntaxError message
+// ("Unexpected end of JSON input") to the player reads as a crash, not a
+// clear, recoverable state.
+const describeTransportError = error => error.name === 'AbortError'
+  ? {code: 'REQUEST_TIMEOUT', message: 'The Hollow Star engine took too long to respond.'}
+  : error instanceof SyntaxError
+    ? {code: 'INVALID_RESPONSE', message: 'The Hollow Star engine sent back an unreadable response.'}
+    : {code: 'NETWORK_ERROR', message: error.message || 'Host is unavailable'};
+
 const responseShape = (payload, transport, requestId, runId) => ({
   ok: Boolean(payload?.ok),
   result: payload?.result ?? null,
@@ -36,11 +48,9 @@ export function createHSRClient({base = '', onTrace = null} = {}) {
       trace({kind: 'host', command, id, run_id: fields.run_id ?? null, http: reply.status, ok: normalized.ok, ms: Math.round(performance.now() - started), error: normalized.error, fields, reply: payload});
       return normalized;
     } catch (error) {
-      trace({kind: 'host', command, id, run_id: fields.run_id ?? null, http: null, ok: false, ms: Math.round(performance.now() - started), error: {code: error.name === 'AbortError' ? 'REQUEST_TIMEOUT' : 'NETWORK_ERROR', message: error.message}, fields});
-      return responseShape({ok: false, id, error: {
-        code: error.name === 'AbortError' ? 'REQUEST_TIMEOUT' : 'NETWORK_ERROR',
-        message: error.message || 'Host is unavailable',
-      }}, transport, id, fields.run_id);
+      const described = describeTransportError(error);
+      trace({kind: 'host', command, id, run_id: fields.run_id ?? null, http: null, ok: false, ms: Math.round(performance.now() - started), error: described, fields});
+      return responseShape({ok: false, id, error: described}, transport, id, fields.run_id);
     } finally {
       clearTimeout(timer);
       inFlight.delete(dedupeKey);
@@ -55,8 +65,9 @@ export function createHSRClient({base = '', onTrace = null} = {}) {
       if (!reply.ok || !payload?.ok) trace({kind: 'get', command: path, http: reply.status, ok: false, error: payload?.error});
       return responseShape(payload, transport);
     } catch (error) {
-      trace({kind: 'get', command: path, http: null, ok: false, error: {code: 'NETWORK_ERROR', message: error.message}});
-      return responseShape({ok: false, error: {code: 'NETWORK_ERROR', message: error.message}}, transport);
+      const described = describeTransportError(error);
+      trace({kind: 'get', command: path, http: null, ok: false, error: described});
+      return responseShape({ok: false, error: described}, transport);
     }
   };
   const client = {

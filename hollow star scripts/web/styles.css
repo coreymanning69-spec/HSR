@@ -702,6 +702,18 @@ body[data-layout="idle"] .card,body[data-layout="idle"] .spec-box{box-shadow:non
   transform-origin: 50% 100%;
   background-image: none;
 }
+/* LEGACY (kept as explicit fallback reference, not deleted -- see
+   docs/faceted-heraldic-visual-ux-plan.md #2): rules below this point that
+   target `.paperdoll-character .char-*` style the CSS-layer paperdoll
+   catalog (SPRITE_LAYER_CATALOG / BASE_SPRITE_LAYERS in web/paperdoll.js).
+   dollMarkup() computes that catalog into the `layers`/`slots` model
+   fields and stamps them into a `data-sprite-layers` attribute, but never
+   emits the per-layer DOM nodes (.char-head, .char-coat, etc.) these
+   rules select -- a real paperdoll character only ever renders a
+   <canvas class="puppet-canvas"> drawn by the shared SkeletalRig
+   (web/skeletal-rig.js) via actorRig()/HERO_RIG (web/hero-rig.js). These
+   selectors currently match nothing on a live character; the active
+   silhouette/material treatment for gear is drawn by the rig itself. */
 .scene-character.paperdoll-character i { transition: transform .2s ease, filter .2s ease, opacity .2s ease; }
 .scene-character.paperdoll-character .char-shadow {
   z-index: 0;

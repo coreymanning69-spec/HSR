@@ -178,3 +178,103 @@ def grand_cleave(run,key,action):
                                    'damage':amount,'hp_before':before,
                                    'hp_after':structure['hp'],'destroyed':structure['hp']==0})
     return {'type':'grand_cleave','actor':key,'roll':natural,'critical':natural==20,'bonus':19,'damage_rolls':rolls,'damage':amount,'targets':reached,'structures':structures,'includes_allies':True,'facing':facing}
+
+
+# --- Read-only twin ------------------------------------------------------------
+# forecast_maneuver is apply() run as odds for the attack-shaped maneuvers:
+# the same weapon_attack terms (through forecast_attack), the superiority die
+# as its own PIERCING damage call, and the rider's save at DC 22. Nothing is
+# rolled, spent or moved. Window-driven maneuvers (Parry, Riposte, Brace),
+# checks, and the ally/position ones have no forecast yet and report so.
+SUPERIORITY_DIE = '1d12'
+MANEUVER_DC = 22
+FORECAST_MANEUVERS = tuple(ATTACKS) + ('Quick Toss',)
+
+
+def forecast_maneuver(run, key, action, informed=True):
+    """What apply(run, key, action) would do for an attack maneuver, as odds.
+
+    Returns forecast_attack's shape with kind "maneuver", the maneuver name,
+    `control` (P(the rider lands: condition, push, distraction or goad)) and
+    `effect` naming it. expected_damage includes the superiority die and a
+    Sweeping Attack's second instance; kill reads the primary target only.
+    """
+    name = action.get('maneuver')
+    target = action.get('target')
+    mode = action.get('mode') or 'dagger'
+    out = {'kind': 'maneuver', 'maneuver': name, 'actor': key, 'target': target, 'mode': mode,
+           'legal': False, 'reason': None, 'hit': 0.0, 'crit': 0.0, 'lands': 0.0,
+           'expected_damage': 0.0, 'kill': 0.0, 'control': 0.0, 'effect': None, 'notes': []}
+    a, r = t.actor(run, key), t.rules(run, key)
+    if r.get('identity') != 'doran':
+        out['reason'] = 'this maneuver set belongs to Doran'
+        return out
+    if name not in FORECAST_MANEUVERS:
+        out['reason'] = 'no forecast for this maneuver'
+        return out
+    if a.resources.get('superiority_dice', 0) <= 0:
+        out['reason'] = 'no superiority dice'
+        return out
+    second = action.get('second_target')
+    if name == 'Sweeping Attack':
+        problem = ('Sweeping Attack needs a second target' if not second else
+                   t.target_problem(run, target, second, 5, enemy=False) if target in t.actors(run) else None)
+        if problem:
+            out['reason'] = problem
+            return out
+    if name == 'Maneuvering Attack':
+        ally = action.get('ally')
+        problem = ('Maneuvering Attack needs an ally' if not ally else
+                   t.target_problem(run, key, ally, 60, enemy=False)
+                   or (None if t.economy(run, ally).get('reaction') else 'the ally has no reaction left'))
+        if problem:
+            out['reason'] = problem
+            return out
+    if name == 'Lunging Attack' and mode == 'cleaver' and target in t.actors(run) \
+            and t.distance(run, key, target) > 15:
+        out['reason'] = 'outside lunging reach'
+        return out
+    precision = name == 'Precision Attack'
+    base = t.forecast_attack(run, key, target, mode, bonus=name == 'Quick Toss', informed=informed,
+                             extra_damage=() if precision else ((SUPERIORITY_DIE, 'PIERCING', True),),
+                             attack_die=SUPERIORITY_DIE if precision else None)
+    notes = out['notes'] + list(base.get('notes') or [])
+    out.update(base)
+    out.update(kind='maneuver', maneuver=name, notes=notes, control=0.0, effect=None)
+    if not out['legal'] or out.get('blocked'):
+        return out
+    lands = out['lands']
+    if name == 'Sweeping Attack':
+        profile = t.known_mitigation(run, key, second, 'PIERCING', informed=informed)
+        sweep = t.map_odds(t.dice_odds(SUPERIORITY_DIE), lambda value: t.mitigate(value, profile))
+        out['sweep_target'] = second
+        out['sweep_expected_damage'] = lands * t.mean_odds(sweep)
+        out['expected_damage'] += out['sweep_expected_damage']
+    ability, status = ATTACKS.get(name, (None, None))
+    fails = 1.0
+    if ability:
+        passed = t.save_odds(run, target, ability, MANEUVER_DC)
+        fails = 0.0 if passed is None else 1.0 - passed
+        out['save'] = {'ability': ability, 'dc': MANEUVER_DC, 'fail': fails}
+    if status in t.CONDITIONS:
+        refusal = t.condition_refusal(run, target, status, mental=status == 'FRIGHTENED')
+        out['effect'] = status
+        out['control'] = 0.0 if refusal else lands * fails
+        if refusal:
+            out['notes'].append(f"{status} would be refused: {refusal.get('reason')}")
+    elif status == 'DISARMED':
+        from hollowstar.lattice import denies
+        out['effect'] = 'DISARMED'
+        out['control'] = 0.0 if denies(run, target, 'DISARMED') else lands * fails
+    elif status in {'DISTRACTED', 'GOADED'}:
+        out['effect'] = status
+        out['control'] = lands * fails
+    elif name == 'Pushing Attack':
+        out['effect'] = 'PUSHED'
+        out['control'] = 0.0 if t.rules(run, target).get('planted') else lands * fails
+    elif name == 'Maneuvering Attack':
+        out['effect'] = 'ALLY_REPOSITIONS'
+        out['ally'] = action.get('ally')
+    out['cost'] = {'economy': {'bonus': 1} if name == 'Quick Toss' else {'attack': 1},
+                   'resources': {'superiority_dice': 1}}
+    return out

@@ -1905,14 +1905,33 @@ def act_and_advance(run, action):
     if run.context.get('manual_opposition'):
         return result
     from hollowstar.policies import combat_action
+    # Windows held by AI-controlled reactors (an enemy's opportunity attack,
+    # the Tarrasque's legendary action) resolve here, in the same step, so the
+    # player is never left facing a window only an NPC could answer.
+    reactions = _settle_npc_reactions(run)
     turns = []
     for _ in range(OPPOSITION_TURN_CAP):
         if not _opposition_holds_initiative(run):
             break
         turns.append(act(run, combat_action(run)))
-    if turns and isinstance(result, dict):
-        result = {**result, 'opposition_turns': turns}
+        turns.extend(_settle_npc_reactions(run))
+    if isinstance(result, dict):
+        if reactions:
+            result = {**result, 'auto_reactions': reactions}
+        if turns:
+            result = {**result, 'opposition_turns': turns}
     return result
+
+
+def _settle_npc_reactions(run):
+    """tactical.settle_npc_reactions through act(), so each answer gets the
+    room's combat bookkeeping (completion, rewards) like any other step."""
+    combat_state = run.context.get('combat')
+    if not isinstance(combat_state, dict) or combat_state.get('complete') or not combat_state.get('pending'):
+        return []
+    if isinstance(run.context.get('arcade'), dict) or state(run).get('status') != 'active':
+        return []
+    return t.settle_npc_reactions(run, apply_fn=lambda choice: act(run, choice))
 
 
 def view(run):

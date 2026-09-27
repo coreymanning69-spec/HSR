@@ -1509,16 +1509,16 @@ function simulationMenu() {
     <button type="button" class="action menu-item-card" data-action="mode:SANDBOX" data-tooltip="Launch a fresh sandbox descent. Select a certified Champion or create a custom build to enter the Reliquary."><strong>New Run</strong><small>Launch a sandbox descent with custom profile or champions</small></button>
     <button type="button" class="action menu-item-card" data-action="continue:SANDBOX" data-tooltip="Resume an active or saved Simulation run without affecting Story Mode progression."><strong>Continue</strong><small>Resume an active or saved simulation run</small></button>
   </div>`;
-  const tools = `<div class="menu-group-label">Rehearsal & Diagnostic Tools</div><div class="menu-grid-row-4">
+  const tools = optionsSection('sim-rehearsal-tools', 'Rehearsal & Diagnostic Tools', 'Boss rehearsal, scenario overrides, telemetry and engine internals', `<div class="menu-grid-row-4">
     <button type="button" class="action secondary menu-item-card" data-action="champion-rehearsal" data-tooltip="Instantly launch the tactical encounter against the Brass Castellan boss with Doran and Wren."><strong>Brass Castellan Rehearsal</strong><small>Doran + Wren boss encounter rehearsal</small></button>
     <button type="button" class="action secondary menu-item-card" data-action="menu:edit-scenario" data-tooltip="Select active test scenario and seed overrides for custom playtesting."><strong>Edit Scenario${state.preferences.scenario ? ` — ${scenarioTitle(state.preferences.scenario)}` : ''}</strong><small>Select active test scenario and seed overrides</small></button>
     <button type="button" class="action secondary menu-item-card" data-action="menu:statistics" data-tooltip="Review simulation telemetry, encounter clear times, victory rates, and lifetime performance."><strong>Statistics</strong><small>Examine simulation run histories and metrics</small></button>
     <button type="button" class="action secondary menu-item-card" data-action="menu:cheats" data-tooltip="Inspect engine internals, hidden checks, enemy AI intent, and underlying rolls."><strong>Cheats</strong><small>Inspect engine internals and debug state</small></button>
-  </div>`;
-  const workbench = `<div class="menu-group-label">Actor Toolbox</div><div class="menu-grid-row-2">
+  </div>`);
+  const workbench = optionsSection('sim-actor-toolbox', 'Diagnostic Stage Tools', 'Actor Toolbox and Actor Lab — pose, move and inspect any figure', `<div class="menu-grid-row-2">
     <button type="button" class="action menu-item-card" data-action="menu:toolbox" data-tooltip="Spawn and steer any figure on the main display's own stage: walking, turning, sizes and hit boxes, weapon carry, swings, damage, doors and sets."><strong>Actor Toolbox</strong><small>Move, turn, resize and swing any figure; cut dummies; open doors; change the set</small></button>
     <a class="action secondary menu-item-card" href="actor-lab.html" target="_blank" rel="noopener" data-tooltip="The pose sheet, line-up and frame-time readout for every rig."><strong>Actor Lab</strong><small>Pose sheet, line-up and frame time</small></a>
-  </div>`;
+  </div>`);
   return `<div class="mode-menu">${breadcrumb('Main Menu', 'Simulation Mode')}${atmosphere('gateway', 'Simulation Mode', 'A private sandbox for rehearsal.')}${card('Simulation Mode', `<div class="menu-list-stack simulation-menu-stack">
     ${intro}
     ${descent}

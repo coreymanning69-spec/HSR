@@ -2027,6 +2027,12 @@ dialog::backdrop{background:rgba(3,5,10,.72);backdrop-filter:blur(3px)}
 .simulation-group {
   margin-bottom: var(--s3);
 }
+/* The stack already spaces its children with `gap`; the section's own
+   margin would double that spacing and push the footer past the card's
+   scroll viewport. */
+.simulation-menu-stack .options-section {
+  margin: 0;
+}
 .simulation-group .label {
   margin: 0 0 8px 2px;
   font-size: 11px;

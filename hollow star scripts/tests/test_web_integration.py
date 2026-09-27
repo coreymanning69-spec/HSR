@@ -121,7 +121,7 @@ def test_browser_cli_mcp_share_one_mailbox_host():
                         assert layer in doll
                     # Combat beats are played by the director from public receipts.
                     assert b"from './combat-director.js" in live_app
-                    assert b"combatDirector.ingest(previousView, state.view)" in live_app
+                    assert b"combatDirector.ingest(previousView, state.view" in live_app
                     with urlopen(url + "/combat-director.js") as response:
                         director = response.read()
                     assert b"export function beatFromReceipt" in director

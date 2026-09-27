@@ -109,6 +109,9 @@ export function createHSRClient({base = '', onTrace = null} = {}) {
     roomAction: (runId, type, fields = {}) => call('design_action', {run_id: runId, action: {type, ...fields}}),
     hostAction: (command, runId, fields = {}) => call(command, {run_id: runId, ...fields}),
     autoStep: (runId, inCombat) => call(inCombat ? 'design_auto_combat' : 'design_auto', {run_id: runId}),
+    // Plays consecutive NPC turns and NPC-held reactions (at most 12 steps),
+    // stopping for a player decision; reply.result.receipts lists each step.
+    drainNpc: (runId, maxSteps = 12) => call('design_drain_npc', {run_id: runId, max_steps: maxSteps}, {dedupeKey: `drain:${runId}:${Date.now()}`}),
     idleTick: (runId, maxSteps = 1) => call('idle_tick', {run_id: runId, max_steps: maxSteps}),
     autoTravel: (runId, destination = 'well', maxSteps = 4, enterDescent = false) => call('auto_travel', {
       run_id: runId, destination, max_steps: maxSteps, enter_descent: enterDescent,

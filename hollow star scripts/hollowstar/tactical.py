@@ -1323,7 +1323,8 @@ def _attack_economy_problem(run, source, *, bonus=False, reaction=False):
     return None
 
 
-def forecast_attack(run, source, target, mode=None, *, bonus=False, reaction=False, informed=True):
+def forecast_attack(run, source, target, mode=None, *, bonus=False, reaction=False, informed=True,
+                    extra_damage=(), attack_die=None):
     """What weapon_attack(run, source, target, mode) would do, as odds.
 
     Read-only: nothing is rolled, spent or moved, and an item's targeting
@@ -1338,6 +1339,11 @@ def forecast_attack(run, source, target, mode=None, *, bonus=False, reaction=Fal
     their choice and is not priced in; `notes` says when one is possible.
     informed=False prices mitigation from source's side's knowledge ledger
     (known_mitigation); legality always reads the engine.
+
+    extra_damage lists (expression, damage_type, bypass_resistance) riders a
+    caller's resolver deals as separate damage() calls on a hit (a maneuver's
+    superiority die); each is mitigated on its own and doubles on a crit.
+    attack_die is a die added to the attack roll (Precision Attack).
     """
     r = rules(run, source)
     mode = mode or r.get("loadout", "weapon")
@@ -1374,11 +1380,13 @@ def forecast_attack(run, source, target, mode=None, *, bonus=False, reaction=Fal
         passed = 1.0 if passed is None else passed
         branches = [(passed, situation["disadvantage"]), (1 - passed, True)]
     hit = crit = 0.0
+    bumps = dice_odds(attack_die) if attack_die else {0: 1.0}
     for weight, disadvantage in branches:
-        odds = attack_odds(attack_bonus, situation["ac"], advantage=situation["advantage"],
-                           disadvantage=disadvantage, threshold=threshold)
-        hit += weight * odds["hit"]
-        crit += weight * odds["crit"]
+        for bump, chance in bumps.items():
+            odds = attack_odds(attack_bonus + bump, situation["ac"], advantage=situation["advantage"],
+                               disadvantage=disadvantage, threshold=threshold)
+            hit += weight * chance * odds["hit"]
+            crit += weight * chance * odds["crit"]
     out.update(legal=True, attack_bonus=attack_bonus, target_ac=situation["ac"], cover=situation["cover"],
                advantage=situation["advantage"], disadvantage=situation["disadvantage"],
                reasons=situation["reasons"], glare=situation["glare"], critical_threshold=threshold,
@@ -1402,7 +1410,12 @@ def forecast_attack(run, source, target, mode=None, *, bonus=False, reaction=Fal
             odds = add_odds(odds, dice_odds(f"{r.get('sneak_attack_dice', 1)}d6", critical=critical))
         if r.get("feint_target") == target:
             odds = add_odds(odds, dice_odds("1d12", critical=critical))
-        return map_odds(odds, lambda value: mitigate(magnify(value), reduction))
+        odds = map_odds(odds, lambda value: mitigate(magnify(value), reduction))
+        for expression, damage_type, bypass in extra_damage:
+            rider = known_mitigation(run, source, target, damage_type, bypass_resistance=bypass, informed=informed)
+            odds = add_odds(odds, map_odds(dice_odds(expression, critical=critical),
+                                           lambda value, rider=rider: mitigate(value, rider)))
+        return odds
 
     normal, critical = landed(False), landed(True)
     if defender.resources.get("ward", 0) > 0:
@@ -1721,6 +1734,110 @@ def help_action(run, key, target, ally=None):
                          "expires": "on the aided attack or at the start of the helper's next turn"}}
 
 
+CONTEST_TYPES = ("shove", "trip", "grapple", "help", "dodge", "disengage", "dash")
+
+
+def forecast_contest(run, key, action):
+    """What shove/trip/grapple/help/dodge/disengage/dash would do, as odds. Read-only.
+
+    The same legality the transitions above check (contact range, size,
+    attack or action economy, Cunning Action), the opposed check as
+    contest_odds over the same skills, and the consequence's own refusals
+    (threshold immunity, lattice denial, planted, an obstructed square).
+    `success` is P(the contest is won); `control` is P(the consequence lands).
+    Nothing here deals damage, so expected_damage and kill are always 0 and
+    hit is None, which keeps hit_chance_gte gambits from matching a contest.
+    """
+    kind = action.get("type")
+    mode = "prone" if kind == "trip" else action.get("mode", "push")
+    target = action.get("target")
+    out = {"kind": kind, "actor": key, "target": target, "legal": False, "reason": None,
+           "hit": None, "kill": 0.0, "expected_damage": 0.0, "success": 0.0, "control": 0.0,
+           "effect": None, "notes": []}
+    if kind not in CONTEST_TYPES:
+        out["reason"] = "not a contest action"
+        return out
+    state = run.context.get("combat") or {}
+    a, r = actor(run, key), rules(run, key)
+    e = state.get("economy", {}).get(key, {})
+    if not conscious(a):
+        out["reason"] = "actor cannot act; end the turn"
+        return out
+    if kind in {"dodge", "disengage", "dash"}:
+        cunning = kind != "dodge" and r.get("cunning_action")
+        slot = "bonus" if cunning else "action"
+        if not e.get(slot):
+            out["reason"] = f"{slot} already spent"
+            return out
+        out.update(legal=True, success=1.0, effect={"dodge": "DODGING", "disengage": "DISENGAGED",
+                                                     "dash": "DASHING"}[kind],
+                   cost={"economy": {slot: 1}, "resources": {}})
+        threatened = [k for k, v in actors(run).items() if not same_side(k, key) and conscious(v)
+                      and distance(run, k, key) <= 5]
+        out["threatened_by"] = threatened
+        if kind == "dash":
+            out["movement_gained"] = a.speed
+        return out
+    if not isinstance(target, str) or target == key or target not in actors(run):
+        out["reason"] = "choose another creature as the target"
+        return out
+    if kind == "help":
+        problem = target_problem(run, key, target, 5, enemy=True)
+        allies = [k for k, v in actors(run).items() if same_side(k, key) and k != key and v.alive]
+        ally = action.get("ally") or min(allies, key=lambda k: (distance(run, k, target), k), default=None)
+        if problem:
+            out["reason"] = problem
+        elif ally not in allies:
+            out["reason"] = "Help needs another living ally to aid"
+        elif not e.get("action"):
+            out["reason"] = "action already spent"
+        else:
+            out.update(legal=True, success=1.0, ally=ally, effect="ADVANTAGE",
+                       cost={"economy": {"action": 1}, "resources": {}})
+        return out
+    problem = target_problem(run, key, target, 5, enemy=not same_side(key, target))
+    if problem is None and _size_rank(run, target) > _size_rank(run, key) + 1:
+        problem = "target is more than one size larger"
+    if problem is None and not (e.get("attacks") or e.get("action")):
+        problem = "action already spent"
+    if problem:
+        out["reason"] = problem
+        return out
+    active_skill, active_bonus = _best_skill(run, key, ("Athletics",))
+    passive_skill, passive_bonus = _best_skill(run, target, ("Athletics", "Acrobatics"))
+    success = contest_odds(active_bonus, passive_bonus)
+    out.update(legal=True, success=success, active_skill=active_skill, passive_skill=passive_skill,
+               cost={"economy": {"attack": 1}, "resources": {}})
+    victim = actor(run, target)
+    if kind == "grapple":
+        out["effect"] = "GRAPPLED"
+        refusal = condition_refusal(run, target, "GRAPPLED")
+    elif mode == "prone":
+        out["effect"] = "PRONE"
+        refusal = (threshold_immunity(run, target, "PRONE") or condition_refusal(run, target, "PRONE")
+                   or ({"reason": "already prone"} if "PRONE" in victim.statuses else None))
+    else:
+        out["effect"] = "PUSHED"
+        from hollowstar.lattice import denies
+        refusal = threshold_immunity(run, target, "DISPLACEMENT") or denies(run, target, "DISPLACEMENT") \
+            or ({"reason": "planted"} if rules(run, target).get("planted") else None)
+        if refusal is None:
+            axis, sign = _line_axis(run, key, target)
+            before = list(position(run, target))
+            after = list(before)
+            after[axis] = max(0, min(120, after[axis] + 5 * sign))
+            occupied = [k for k in actors(run) if k != target and actor(run, k).alive and position(run, k) == after]
+            if after == before or after in state.get("terrain", {}).get("blocked", []) or occupied:
+                refusal = {"reason": "obstructed"}
+            else:
+                out["push_to"] = after
+    if refusal:
+        out["notes"].append(f"{out['effect']} would be refused: {refusal.get('reason') or refusal.get('tell')}")
+    else:
+        out["control"] = success
+    return out
+
+
 def contextual_actions(run, key):
     """What this actor could legally attempt right now, with public help text.
 
@@ -1823,6 +1940,60 @@ def contextual_actions(run, key):
     return rows
 
 
+def ai_controlled(run, key):
+    """True when no player decides for key: its reactions and turns are the policy's."""
+    return key in actors(run) and actor(run, key).controller != "player"
+
+
+# More windows than one move or blow can open; a bound, never a budget.
+AUTO_REACTION_LIMIT = 16
+
+
+def settle_npc_reactions(run, apply_fn=None):
+    """Resolve every pending window whose reactor is AI-controlled, in order.
+
+    Each choice is the automated policy's (policies.reaction_action) and goes
+    through the ordinary transition, so it rolls, spends and records exactly
+    like a clicked reaction; a choice the engine refuses is declined instead.
+    Windows offered to player-controlled actors stay pending for the player.
+    apply_fn lets an orchestrator (the dungeon) wrap each step with its own
+    bookkeeping; it defaults to apply(). Returns the results in order.
+    """
+    from hollowstar.policies import reaction_action
+    step = apply_fn or (lambda choice: apply(run, choice))
+    state = run.context.get("combat") or {}
+    settled = []
+    for _ in range(AUTO_REACTION_LIMIT):
+        if state.get("complete"):
+            break
+        window = next((w for w in state.get("pending", []) if ai_controlled(run, w.get("reactor"))), None)
+        if window is None:
+            break
+        try:
+            settled.append(step(reaction_action(run, window)))
+        except ActionError:
+            settled.append(step({"type": "decline_reaction", "actor": window["reactor"]}))
+    return settled
+
+
+def _auto_settled_move(run, key, pending):
+    """move()'s movement_pending, with every AI-held window resolved in the same step."""
+    settled = settle_npc_reactions(run)
+    if not settled:
+        return pending
+    state = run.context["combat"]
+    final = next((row for row in reversed(settled) if isinstance(row, dict)
+                  and row.get("type") == "reaction_and_movement"), None)
+    result = dict(pending)
+    result.update(auto_reactions=settled, actor=key)
+    result["evidence"] = {**pending.get("evidence", {}), "auto_resolved_reactions": len(settled)}
+    if final is not None and not state.get("pending_movement"):
+        result.update(type="reaction_and_movement", movement=final.get("movement"))
+        result["evidence"]["movement_committed_after_reaction"] = \
+            final.get("evidence", {}).get("movement_committed_after_reaction")
+    return result
+
+
 def apply(run, action):
     if not isinstance(action, dict) or not isinstance(action.get("type"), str):
         raise ActionError("action requires a type")
@@ -1919,6 +2090,9 @@ def apply(run, action):
             result = weapon_attack(run, key, window["target"], reaction=True)
             if window["kind"] == "opportunity" and r.get("identity") == "doran" and result["roll"]["success"]:
                 economy(run, window["target"])["movement"] = 0
+        if isinstance(result, dict):
+            # Which window this answered, so a client can announce it.
+            result.setdefault("reaction_kind", window["kind"])
         state["pending"].remove(window)
         pending_movement=state.get("pending_movement")
         if pending_movement and not any(w.get('kind') in {'opportunity','brace'}
@@ -1935,6 +2109,7 @@ def apply(run, action):
                 movement={'actor':mover,'cancelled':'actor defeated'}
                 committed=False
             result={'type':'reaction_and_movement','reaction':result,'movement':movement,
+                    'reaction_kind':window['kind'],
                     'evidence':{'movement_committed_after_reaction':committed,
                                 'origin':pending_movement['origin'],'path':pending_movement['path']}}
             state.pop('pending_movement',None)
@@ -1956,6 +2131,11 @@ def apply(run, action):
             result = weapon_attack(run, key, action.get("target"), action.get("mode", r.get("loadout", "weapon")), bonus=action.get("bonus", False))
         elif kind == "move":
             result = move(run, key, action.get("destination"))
+            # Opt-in for orchestrators that play the opposition themselves:
+            # an NPC's opportunity attack resolves inside the same step rather
+            # than leaving a window no one on screen can answer.
+            if result.get("type") == "movement_pending" and run.context.get("auto_npc_reactions"):
+                result = _auto_settled_move(run, key, result)
         elif kind in {"dodge", "disengage", "dash"}:
             cunning = kind in {"disengage", "dash"} and r.get("cunning_action")
             use(run, key, "bonus" if cunning else "action")

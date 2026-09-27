@@ -4,7 +4,7 @@ import json
 from hollowstar.items import Item, item_presentation, public_item
 from hollowstar.phases import Tier
 from hollowstar.tags import DamageTag
-from hollowstar.loader import load_items, load_affixes
+from hollowstar.loader import load_items, load_affixes, load_roster
 from hollowstar.view_model import build_public_view
 from hollowstar.profiles import actor_sheet
 from hollowstar.actors import Actor
@@ -47,6 +47,39 @@ def test_every_weapon_in_the_loot_table_has_a_working_generic_profile():
         assert profile["damage_dice"] == item.damage_dice
         assert profile["reach"] == item.reach
         assert profile["range"] == {"normal": item.range_normal, "long": item.range_long}
+
+
+def test_every_weapon_with_damage_dice_also_has_base_damage():
+    """The reverse of the check above: hollowstar.resolution.resolve_attack's
+    legacy no-rng path (used by combat.py's Encounter, the Simulation/
+    rehearsal engine) reads base_damage directly and never looks at
+    damage_dice. A weapon with dice but no base_damage silently deals 0
+    damage there (Item.base_damage defaults to 0) instead of raising --
+    the quiet twin of the "weapon dice are not implemented" crash the test
+    above guards against on the tactical.py side. Covers both the loot
+    table and every alternate_modes entry within it."""
+    for name, item in load_items().items():
+        if item.damage_dice:
+            assert item.base_damage, f"{name} has damage_dice but no base_damage"
+        for mode_name, mode in (item.alternate_modes or {}).items():
+            if mode.get("damage_dice"):
+                assert mode.get("base_damage"), f"{name}'s {mode_name} mode has damage_dice but no base_damage"
+
+
+def test_every_roster_actor_weapon_has_both_damage_fields():
+    """content/actors.json equipment is authored by hand, separately from
+    content/items.json, and has drifted out of sync before: several named
+    weapons (Doran's watchblade, Kusanagi, Vesper, etc.) had only one of
+    damage_dice/base_damage, so they worked in one combat resolver and
+    broke (crashed or dealt 0 damage) in the other."""
+    for actor_name, actor in load_roster().items():
+        for item in actor.equipment:
+            if item.slot != "hand":
+                continue
+            if not item.damage_dice and not item.base_damage:
+                continue  # a pure spell/utility implement (e.g. Letha's Sunset) carries neither
+            assert item.damage_dice, f"{actor_name}'s {item.name} has base_damage but no damage_dice"
+            assert item.base_damage, f"{actor_name}'s {item.name} has damage_dice but no base_damage"
 
 
 def test_loader_wires_through_authored_presentation_overrides():

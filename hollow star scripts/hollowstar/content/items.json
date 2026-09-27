@@ -104,6 +104,7 @@
       "alternate_modes": {
         "two_handed": {
           "damage_dice": "1d10",
+          "base_damage": 10,
           "reach": 5,
           "range_long": 5,
           "damage_type": "SLASHING"
@@ -209,6 +210,7 @@
       "alternate_modes": {
         "two_handed": {
           "damage_dice": "1d10",
+          "base_damage": 10,
           "reach": 5,
           "range_long": 5,
           "damage_type": "BLUDGEONING"
@@ -292,6 +294,7 @@
       "alternate_modes": {
         "two_handed": {
           "damage_dice": "1d10",
+          "base_damage": 10,
           "reach": 5,
           "range_long": 5,
           "damage_type": "SLASHING"

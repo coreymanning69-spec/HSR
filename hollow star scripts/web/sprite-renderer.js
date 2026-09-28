@@ -16,6 +16,11 @@ export {HERO_RIG, drawHero, heroBurst, heroPortrait} from './hero-rig.js';
 
 const SPRITE_BASE = '/assets/sprites';
 
+// LEGACY (kept as explicit fallback reference, not deleted -- see
+// docs/faceted-heraldic-visual-ux-plan.md #2): resolves a race+gender PNG
+// path. Unused by any current code path -- dollModel() never sets
+// `base.type: 'canvas'`, so nothing calls this. Kept as a pointer to where
+// race art used to live if a future frame-art fallback needs it.
 export function getCharacterSpritePath(spriteId) {
   if (!spriteId) return null;
   // Character art ships as PNG, one per race and female/male variant (the SVG

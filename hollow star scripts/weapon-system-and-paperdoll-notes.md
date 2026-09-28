@@ -1,3 +1,18 @@
+> **Partially superseded — kept as reference, not deleted** (see
+> `docs/faceted-heraldic-visual-ux-plan.md` #2). Written before the
+> SkeletalRig/Canvas2D unification (Doran's rig landed 2026-09-23, Wren's
+> 2026-09-25). The "Paperdoll skeleton" section below proposes an
+> explicit CSS anchor registry for the ~30-layer `.char-*` DOM skeleton —
+> that whole skeleton is now legacy (see the matching note in
+> `web/paperdoll.js` above `SPRITE_LAYER_CATALOG` and in `web/styles.css`
+> above `.scene-character.paperdoll-character .char-shadow`); don't build
+> the registry against it. The "no polearm silhouette" item further down is
+> resolved — `hero-parts.js`'s weapon-drawing code now has its own
+> `kind === 'polearm'` branch (long shaft, glaive head, pennant cords),
+> distinct from `sword`. The "two combat resolvers need both `damage_dice`
+> and `base_damage`" item is independent of the rig work and may still be
+> live — re-verify before relying on it.
+
 # Weapon system + paperdoll fit — session notes (2026-09-21)
 
 Working notes for the ongoing "outfits/items for the paperdoll, starting with

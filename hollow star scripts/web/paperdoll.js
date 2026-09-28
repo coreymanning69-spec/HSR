@@ -155,6 +155,15 @@ export function isChampion(item = {}) {
   const identity = String(item.identity || '').toLowerCase();
   return item.is_champion === true || item.kind === 'champion' || ['doran', 'sera', 'wren'].includes(identity);
 }
+// LEGACY (kept as explicit fallback reference, not deleted -- see
+// docs/faceted-heraldic-visual-ux-plan.md #2): this catalog and
+// BASE_SPRITE_LAYERS below feed dollModel()'s `layers`/`slots` fields and
+// the `data-sprite-layers` attribute dollMarkup() stamps onto a character,
+// but no code builds the per-layer DOM nodes (.char-head, .char-coat, etc.)
+// these class names name -- see the matching legacy note in styles.css
+// above `.scene-character.paperdoll-character .char-shadow`. Every live
+// paperdoll character renders through the shared SkeletalRig canvas
+// (actorRig()/HERO_RIG in hero-rig.js) instead.
 export const SPRITE_LAYER_CATALOG = Object.freeze({
   shadow: {className: 'char-shadow', slot: 'ground'}, wings: {className: 'char-wings', slot: 'ground'},
   'effect:aura': {className: 'char-aura', slot: 'effect'},

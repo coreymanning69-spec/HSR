@@ -66,12 +66,20 @@ function cacheFor(ctx) {
   else if (cache.size > 900) cache.clear();
   return cache;
 }
+// Faceted Heraldic calls for one shared light direction across every surface
+// (docs/faceted-heraldic-visual-ux-plan.md #3) rather than each part shading
+// along its own flat horizontal axis. A shallow diagonal (~22 degrees, light
+// from the upper-left) reads as a cut facet plane instead of a soft airbrush
+// band, without touching the ~60 call sites that already pass this helper
+// their part-local x-span.
+const LIGHT_SKEW = .4;
 // Two-tone ramp: `base` holds flat to `split`, then `shade`.
 export function celGradient(ctx, x0, x1, base, shade, split = .6) {
   const cache = cacheFor(ctx), key = `c${x0}|${x1}|${base}|${shade}|${split}`;
   let g = cache.get(key);
   if (!g) {
-    g = ctx.createLinearGradient(x0, 0, x1, 0);
+    const dy = (x1 - x0) * LIGHT_SKEW;
+    g = ctx.createLinearGradient(x0, -dy, x1, dy);
     g.addColorStop(0, base); g.addColorStop(split, base); g.addColorStop(split, shade); g.addColorStop(1, shade);
     cache.set(key, g);
   }

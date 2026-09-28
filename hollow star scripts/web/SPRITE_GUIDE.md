@@ -1,5 +1,14 @@
 # Sprite System Guide
 
+> **STALE — reference only, kept as an explicit legacy pointer (see
+> `docs/faceted-heraldic-visual-ux-plan.md` #2), not describing the current
+> system.** This documents an old flat-SVG mood-sprite system
+> (`sera-happy.svg` etc.). Live characters render through the shared
+> `SkeletalRig` Canvas2D pipeline instead: `web/paperdoll.js` `dollModel()` →
+> `web/sprite-renderer.js` `actorRig()` → `web/hero-rig.js` `HERO_RIG` (or a
+> named rig like `web/doran-rig.js`/`web/wren-rig.js`), driven every frame by
+> `web/puppet-dom.js`. Nothing below reflects that pipeline.
+
 Simple geometric sprite support for HSR characters and items.
 
 ## Structure

@@ -57,13 +57,13 @@ const PALACE = svg(1600, 900, `<defs><linearGradient id="pf" x1="0" y1="0" x2="0
 
 const DUST = svg(1600, 900, Array.from({length: 40}, (_, i) => `<circle cx="${(i * 397) % 1600}" cy="${(i * 211) % 900}" r="${1 + (i % 3)}" fill="#e8c46a" opacity=".35"/>`).join(''));
 
-const figure = (id, x, y, extra = {}) => ({
+const figure = (id, x, y, extra = {}, spriteId = 'vessel') => ({
   id, kind: 'group', w: 300, h: 600, x, y, anchor: [0.5, 1], z: 10, ...extra,
   children: [
-    {id: `${id}-cloak`, kind: 'svg', content: FIGURE_CLOAK, w: 300, h: 600, x: 150, y: 300, z: 1, loop: 'breathe', loopMs: 5200},
-    {id: `${id}-body`, kind: 'svg', content: FIGURE_BODY, w: 300, h: 600, x: 150, y: 300, z: 2},
-    {id: `${id}-head`, kind: 'svg', content: FIGURE_HEAD, w: 120, h: 140, x: 150, y: 110, z: 3},
-    {id: `${id}-core`, kind: 'svg', content: FIGURE_CORE, w: 120, h: 120, x: 150, y: 250, z: 4, opacity: 0, loop: 'pulse', loopMs: 2600},
+    {id: `${id}-cloak`, asset: `sprite.${spriteId}.cloak`, kind: 'svg', content: FIGURE_CLOAK, w: 300, h: 600, x: 150, y: 300, z: 1, loop: 'breathe', loopMs: 5200},
+    {id: `${id}-body`, asset: `sprite.${spriteId}.body`, kind: 'svg', content: FIGURE_BODY, w: 300, h: 600, x: 150, y: 300, z: 2},
+    {id: `${id}-head`, asset: `sprite.${spriteId}.head`, kind: 'svg', content: FIGURE_HEAD, w: 120, h: 140, x: 150, y: 110, z: 3},
+    {id: `${id}-core`, asset: `sprite.${spriteId}.core`, kind: 'svg', content: FIGURE_CORE, w: 120, h: 120, x: 150, y: 250, z: 4, opacity: 0, loop: 'pulse', loopMs: 2600},
   ],
 });
 
@@ -76,19 +76,19 @@ export const CUTSCENES = [
     thumb: HOLLOW_STAR,
     shots: [
       {layers: [
-        {id: 'void', kind: 'svg', content: VOID, w: 1600, h: 900, x: 800, y: 450, z: 0},
+        {asset: 'cs.bg.void', id: 'void', kind: 'svg', content: VOID, w: 1600, h: 900, x: 800, y: 450, z: 0},
         {id: 'stars-far', kind: 'svg', content: starfield(3, 160), w: 1700, h: 960, x: 800, y: 450, z: 1, opacity: 0.6, in: {opacity: 0}, dur: 3000, loop: 'twinkle', loopMs: 7000},
         {id: 'stars-near', kind: 'svg', content: starfield(11, 50), w: 1800, h: 1000, x: 800, y: 450, z: 2, opacity: 0.9, in: {opacity: 0, scale: 1.1}, dur: 4000},
-      ], text: {style: 'narration', line: 'Before there was a door, there was a wish. Two of them, giggling.'}},
+      ], audio: {music: 'music.hollow-star-theme'}, text: {style: 'narration', line: 'Before there was a door, there was a wish. Two of them, giggling.'}},
       {layers: [
-        {id: 'star', kind: 'svg', content: HOLLOW_STAR, w: 400, h: 400, x: 800, y: 420, z: 5, scale: 0.35, opacity: 1, in: {opacity: 0, scale: 0.05}, dur: 2600, loop: 'pulse', loopMs: 3400},
+        {id: 'star', asset: 'cs.hollow-star', kind: 'svg', content: HOLLOW_STAR, w: 400, h: 400, x: 800, y: 420, z: 5, scale: 0.35, opacity: 1, in: {opacity: 0, scale: 0.05}, dur: 2600, loop: 'pulse', loopMs: 3400},
       ], camera: {zoom: 1.08, dur: 3000}, text: {style: 'narration', line: 'Something was made to be held.'}},
       {layers: [
         {id: 'star', scale: 0.8, dur: 2200},
         {id: 'stars-near', x: 760, dur: 6000},
       ], text: {style: 'narration', line: 'A star, bright at every edge. Empty at the centre.'}},
       {flash: 'gold', layers: [
-        {id: 'reliquary', kind: 'svg', content: RELIQUARY, w: 600, h: 700, x: 800, y: 470, z: 4, opacity: 0.95, in: {opacity: 0, y: 560, scale: 0.9}, dur: 2400},
+        {id: 'reliquary', asset: 'cs.reliquary', kind: 'svg', content: RELIQUARY, w: 600, h: 700, x: 800, y: 470, z: 4, opacity: 0.95, in: {opacity: 0, y: 560, scale: 0.9}, dur: 2400},
         {id: 'star', scale: 0.32, y: 400, dur: 2400},
       ], camera: {zoom: 1, dur: 2400}, text: {style: 'narration', line: 'Around it, a shrine rose up. Bars of gold. A place where a relic is kept.'}},
       {layers: [], text: {speaker: 'The Hollow Star', style: 'star', line: '…Is this mine?'}},
@@ -104,7 +104,7 @@ export const CUTSCENES = [
       {flash: 'white', layers: [
         {id: 'star', opacity: 0, scale: 0.02, dur: 500},
         {id: 'vessel-core', opacity: 1, dur: 700},
-      ], camera: {zoom: 1.15, y: 60, shake: 10, dur: 400}, text: {speaker: 'The Hollow Star', style: 'star', line: 'Oh. I can feel their hands. Warm.'}},
+      ], audio: {stinger: 'sfx.star-ignite'}, camera: {zoom: 1.15, y: 60, shake: 10, dur: 400}, text: {speaker: 'The Hollow Star', style: 'star', line: 'Oh. I can feel their hands. Warm.'}},
       {layers: [
         {id: 'sub', kind: 'text', content: 'Floor One · The Town Above the Well', style: 'small', x: 800, y: 110, z: 20, in: {opacity: 0}, dur: 1600},
       ], hold: 3600, text: {style: 'narration', line: 'Go on, then. Let us see what we become.'}},
@@ -118,9 +118,9 @@ export const CUTSCENES = [
     thumb: WELL,
     shots: [
       {layers: [
-        {id: 'void', kind: 'svg', content: VOID, w: 1600, h: 900, x: 800, y: 450, z: 0},
+        {asset: 'cs.bg.void', id: 'void', kind: 'svg', content: VOID, w: 1600, h: 900, x: 800, y: 450, z: 0},
         {id: 'stars', kind: 'svg', content: starfield(29, 90), w: 1600, h: 900, x: 800, y: 450, z: 1, opacity: 0.4},
-        {id: 'well', kind: 'svg', content: WELL, w: 700, h: 500, x: 800, y: 560, z: 3, in: {opacity: 0, y: 600}, dur: 2400},
+        {id: 'well', asset: 'cs.well', kind: 'svg', content: WELL, w: 700, h: 500, x: 800, y: 560, z: 3, in: {opacity: 0, y: 600}, dur: 2400},
       ], text: {style: 'narration', line: 'The well at the centre of town. Stone, rope, a bucket that never quite reaches water.'}},
       {layers: [figure('vessel', 1180, 860, {scale: 0.8, in: {opacity: 0, x: 1300}, dur: 2200})],
         camera: {zoom: 1.1, x: 60, dur: 2400}, text: {speaker: 'The Hollow Star', style: 'star', line: 'This well. I have looked into it before.'}},
@@ -142,13 +142,13 @@ export const CUTSCENES = [
     thumb: FIGURE_CORE,
     shots: [
       {layers: [
-        {id: 'void', kind: 'svg', content: VOID, w: 1600, h: 900, x: 800, y: 450, z: 0},
+        {asset: 'cs.bg.void', id: 'void', kind: 'svg', content: VOID, w: 1600, h: 900, x: 800, y: 450, z: 0},
         figure('vessel', 800, 860, {in: {opacity: 0}, dur: 1600}),
         {id: 'vessel-core', opacity: 1},
       ], text: {style: 'narration', line: 'It ends the way these things end. Quickly, and then very slowly.'}},
       {flash: 'black', layers: [
         {id: 'vessel', opacity: 0, y: 900, rot: -8, dur: 2600, ease: 'ease-in'},
-        {id: 'lone-star', kind: 'svg', content: HOLLOW_STAR, w: 400, h: 400, x: 800, y: 560, z: 12, scale: 0.18, in: {opacity: 0}, dur: 1200, loop: 'pulse', loopMs: 2400},
+        {id: 'lone-star', asset: 'cs.hollow-star', kind: 'svg', content: HOLLOW_STAR, w: 400, h: 400, x: 800, y: 560, z: 12, scale: 0.18, in: {opacity: 0}, dur: 1200, loop: 'pulse', loopMs: 2400},
       ], camera: {shake: 14, dur: 300}, text: {speaker: 'The Hollow Star', style: 'star', line: 'You fell. I didn\'t.'}},
       {layers: [{id: 'lone-star', y: 420, scale: 0.4, dur: 3200}],
         text: {speaker: 'The Hollow Star', style: 'star', line: 'That seems unfair to you. I\'ll remember it for both of us.'}},
@@ -164,9 +164,9 @@ export const CUTSCENES = [
     thumb: RELIQUARY,
     shots: [
       {layers: [
-        {id: 'void', kind: 'svg', content: VOID, w: 1600, h: 900, x: 800, y: 450, z: 0},
-        {id: 'reliquary', kind: 'svg', content: RELIQUARY, w: 600, h: 700, x: 800, y: 470, z: 3, in: {opacity: 0}, dur: 2000},
-        {id: 'star', kind: 'svg', content: HOLLOW_STAR, w: 400, h: 400, x: 800, y: 440, z: 5, scale: 0.4, loop: 'pulse', loopMs: 3000},
+        {asset: 'cs.bg.void', id: 'void', kind: 'svg', content: VOID, w: 1600, h: 900, x: 800, y: 450, z: 0},
+        {id: 'reliquary', asset: 'cs.reliquary', kind: 'svg', content: RELIQUARY, w: 600, h: 700, x: 800, y: 470, z: 3, in: {opacity: 0}, dur: 2000},
+        {id: 'star', asset: 'cs.hollow-star', kind: 'svg', content: HOLLOW_STAR, w: 400, h: 400, x: 800, y: 440, z: 5, scale: 0.4, loop: 'pulse', loopMs: 3000},
       ], text: {style: 'narration', line: 'Inside the shrine, the hollow is not quite so hollow any more.'}},
       {layers: [
         {id: 'dust', kind: 'svg', content: DUST, w: 1600, h: 900, x: 800, y: 450, z: 6, in: {opacity: 0}, dur: 3000, loop: 'drift', loopMs: 9000},
@@ -184,12 +184,12 @@ export const CUTSCENES = [
     thumb: COCOON,
     shots: [
       {layers: [
-        {id: 'palace', kind: 'svg', content: PALACE, w: 1600, h: 900, x: 800, y: 450, z: 0},
-        {id: 'cocoon', kind: 'svg', content: COCOON, w: 500, h: 700, x: 800, y: 430, z: 3, opacity: 0.5},
+        {id: 'palace', asset: 'cs.bg.palace', kind: 'svg', content: PALACE, w: 1600, h: 900, x: 800, y: 450, z: 0},
+        {id: 'cocoon', asset: 'cs.cocoon', kind: 'svg', content: COCOON, w: 500, h: 700, x: 800, y: 430, z: 3, opacity: 0.5},
         figure('vessel', 520, 860, {scale: 0.85}),
-      ], text: {style: 'narration', line: 'The palace is very quiet. Everyone else is dead.'}},
+      ], audio: {music: null, ambience: 'amb.palace-silence'}, text: {style: 'narration', line: 'The palace is very quiet. Everyone else is dead.'}},
       {flash: 'gold', layers: [
-        figure('mirror', 1080, 860, {scale: 0.85, in: {opacity: 0, blur: 12}, dur: 2600}),
+        figure('mirror', 1080, 860, {scale: 0.85, in: {opacity: 0, blur: 12}, dur: 2600}, 'star-mirror'),
         {id: 'mirror-core', opacity: 1, dur: 1800},
       ], text: {speaker: 'The Hollow Star', style: 'star', line: 'Oh. So I won this time, too. …That\'s cool.'}},
       {layers: [], camera: {zoom: 1.2, x: 140, dur: 2400},

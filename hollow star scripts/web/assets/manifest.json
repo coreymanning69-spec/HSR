@@ -1,0 +1,5 @@
+{
+  "_readme": "Art made outside this repo. images: id -> {src, w, h}, paths relative to web/. sprites: id -> {parts: {partName: imageId}}. Cutscene layers and screens reference ids; unlisted ids fall back to the built-in placeholder art.",
+  "images": {},
+  "sprites": {}
+}

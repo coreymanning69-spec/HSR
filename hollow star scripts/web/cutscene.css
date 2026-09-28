@@ -95,3 +95,41 @@
 .meta-lock{display:grid;place-items:center;gap:var(--s5);min-height:260px;text-align:center;color:#b8ab8b}
 .meta-lock strong{font-family:'Cinzel',serif;font-size:var(--t-h2);color:#e9dcb8}
 .menu-item-card.is-locked{opacity:.55;cursor:not-allowed}
+
+/* ---- Dialogue ------------------------------------------------------------ */
+.dialogue-root{position:fixed;inset:0;z-index:8900;background:linear-gradient(180deg,transparent 40%,#000c);opacity:0;transition:opacity .4s;font-family:'Cinzel',serif}
+.dialogue-root.is-open{opacity:1}
+.dlg-box{bottom:6vh}
+.dlg-choices{display:grid;gap:6px;margin-top:12px}
+.dlg-choice{text-align:left;background:#e8c46a0d;border:1px solid #e8c46a33;color:#eee4cc;padding:8px 14px;border-radius:3px;font:15px Georgia,serif;cursor:pointer}
+.dlg-choice:hover,.dlg-choice:focus-visible{background:#e8c46a22;border-color:#e8c46a;outline:none}
+.dlg-choice::before{content:'› ';color:#e8c46a}
+.dlg-unwritten{border-style:dashed;border-color:#d27a5a}
+.dlg-unwritten .cs-line{color:#e0a58c;font-family:'JetBrains Mono',monospace;font-size:15px}
+
+/* ---- Title cards and story toasts --------------------------------------- */
+.title-card{position:fixed;inset:0;z-index:8800;display:grid;place-content:center;justify-items:center;gap:14px;
+  background:radial-gradient(ellipse at center,#07060bdd,#000f);opacity:0;transition:opacity .7s ease;cursor:pointer;font-family:'Cinzel',serif}
+.title-card.is-in{opacity:1}
+.title-card.is-out{opacity:0}
+.title-card-eyebrow{margin:0;letter-spacing:.5em;text-transform:uppercase;color:#b9a77f;font-size:15px}
+.title-card-rule{width:0;height:1px;background:linear-gradient(90deg,transparent,#e8c46a,transparent);transition:width 1.2s ease .2s}
+.title-card.is-in .title-card-rule{width:min(420px,70vw)}
+.title-card-title{margin:0;font-size:clamp(30px,5vw,56px);font-weight:500;letter-spacing:.14em;color:#f1e6c8;text-shadow:0 0 24px #e8c46a55;text-align:center}
+.story-toast{position:fixed;right:24px;bottom:24px;z-index:8700;display:flex;align-items:center;gap:12px;max-width:380px;padding:12px 18px;
+  border:1px solid #e8c46a55;border-radius:4px;background:#0b0a10f0;color:#eee4cc;font:15px Georgia,serif;box-shadow:0 12px 30px #000a;
+  transform:translateY(20px);opacity:0;transition:transform .5s ease,opacity .5s ease}
+.story-toast.is-in{transform:none;opacity:1}
+.story-toast-glyph{width:18px;height:18px;flex:none;border-radius:50%;background:radial-gradient(circle,#0b0a10 30%,#fff6d8 45%,#e8c46a88 60%,transparent 72%)}
+
+/* ---- Codex -------------------------------------------------------------- */
+.codex-shelves{display:grid;gap:var(--s8)}
+.codex-shelf h3{margin:0 0 var(--s4);font-family:'Cinzel',serif;font-size:var(--t-h3);letter-spacing:.08em;color:#e9dcb8}
+.codex-entries{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--s5)}
+.codex-entry{padding:var(--s5) var(--s7);border-radius:var(--r-sm);border:1px solid rgb(232 196 106 / .2);background:#0e0c14}
+.codex-entry strong{display:block}
+.codex-entry small{color:#8f846b}
+
+/* ---- Colour-blind support: shape + text redundancy for status colours ----- */
+body[data-colorblind="on"] .meta-pips i.on{background:repeating-linear-gradient(45deg,#f3dc97 0 3px,#8a6a24 3px 6px)}
+body[data-colorblind="on"] .archive-card.is-sealed em::before{content:'🔒 '}

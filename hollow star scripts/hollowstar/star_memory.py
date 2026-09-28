@@ -12,6 +12,7 @@ import json
 import re
 from pathlib import Path
 
+from hollowstar.save_migrations import migrate
 from hollowstar.snapshot import assert_safe_write_path
 from hollowstar.storage import atomic_json
 
@@ -63,8 +64,9 @@ class StarMemory:
         if not path.exists():
             return _default()
         raw = json.loads(path.read_text(encoding="utf-8"))
-        if not isinstance(raw, dict) or raw.get("schema") != SCHEMA:
+        if not isinstance(raw, dict):
             raise ValueError("invalid Hollow Star memory contract")
+        raw, _ = migrate(raw, "hollow-star-memory", 1)
         data = _default()
         for key in ("runs", "completions", "deaths"):
             value = raw.get(key, 0)
@@ -149,4 +151,25 @@ class StarMemory:
         if flag not in data["flags"]:
             data["flags"].append(flag)
             atomic_json(self.path, data)
+        return self.view()
+
+    # ---- debug tools (Simulation > Cheats) ---------------------------------
+    def debug(self, op: object, value: object = None) -> dict:
+        """Dev-only edits: set totals, clear flags, forget cutscenes, or reset."""
+        data = self.load()
+        if op == "reset":
+            data = _default()
+        elif op in {"runs", "completions", "deaths"}:
+            if type(value) is not int or not 0 <= value <= 100000:
+                raise ValueError("totals are non-negative integers")
+            data[op] = value
+        elif op == "clear_flag":
+            data["flags"] = [f for f in data["flags"] if f != value]
+        elif op == "set_flag":
+            return self.set_flag(value)
+        elif op == "forget_cutscenes":
+            data["seen_cutscenes"] = []
+        else:
+            raise ValueError("unknown Star debug operation")
+        atomic_json(self.path, data)
         return self.view()

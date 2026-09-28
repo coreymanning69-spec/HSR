@@ -1,3 +1,5 @@
+import {image} from './asset-registry.js';
+
 // Layered cutscene player: Flash-timeline style compositing for HSR.
 //
 // A scene is a list of shots. Layers persist across shots by id (like symbols
@@ -16,7 +18,10 @@
 //    in: {…props to start from}, dur, ease, delay, remove: true}
 // Shot spec:
 //   {layers: [...], camera: {x, y, zoom, rot, shake, dur}, text: {speaker, line, style},
-//    hold: ms (auto-advance; omit to wait for input), flash: 'white'|'gold'|'black'}
+//    hold: ms (auto-advance; omit to wait for input), flash: 'white'|'gold'|'black',
+//    audio: {music: id|null, ambience: id|null, sfx: id, stinger: id}}
+// Any layer may name `asset: 'image-id'` from web/assets/manifest.json; when
+// that art exists it replaces the built-in placeholder content.
 
 const STAGE_W = 1600;
 const STAGE_H = 900;
@@ -31,7 +36,8 @@ const LOOPS = {
   spin: [{transform: 'rotate(0deg)'}, {transform: 'rotate(360deg)'}],
 };
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
-const reducedMotion = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+const reducedMotion = () => document.body.classList.contains('reduced-motion')
+  || Boolean(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 
 function transformOf(p, anchor) {
   const [ax, ay] = anchor || [0.5, 0.5];
@@ -51,7 +57,9 @@ function buildNode(spec) {
   const inner = document.createElement('div');
   inner.className = 'cs-inner';
   node.appendChild(inner);
-  if (spec.kind === 'image') inner.innerHTML = `<img src="${esc(spec.src)}" alt="" draggable="false">`;
+  const art = spec.asset ? image(spec.asset) : null;
+  if (art) inner.innerHTML = `<img src="${esc(art.src)}" alt="" draggable="false">`;
+  else if (spec.kind === 'image') inner.innerHTML = `<img src="${esc(spec.src)}" alt="" draggable="false">`;
   else if (spec.kind === 'text') inner.innerHTML = `<span class="cs-title-text ${esc(spec.style || '')}">${esc(spec.content)}</span>`;
   else if (spec.kind === 'fill') inner.style.background = spec.content || '#000';
   else if (spec.kind !== 'group') inner.innerHTML = spec.content || '';  // authored SVG, trusted scene data
@@ -59,8 +67,10 @@ function buildNode(spec) {
 }
 
 export class CutscenePlayer {
-  constructor({host = document.body, onEnd = null} = {}) {
+  constructor({host = document.body, onEnd = null, textSpeed = 34, audio = null} = {}) {
     this.host = host;
+    this.textSpeed = textSpeed;
+    this.audio = audio;
     this.onEnd = onEnd;
     this.layers = new Map();  // id -> {node, props, anchor, loopAnim}
     this.index = -1;
@@ -121,6 +131,13 @@ export class CutscenePlayer {
     const shot = this.scene.shots[this.index];
     this.root.querySelectorAll('.cs-pips i').forEach((pip, i) => pip.classList.toggle('on', i <= this.index));
     if (shot.flash) this.flash(shot.flash);
+    if (shot.audio && this.audio) {
+      const a = shot.audio;
+      if ('music' in a) (a.music ? this.audio.playMusic(a.music) : this.audio.stopMusic());
+      if ('ambience' in a) (a.ambience ? this.audio.playAmbience(a.ambience) : this.audio.stopAmbience());
+      if (a.sfx) this.audio.play(a.sfx);
+      if (a.stinger) this.audio.stinger(a.stinger);
+    }
     if (shot.camera) this.moveCamera(shot.camera);
     for (const spec of shot.layers || []) this.applyLayer(spec, this.stage);
     this.showText(shot.text);
@@ -202,7 +219,7 @@ export class CutscenePlayer {
     const lineNode = box.querySelector('.cs-line');
     const line = String(text.line || '');
     box.classList.remove('is-done');
-    if (reducedMotion()) { lineNode.textContent = line; box.classList.add('is-done'); return; }
+    if (reducedMotion() || !this.textSpeed) { lineNode.textContent = line; box.classList.add('is-done'); return; }
     let shown = 0;
     lineNode.textContent = '';
     const finish = () => {
@@ -216,7 +233,7 @@ export class CutscenePlayer {
       shown += 1;
       lineNode.textContent = line.slice(0, shown);
       if (shown >= line.length) finish();
-    }, text.speed ?? 34);
+    }, text.speed ?? this.textSpeed);
     this.typing = {finish};
   }
 

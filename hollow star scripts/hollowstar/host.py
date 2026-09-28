@@ -1140,7 +1140,7 @@ class HSRHost:
         except (spell_workshop.WorkshopError, OSError, ValueError, TypeError) as exc:
             return self._error(request, "SPELL_WORKSHOP_INVALID", str(exc))
 
-    @command_handler(*({"character_options", "character_roll", "peek_creation_seed", "allocate_creation_seed", "randomize_build", "preview_character", "build_character", "content_catalog", "design_start", "design_action", "design_turn", "arcade_tick", "arcade_toggle_flight", "arcade_set_movement_mode", "idle_tick", "auto_travel", "observe", "readout", "report", "reveal-room-record", "test-perception", "register_ruling", "spell_catalog", "design_auto", "design_auto_combat", "design_drain_npc", "checkpoint", "bank_checkpoint", "resume_checkpoint", "terminal_receipt", "progression", "settle_run", "upgrade", "meta_shop", "meta_shop_purchase", "star_memory", "star_mark_seen", "star_debug", "story_state", "story_emit", "story_flag", "codex_discover", "run_end", "identify", "combine", "replay_token", "inspect_replay_token", "design_auto", "sandbox_start", "sandbox_release", "sandbox_action", "sandbox_debug", "sandbox_branch", "finished_runs", "sandbox_prestige", "forge_start", "forge_action", "forge_receipt"} | EXPEDITION_COMMANDS))
+    @command_handler(*({"character_options", "character_roll", "peek_creation_seed", "allocate_creation_seed", "randomize_build", "preview_character", "build_character", "content_catalog", "design_start", "design_action", "design_turn", "arcade_tick", "arcade_toggle_flight", "arcade_set_movement_mode", "idle_tick", "auto_travel", "observe", "readout", "report", "reveal-room-record", "test-perception", "register_ruling", "spell_catalog", "design_auto", "design_auto_combat", "design_drain_npc", "checkpoint", "bank_checkpoint", "resume_checkpoint", "terminal_receipt", "progression", "settle_run", "upgrade", "meta_shop", "meta_shop_purchase", "star_memory", "star_mark_seen", "star_debug", "story_state", "story_emit", "story_flag", "codex_discover", "run_end", "unlock_ladder", "unlock_pick", "unlock_debug", "identify", "combine", "replay_token", "inspect_replay_token", "design_auto", "sandbox_start", "sandbox_release", "sandbox_action", "sandbox_debug", "sandbox_branch", "finished_runs", "sandbox_prestige", "forge_start", "forge_action", "forge_receipt"} | EXPEDITION_COMMANDS))
     def _cmd_design_runtime(self, request: dict, command: str) -> dict | None:
         blocked = self._require_booted(request)
         if blocked:
@@ -1171,6 +1171,13 @@ class HSRHost:
                     run=self._runs()._active.get(run_id)
                 if run is None: raise RunServiceError("load the run first")
                 return self._ok(request,{"run_end":finalize(self.paths.run_root.parent / "reliquary_progress",run_id,run)})
+            if command in {"unlock_ladder","unlock_pick","unlock_debug"}:
+                from hollowstar.unlock_ladder import UnlockLadder, ladder as ladder_spec
+                unlocks=UnlockLadder(self.paths.run_root.parent / "reliquary_progress")
+                champ=str(request.get("champion") or "").lower()
+                if command=="unlock_pick": return self._ok(request,{"ladder":unlocks.pick(champ,request.get("key"))})
+                if command=="unlock_debug": return self._ok(request,{"ladder":unlocks.debug_set_level(champ,request.get("level"))})
+                return self._ok(request,{"ladders":{name:unlocks.view(name) for name in ladder_spec()["champions"]}})
             if command=="star_debug":
                 from hollowstar.star_memory import StarMemory
                 return self._ok(request,{"star":StarMemory(self.paths.run_root.parent / "reliquary_progress").debug(request.get("op"),request.get("value"))})

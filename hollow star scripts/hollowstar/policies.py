@@ -537,8 +537,9 @@ def _legendary_choice(run, key, window):
     a = t.actor(run, key)
     if t.rules(run, key).get("identity") != "tarrasque" or a.resources.get("legendary_actions", 0) <= 0:
         return None
-    foes = [k for k, v in t.actors(run).items() if not t.same_side(k, key) and v.alive
-            and "total" != run.context["combat"]["terrain"]["cover"].get(k)]
+    if run.round_number < t.rules(run, key).get("rising_until", 0):
+        return None
+    foes = _tarrasque_foes(run, key)
     preferred = window.get("target")
     for mode in ("claw", "tail"):
         reach = TARRASQUE_REACH[mode]
@@ -592,16 +593,28 @@ def reaction_action(run, window):
     return decline
 
 
+def _tarrasque_foes(run, key):
+    """Before launch it fights the party; once launched it attacks everything alive."""
+    r = t.rules(run, key)
+    feral = r.get("feral") and run.round_number >= r.get("launches_at", 0)
+    return [k for k, v in t.actors(run).items() if k != key and v.alive
+            and (feral or not t.same_side(k, key))
+            and "total" != run.context["combat"]["terrain"]["cover"].get(k)]
+
+
 def _tarrasque_turn(run, key, target):
     """One step of the Tarrasque's own turn: the five-attack routine at
     whatever it can reach, closing the distance when nothing reaches."""
     r, e = t.rules(run, key), t.economy(run, key)
+    if run.round_number < r.get("rising_until", 0):
+        return {"type": "end_turn", "actor": key}  # still hauling itself out of the cocoon
     routine = r.get("routine") or []
     if not routine and not e["action"]:
         return {"type": "end_turn", "actor": key}
     remaining = routine or ["bite", "claw", "claw", "horns", "tail"]
-    foes = [k for k, v in t.actors(run).items() if not t.same_side(k, key) and v.alive
-            and "total" != run.context["combat"]["terrain"]["cover"].get(k)]
+    foes = _tarrasque_foes(run, key)
+    if r.get("feral") and run.round_number >= r.get("launches_at", 0) and foes:
+        target = min(foes, key=lambda k: (t.distance(run, key, k), t.actor(run, k).hp, k))
     for mode in TARRASQUE_PREFERENCE:
         if mode not in remaining:
             continue

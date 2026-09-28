@@ -45,10 +45,22 @@ def finalize(progress_root: Path, run_id: str, run) -> dict:
     receipt = receipt or {"outcome": "completed" if status == "cleared" else "dead", "status": status,
                           "rooms": d.get("rooms_cleared", 0)}
     after = star.record_run(run_id, lead, receipt, {"name": lead.split(":", 1)[-1]})
+    ladder = {}
+    from hollowstar.unlock_ladder import UnlockLadder, champion_of
+    unlocks = UnlockLadder(progress_root)
+    for selector in run.context.get("party_selectors", []):
+        champ = None if str(selector).startswith("custom:") else champion_of(selector)
+        if champ:
+            ladder[champ] = unlocks.credit(champ, run_id, d.get("rooms_cleared", 0))
+    if d.get("star_reveal"):
+        after = star.set_flag("star_revealed")
     if not already:
+        if d.get("star_reveal"):
+            story.emit("star_revealed", {"run_id": run_id, "survivors": d["star_reveal"].get("survivors", [])})
         story.emit("run_ended", {"run_id": run_id, "status": status, "outcome": receipt.get("outcome"),
                                  "floor": d.get("floor"), "rooms": d.get("rooms_cleared", 0)})
     return {"run_id": run_id, "already_finalized": already, "settled": settled, "errors": errors,
             "star": after, "awareness_before": awareness(before), "awareness_after": after["awareness"],
+            "ladder": ladder, "star_revealed": bool(d.get("star_reveal")),
             "meta_shop_newly_unlocked": after["meta_shop_unlocked"] and not before["meta_shop_unlocked"],
             "story": story.load()}

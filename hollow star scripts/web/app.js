@@ -1002,6 +1002,7 @@ function result(reply) {
     state.refreshed = new Date();
     syncEncounterScreen(previousView, state.view);
     announceDescent(previousView?.descent, state.view?.descent);
+    recordSightings(state.view);
     // A Turn 0 cascade resolves before initiative; say so once, in the log.
     const turnZero = state.view?.combat?.turn_zero;
     if (Array.isArray(turnZero) && turnZero.length && !(previousView?.combat?.turn_zero || []).length) {
@@ -1581,6 +1582,19 @@ async function talkTo(id) {
     }});
   await loadStory();
 }
+function slug(value) { return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 90) || 'unknown'; }
+// Codex: the first time a creature or resident is seen, record it. Once per name per session.
+function recordSightings(view) {
+  state.codexSeen = state.codexSeen || new Set();
+  for (const row of view?.opposition || []) {
+    const name = row.name || row.id; if (!name) continue;
+    const kind = String(row.role || row.kind || '').includes('resident') ? 'resident' : 'monster';
+    const id = slug(name);
+    if (state.codexSeen.has(`${kind}:${id}`)) continue;
+    state.codexSeen.add(`${kind}:${id}`);
+    state.client.request('codex_discover', {kind, entry: id, title: name}).catch(() => {});
+  }
+}
 // The run-end pipeline: once per run, the host settles progression, feeds the
 // Star and emits run_ended. The client only reports what changed.
 async function finalizeRun(runId) {
@@ -1594,6 +1608,8 @@ async function finalizeRun(runId) {
     if (out.meta_shop_newly_unlocked) storyToast(t('shop.unlocked_toast'));
     if ((out.awareness_after?.tier ?? 0) > (out.awareness_before?.tier ?? 0)) storyToast(t('run.star_awareness', {tier: out.awareness_after.tier, name: out.awareness_after.name}));
     for (const row of out.errors || []) addMessage(`Settlement skipped for ${row.identity}: ${row.error}`, 'note');
+    for (const [champ, view] of Object.entries(out.ladder || {})) if (view.picks_left) storyToast(t('ladder.picks_toast', {name: champ[0].toUpperCase() + champ.slice(1), n: view.picks_left}));
+    if (out.star_revealed) { await playScene('last-standing'); render(); }
   } catch { state.finalizedRuns.delete(runId); }
 }
 function codexScreen() {
@@ -1615,6 +1631,8 @@ function storyDebugPanel() {
     <p class="label">Dialogues</p><div class="actions">${Object.keys(DIALOGUES).map(id => button(id, `dialogue:${id}`, 'secondary')).join('')}</div>
     <p class="label">Story flags</p><form class="actions" data-story-flag-form><input name="flag" placeholder="flag_name" aria-label="Flag name"><button type="submit" class="action secondary">Set flag</button></form>
     <p>${flags.length ? flags.map(([k, v]) => `<code>${E(k)}=${E(v)}</code>`).join(' ') : '<span class="notice">No flags set.</span>'}</p>
+    <p class="label">Champion ladder (set level)</p><div class="actions">${['doran', 'wren'].flatMap(c => [1, 25, 50, 100].map(n => button(`${c[0].toUpperCase() + c.slice(1)} ${n}`, `ladder-debug:${c}:${n}`, 'secondary'))).join('')}</div>
+    <p>${Object.values(state.ladders || {}).map(v => `${E(v.champion)} L${E(v.level)} · ${E(v.picks_left)} picks`).join(' · ') || '<span class="notice">Ladder not loaded.</span>'}</p>
     <p class="label">Content systems</p><p>Audio: ${E(a.known)} sounds in manifest · music ${E(a.music || 'none')}${a.missing.length ? ` · missing: ${E(a.missing.slice(0, 6).join(', '))}` : ''}<br>Art: ${E(art.images)} images, ${E(art.sprites)} sprites${art.missing.length ? ` · placeholders for: ${E(art.missing.slice(0, 6).join(', '))}` : ''}</p>
   </section>`;
 }
@@ -1627,6 +1645,24 @@ function storyOptions() {
     <label class="option-row"><span><strong>Colour-blind support</strong><small>Add patterns and symbols wherever colour carries meaning.</small></span><input type="checkbox" data-pref="colorblind" ${state.preferences.colorblind === 'on' ? 'checked' : ''}></label>
     <label class="option-row"><span><strong>Mute all audio</strong></span><input type="checkbox" data-pref-group="audio" data-pref-key="muted" ${au.muted ? 'checked' : ''}></label>
     ${['master', ...AUDIO_CATEGORIES].map(cat => `<label class="option-row"><span><strong>${E(cat[0].toUpperCase() + cat.slice(1))} volume — ${Math.round(au[cat] * 100)}%</strong></span><input type="range" min="0" max="1" step=".05" value="${E(au[cat])}" data-pref-group="audio" data-pref-key="${cat}"></label>`).join('')}`;
+}
+async function loadLadders() {
+  try { const reply = await state.client.request('unlock_ladder', {}, {dedupeKey: 'unlock_ladder'}); if (reply.ok) state.ladders = reply.result?.ladders || null; } catch {}
+}
+function ladderScreen() {
+  const back = `<div class="mode-menu-footer"><div class="footer-right">${button('Back', 'back', 'secondary')}</div></div>`;
+  const ladders = state.ladders;
+  const body = !ladders ? `<p class="notice">${E(t('star.offline'))}</p>` : Object.values(ladders).map(v => {
+    const name = v.champion[0].toUpperCase() + v.champion.slice(1);
+    const tiles = v.entries.map(e => `<div class="ladder-entry${e.unlocked ? ' is-unlocked' : e.available ? ' is-available' : ''}">
+      <strong>${E(e.label)}</strong><small>${E(t('ladder.min_level', {n: e.min_level}))}</small>
+      ${e.unlocked ? `<em>${E(t('ladder.unlocked'))}</em>` : e.available && v.picks_left ? `<button type="button" class="action secondary" data-action="unlock:${E(v.champion)}:${E(e.key)}">${E(t('ladder.unlock'))}</button>` : ''}</div>`).join('');
+    return `<section class="ladder-champion"><header class="ladder-head"><h3>${E(name)}</h3><span class="ladder-level">${E(t('ladder.level', {n: v.level, max: v.max_level}))}</span>
+      <span class="ladder-picks">${E(t('ladder.picks', {n: v.picks_left}))}</span>${v.slot_cap ? `<span class="ladder-picks">${E(t('ladder.slots', {n: v.slot_cap}))}</span>` : ''}</header>
+      <div class="journey-progress"><span style="width:${Math.round(v.level / v.max_level * 100)}%"></span></div>
+      <div class="ladder-grid">${tiles}</div></section>`;
+  }).join('');
+  return `<div class="mode-menu">${breadcrumb('Main Menu', 'Story Mode', t('ladder.title'))}${atmosphere('gateway', t('ladder.title'), t('ladder.subtitle'))}${card(t('ladder.title'), `<div class="ladder">${body}</div>${back}`, 'mode-menu-card')}</div>`;
 }
 function metaShopScreen() {
   const back = `<div class="mode-menu-footer"><div class="footer-right">${button('Back', 'back', 'secondary')}</div></div>`;
@@ -1662,6 +1698,10 @@ function storyMenu() {
         ? `<button type="button" class="action menu-item-card" data-action="menu:meta-shop" data-tooltip="Spend Platinum on permanent upgrades the Hollow Star carries into every vessel."><strong>Meta Shop</strong><small>Permanent upgrades carried between runs</small></button>`
         : `<button type="button" class="action menu-item-card is-locked" aria-disabled="true" data-tooltip="The Hollow Star has nothing to trade yet. Finish your first run."><strong>Meta Shop · Sealed</strong><small>Unlocks after your first run ends</small></button>`}
       <button type="button" class="action menu-item-card" data-action="menu:archive" data-tooltip="Replay the Hollow Star's memories."><strong>Memory Archive</strong><small>Cutscenes the Star has lived through</small></button>
+    </div>
+    <div class="menu-grid-row-2">
+      <button type="button" class="action menu-item-card" data-action="menu:ladder" data-tooltip="Doran and Wren earn their own power back, level 1 to 100."><strong>Champion Ladder</strong><small>Unlock Doran and Wren's abilities as they level</small></button>
+      <button type="button" class="action menu-item-card" data-action="menu:codex" data-tooltip="Floors, creatures and residents you have discovered."><strong>Codex</strong><small>What the Reliquary has let you learn</small></button>
     </div>
   </div><div class="mode-menu-footer"><div class="footer-right">${button('Back', 'back', 'secondary')}</div></div>`, 'mode-menu-card')}</div>`;
 }
@@ -5159,7 +5199,7 @@ function renderNow() {
     state.phase === 'create' ? creator() : state.phase === 'entry-select' ? entrySelect() :
     state.phase === 'preview' ? preview() : state.phase === 'runs' ? runs() :
     state.phase === 'statistics' ? statisticsScreen() : state.phase === 'edit-scenario' ? scenarioEditor() :
-    state.phase === 'cheats' ? cheatsPanel() : state.phase === 'archive' ? archiveScreen() : state.phase === 'codex' ? codexScreen() : state.phase === 'meta-shop' ? metaShopScreen() : state.phase === 'toolbox' ? toolboxScreen() : state.phase === 'options' ? options() : shell();
+    state.phase === 'cheats' ? cheatsPanel() : state.phase === 'archive' ? archiveScreen() : state.phase === 'codex' ? codexScreen() : state.phase === 'ladder' ? ladderScreen() : state.phase === 'meta-shop' ? metaShopScreen() : state.phase === 'toolbox' ? toolboxScreen() : state.phase === 'options' ? options() : shell();
   // The desktop app is a locked-ratio frame, so long pre-game/menu screens
   // need one named in-frame scrolling region.  Gameplay owns its centre-stage
   // scroller and the fixed creator owns its stage; wrapping either here would
@@ -6366,8 +6406,9 @@ function bind() {
         state.statistics = null; state.statisticsDetail = null; state.statisticsView = 'menu';
       }
       go(phase); render();
-      if (['archive', 'menu-story', 'meta-shop', 'codex', 'cheats'].includes(phase)) {
+      if (['archive', 'menu-story', 'meta-shop', 'codex', 'cheats', 'ladder'].includes(phase)) {
         await loadStar();
+        if (phase === 'ladder' || phase === 'cheats') await loadLadders();
         if (phase === 'codex' || phase === 'cheats') await loadStory();
         if (phase === 'meta-shop' && metaShopUnlocked()) await loadMetaShop();
         if (state.phase === phase) render();
@@ -6382,6 +6423,14 @@ function bind() {
     else if (action === 'engine' || action === 'start-engine') await connect('engine-host', 'title');
     else if (action.startsWith('cutscene:')) { await playScene(action.slice(9)); render(); }
     else if (action.startsWith('dialogue:')) { await talkTo(action.slice(9)); render(); }
+    else if (action.startsWith('unlock:')) {
+      const [, champion, ...rest] = action.split(':');
+      await work(async () => { const reply = await state.client.request('unlock_pick', {champion, key: rest.join(':')}); if (!reply.ok) throw Error(reply.error?.message || 'Unlock failed'); await loadLadders(); });
+    }
+    else if (action.startsWith('ladder-debug:')) {
+      const [, champion, level] = action.split(':');
+      await work(async () => { const reply = await state.client.request('unlock_debug', {champion, level: Number(level)}); if (!reply.ok) throw Error(reply.error?.message); await loadLadders(); });
+    }
     else if (action.startsWith('story-debug:')) {
       const op = action.slice(12);
       await work(async () => {
@@ -6539,6 +6588,9 @@ function bind() {
     });
     else if (action === 'return-menu') { clearScreenTransientState(); state.route = ['title']; state.phase = 'title'; state.note = ''; render(); }
     else if (action.startsWith('tab:')) { refreshScreen(action.slice(4)); }
+    else if (action.startsWith('talk:') && DIALOGUES[`npc:${slug(action.slice(5))}`]) {
+      await talkTo(`npc:${slug(action.slice(5))}`); render();
+    }
     else if (action.startsWith('talk:') || action.startsWith('intent:')) {
       state.pendingConversation = null;
       state.consoleDraft = action.startsWith('talk:') ? `talk to ${action.slice(5)}` : action.slice(7);

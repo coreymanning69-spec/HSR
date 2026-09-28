@@ -2050,6 +2050,11 @@ def apply(run, action):
     key = action.get("actor", current(run))
     kind = action["type"]
     a, r = actor(run, key), rules(run, key)
+    if r.get("locked_actions"):
+        from hollowstar.unlock_ladder import action_locked
+        locked = action_locked(r, action)
+        if locked:
+            raise ActionError(f"{locked} is still locked (champion level {r.get('champion_level', 1)}); unlock it on the ladder")
     if kind in {"flight_move", "ascend", "descend"}:
         if not capable(r, "flight"):
             raise ActionError("only Wren may use flight controls")

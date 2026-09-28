@@ -33,6 +33,15 @@ const TABLES = {
     'dialogue.unwritten': 'Unwritten line: {speaker} ({id})',
     'run.star_awareness': 'The Hollow Star stirs. Awareness {tier}: {name}.',
     'floor.card': 'Floor {n}',
+    'ladder.title': 'Champion Ladder',
+    'ladder.subtitle': 'Doran and Wren already hold everything. The Reliquary gives it back a piece at a time.',
+    'ladder.level': 'Level {n} / {max}',
+    'ladder.picks': '{n} picks available',
+    'ladder.slots': 'Spell slots to level {n}',
+    'ladder.min_level': 'From level {n}',
+    'ladder.unlock': 'Unlock',
+    'ladder.unlocked': 'Unlocked',
+    'ladder.picks_toast': '{name} can unlock {n} more abilities on the Champion Ladder.',
   },
 };
 

@@ -27,3 +27,14 @@ export const DIALOGUES = {
     },
   },
 };
+
+// NPC hooks: an entry keyed `npc:<name-slug>` plays when the player talks to
+// that resident, before the host conversation. Example (inactive name):
+DIALOGUES['npc:example-well-keeper'] = {
+  id: 'npc:example-well-keeper',
+  start: 'a',
+  nodes: {
+    a: {speaker: 'Well-keeper', line: 'You have the look of someone who has drunk from this well before.', if: {awareness: 1}, else: 'b'},
+    b: {speaker: 'Well-keeper', line: 'Mind the rope. It remembers hands.'},
+  },
+};

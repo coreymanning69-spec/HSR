@@ -393,6 +393,17 @@ class RunService:
                     "saves": {k.upper(): v for k,v in source["stats"].get("saves", {}).items()},
                     "baseline_resources": dict(selected[index].resources),
                     "base_ac": selected[index].armor_class}
+        if str(run_mode).upper() == "FORGE":
+            # Story Mode: Doran and Wren's earned-back ladder. Simulation and
+            # rehearsal keep their complete sheets.
+            from hollowstar.unlock_ladder import UnlockLadder, apply_slot_cap, champion_of
+            unlocks = UnlockLadder(self.run_root.parent / "reliquary_progress")
+            for index, selector in enumerate(party):
+                champ = None if selector.startswith("custom:") else champion_of(selector)
+                if champ:
+                    locks = unlocks.run_locks(champ)
+                    party_rules.setdefault(f"p{index}", {}).update(locks)
+                    party_rules[f"p{index}"]["closed_slots"] = apply_slot_cap(selected[index], locks["slot_cap"])
         encounter.context["party_rules"] = party_rules
         from hollowstar.progression import Progression
         progress=Progression(self.run_root.parent / "reliquary_progress")

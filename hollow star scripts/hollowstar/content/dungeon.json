@@ -40,7 +40,9 @@
     }
   },
   "defeat": "eject; re-entry starts a fresh run from frozen baselines",
-  "cocoon_rounds": 20,
+  "cocoon_rounds": 30,
+  "tarrasque_rise_rounds": 5,
+  "tarrasque_launch_delay": 2,
   "room_types": [
     "social",
     "combat",
@@ -310,7 +312,7 @@
       "posture": "rivals hold positions around the visible cocoon clock",
       "resident": "Palace rival envoy",
       "motive": "Win the chamber's prize while preventing another party from claiming control of the cocoon.",
-      "law": "The crisis chamber begins a visible twenty-round cocoon clock; surviving rivals and escape routes persist when it opens.",
+      "law": "The crisis chamber begins a visible thirty-round cocoon clock; surviving rivals and escape routes persist when it opens.",
       "terrain": "Polished halls, balconies, five rival positions, and the central cocoon.",
       "tell": "Each seam in the cocoon brightens once per round.",
       "secret": "A service stair reaches the chamber's extraction balcony.",

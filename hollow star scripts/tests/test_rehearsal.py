@@ -381,11 +381,15 @@ class FinalFloor(unittest.TestCase):
         run.round_number = run.context['dungeon']['rooms']['5:7']['cocoon']['rounds'] + 5
         return self.service.design_action('trial', {'type': 'end_turn'})
 
-    def test_round_twenty_opens_the_regular_tarrasque_without_a_ruling(self):
+    def test_round_thirty_opens_the_regular_tarrasque_without_a_ruling(self):
         result = self.reach_the_cocoon()
         crisis = result['event']['crisis']
         self.assertEqual(crisis['type'], 'cocoon_opened')
-        self.assertEqual(crisis['emerges_at_round'], 20)
+        self.assertEqual(crisis['emerges_at_round'], 30)
+        # It rises for five rounds, then launches two rounds later at everyone.
+        opened_at = self.service._active['trial'].round_number
+        self.assertEqual(crisis['rising_until'], opened_at + 5)
+        self.assertEqual(crisis['launches_at'], opened_at + 7)
         self.assertEqual(crisis['rules_version'], 'regular 2014 Tarrasque')
         run = self.service._active['trial']
         self.assertIn('tarrasque', [t.rules(run, k).get('identity') for k in t.actors(run)])

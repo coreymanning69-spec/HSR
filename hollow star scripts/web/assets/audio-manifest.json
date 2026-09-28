@@ -1,0 +1,4 @@
+{
+  "_readme": "Audio made outside this repo. Add one entry per sound: id -> {src, category (music|ambience|sfx|voice|ui), volume 0-1, loop}. Paths are relative to web/. Ids referenced but not listed here are skipped silently.",
+  "sounds": {}
+}

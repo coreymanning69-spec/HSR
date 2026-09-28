@@ -864,9 +864,27 @@ def record_final_floor_completion(run):
         return None
     tarrasques=[k for k in t.actors(run) if t.rules(run,k).get('identity')=='tarrasque']
     if tarrasques and all(not t.actor(run,k).alive for k in tarrasques):
+        # Whoever is still standing on the rival side when it dies takes its loot.
+        rivals=[k for k in t.actors(run) if not k.startswith('p') and k not in tarrasques and t.actor(run,k).alive]
+        d.setdefault('tarrasque_loot', 'rivals' if rivals else 'party')
+        _check_star_reveal(run)
         d['final_floor']='actual_final_floor_complete'
         return 'actual_final_floor_complete'
+    _check_star_reveal(run)
     return None
+
+
+def _check_star_reveal(run):
+    """Last one standing in the palace, after the cocoon opened: the Star appears."""
+    d=state(run)
+    row=room(run) or {}
+    if d.get('star_reveal') or not (row.get('cocoon') or {}).get('opened'):
+        return None
+    others=[k for k in t.actors(run) if not k.startswith('p') and t.actor(run,k).alive]
+    party=[k for k in t.actors(run) if k.startswith('p') and t.actor(run,k).alive]
+    if party and not others:
+        d['star_reveal']={'round': run.round_number, 'survivors': [t.actor(run,k).name for k in party]}
+    return d.get('star_reveal')
 
 
 def add_item(run,kind,*,identified=None):
@@ -1438,7 +1456,18 @@ def cocoon(run,row):
         from hollowstar.monsters import spawn_tarrasque
         row['cocoon']['opened'] = True
         event = spawn_tarrasque(run)
+        # It rises for several rounds (untouchable by its own turn, but hittable),
+        # then launches and attacks everything alive: party and rivals alike.
+        rise = int(state(run)['config'].get('tarrasque_rise_rounds', 5))
+        delay = int(state(run)['config'].get('tarrasque_launch_delay', 2))
+        beast_rules = t.rules(run, event['actor'])
+        beast_rules['rising_until'] = run.round_number + rise
+        beast_rules['launches_at'] = run.round_number + rise + delay
+        beast_rules['feral'] = True
+        row['cocoon'].update({'rising_until': beast_rules['rising_until'], 'launches_at': beast_rules['launches_at']})
         event.update({'type': 'cocoon_opened', 'emerges_at_round': clock,
+                      'rising_until': beast_rules['rising_until'], 'launches_at': beast_rules['launches_at'],
+                      'tell': 'The Tarrasque drags itself out of the cocoon. It is not ready yet.',
                       'rules_version': 'regular 2014 Tarrasque',
                       'certification': 'Step 6 final-floor fixture'})
         return event
@@ -2008,6 +2037,7 @@ def view(run):
           'expedition':_expedition_view(run),
         'final_floor':d.get('final_floor','not-reached' if d['floor']<5 else 'boss_victory_only'),
          'final_floor_clock':cocoon_state,
+         'star_reveal':copy.deepcopy(d.get('star_reveal')),'tarrasque_loot':d.get('tarrasque_loot'),
          'fixture_status':d['config']['status'],'carry_out':d['config']['carry_out'],
          'pending_carry_out':copy.deepcopy(list(d.get('permanent_gear',{}).values())),
          'content':visible_catalog(registry,{owner.lower() for owner in owners}),

@@ -1,0 +1,55 @@
+{
+  "schema": "hollow-star-unlock-ladder-1",
+  "_readme": "Doran and Wren enter Story Mode with their full level-20 sheets locked. Champion level 1-100 (100 = their complete selves). Picks: one every 5 levels, plus a bonus pick every 25. min_level gates when a pick becomes available. key matches an engine action: '<type>' or '<type>:<maneuver|feature|spell>'. Wren's spell slots open by level instead of by pick. HSR-only overlay: canon sheets are never changed. [COREY] reorder/retune freely.",
+  "xp_per_level": 2,
+  "picks": {"every": 5, "bonus_every": 25},
+  "champions": {
+    "doran": {
+      "always": ["attack", "move", "dash", "dodge", "disengage", "help", "shove", "trip", "grapple", "stand", "end_turn", "aim"],
+      "unlocks": [
+        {"key": "maneuver:Trip Attack", "label": "Trip Attack", "min_level": 1},
+        {"key": "maneuver:Pushing Attack", "label": "Pushing Attack", "min_level": 1},
+        {"key": "maneuver:Disarming Attack", "label": "Disarming Attack", "min_level": 5},
+        {"key": "maneuver:Menacing Attack", "label": "Menacing Attack", "min_level": 5},
+        {"key": "maneuver:Riposte", "label": "Riposte", "min_level": 10},
+        {"key": "maneuver:Precision Attack", "label": "Precision Attack", "min_level": 10},
+        {"key": "maneuver:Goading Attack", "label": "Goading Attack", "min_level": 10},
+        {"key": "maneuver:Lunging Attack", "label": "Lunging Attack", "min_level": 15},
+        {"key": "maneuver:Feinting Attack", "label": "Feinting Attack", "min_level": 15},
+        {"key": "maneuver:Distracting Strike", "label": "Distracting Strike", "min_level": 15},
+        {"key": "maneuver:Brace", "label": "Brace", "min_level": 20},
+        {"key": "maneuver:Maneuvering Attack", "label": "Maneuvering Attack", "min_level": 20},
+        {"key": "maneuver:Commanding Presence", "label": "Commanding Presence", "min_level": 25},
+        {"key": "maneuver:Evasive Footwork", "label": "Evasive Footwork", "min_level": 25},
+        {"key": "maneuver:Grappling Strike", "label": "Grappling Strike", "min_level": 30},
+        {"key": "maneuver:Bait and Switch", "label": "Bait and Switch", "min_level": 30},
+        {"key": "maneuver:Ambush", "label": "Ambush", "min_level": 35},
+        {"key": "action_surge", "label": "Action Surge", "min_level": 20},
+        {"key": "second_wind", "label": "Second Wind", "min_level": 5},
+        {"key": "stance", "label": "Stances", "min_level": 25},
+        {"key": "read_seam", "label": "Read the Seam", "min_level": 35},
+        {"key": "recover_weapon", "label": "Recover Weapon", "min_level": 10},
+        {"key": "indomitable", "label": "Indomitable", "min_level": 40},
+        {"key": "grand_cleave", "label": "Grand Cleave", "min_level": 50}
+      ]
+    },
+    "wren": {
+      "always": ["attack", "move", "dash", "dodge", "disengage", "help", "shove", "trip", "grapple", "stand", "end_turn", "aim", "cast", "end_concentration"],
+      "slot_levels": {"per_levels": 11, "max": 9},
+      "unlocks": [
+        {"key": "ring_heal", "label": "Ring of Healing", "min_level": 5},
+        {"key": "unearthly_recovery", "label": "Unearthly Recovery", "min_level": 10},
+        {"key": "arcane_recovery", "label": "Arcane Recovery", "min_level": 10},
+        {"key": "channel_grace", "label": "Channel Grace", "min_level": 15},
+        {"key": "domain:free_misty_step", "label": "Free Misty Step", "min_level": 15},
+        {"key": "domain:Aura of the Unbound", "label": "Aura of the Unbound", "min_level": 25},
+        {"key": "domain:Indomitable Spirit", "label": "Indomitable Spirit", "min_level": 30},
+        {"key": "domain:Dimensional Shift", "label": "Dimensional Shift", "min_level": 40},
+        {"key": "staff_cast", "label": "Staff casting", "min_level": 45},
+        {"key": "staff_absorb", "label": "Staff absorption", "min_level": 45},
+        {"key": "domain:simulacrum", "label": "Call Simulacrum", "min_level": 60},
+        {"key": "domain:The Open Door", "label": "The Open Door", "min_level": 80}
+      ]
+    }
+  }
+}

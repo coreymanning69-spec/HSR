@@ -14,6 +14,14 @@ import {themeFor} from './stage-set.js';
 import {bodyOf} from './stage-world.js';
 import {createToolbox} from './actor-toolbox.js';
 import {mountBattleBackdrop, createWoundLayer} from './battle-backdrop.js';
+import {playCutscene} from './cutscene-player.js?v=cs-2';
+import {createAudioSystem, DEFAULT_AUDIO_SETTINGS, AUDIO_CATEGORIES} from './audio-system.js';
+import {assetStatus} from './asset-registry.js';
+import {t} from './strings.js';
+import {runDialogue} from './dialogue-runner.js';
+import {DIALOGUES} from './dialogues.js';
+import {titleCard, storyToast} from './transitions.js';
+import {CUTSCENES, cutsceneUnlocked} from './cutscenes.js?v=cs-2';
 import {characterFigure as drawDoll, visualRole, visualIdentity, presentationAppearance, visualExpression} from './paperdoll.js?v=puppet-1';
 
 const E = globalThis.HSRUI.escape;
@@ -60,7 +68,7 @@ const FLAVOR = {
 };
 const preferenceKey = 'hsr-display-preferences';
 const workspaceKey = 'hsr-workspace-layout-v1';
-const defaultPreferences = {scenario: '', scenarioSeed: '', iconActions: false, menuDensity: 'comfortable', layout: 'sanctum', sceneScale: 'standard', dockPosition: 'bottom', debugMode: false, showParty: true, showNavigation: true, showWorkspace: true, showActionDock: true, showStatusMessages: true, menuSize: 'standard', accent: 'gold', textScale: '1', stageMode: 'on', stageAspect: '2:1', stageResolution: 'standard', motion: 'full', effects: 'full', showTickIndicator: true};
+const defaultPreferences = {scenario: '', scenarioSeed: '', iconActions: false, menuDensity: 'comfortable', layout: 'sanctum', sceneScale: 'standard', dockPosition: 'bottom', debugMode: false, showParty: true, showNavigation: true, showWorkspace: true, showActionDock: true, showStatusMessages: true, menuSize: 'standard', accent: 'gold', textScale: '1', stageMode: 'on', stageAspect: '2:1', stageResolution: 'standard', motion: 'full', effects: 'full', showTickIndicator: true, colorblind: 'off'};
 // Connection box and heartbeat. Nested groups are merged key by key so a
 // setting added later still gets its default for people with older saves.
 const DEFAULT_LINK_SETTINGS = Object.freeze({
@@ -74,7 +82,9 @@ const DEFAULT_LINK_SETTINGS = Object.freeze({
   sparkline: true,      // latency history graph in the expanded box
   historySize: 40,
 });
-const NESTED_PREFERENCES = {combat: DEFAULT_COMBAT_SETTINGS, link: DEFAULT_LINK_SETTINGS, voice: DEFAULT_VOICE_SETTINGS};
+const DEFAULT_STORY_SETTINGS = Object.freeze({textSpeed: 'normal', skipSeenCutscenes: false, floorCards: true});
+const TEXT_SPEEDS = {slow: 55, normal: 34, fast: 16, instant: 0};
+const NESTED_PREFERENCES = {combat: DEFAULT_COMBAT_SETTINGS, link: DEFAULT_LINK_SETTINGS, voice: DEFAULT_VOICE_SETTINGS, audio: DEFAULT_AUDIO_SETTINGS, story: DEFAULT_STORY_SETTINGS};
 function readPreferences() {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(preferenceKey) || '{}') || {}; } catch {}
@@ -354,6 +364,8 @@ function applyPreferences() {
   document.body.classList.toggle('compact-menu', state.preferences.menuDensity === 'compact');
   document.body.classList.toggle('reduced-motion', state.preferences.motion === 'reduced');
   document.body.classList.toggle('soft-effects', state.preferences.effects === 'soft');
+  document.body.dataset.colorblind = state.preferences.colorblind === 'on' ? 'on' : 'off';
+  audio?.setVolumes();
   document.body.dataset.layout = state.preferences.layout;
   document.body.dataset.density = state.preferences.menuDensity;
   document.body.dataset.sceneScale = state.preferences.sceneScale;
@@ -419,7 +431,7 @@ const state = {
   selected: screens.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'room',
   selectedActor: null,
   busy: false, connected: false, note: '', error: '', refreshed: null, initialized: false, activity: {label: 'Idle', started: 0, requests: 0, line: 'Awaiting a request; the reliquary is pretending to be patient.'}, requestKeys: new Set(),
-  pendingMode: 'DESIGN', pendingLead: null, accountIdentity: readAccountIdentity(), progression: null, terminal: null,
+  pendingMode: 'DESIGN', pendingLead: null, accountIdentity: readAccountIdentity(), progression: null, star: null, metaShop: null, story: null, finalizedRuns: new Set(), terminal: null,
   statisticsMode: null, statistics: null, statisticsView: 'menu', statisticsDetail: null,
   pendingConversation: null, consoleDraft: '', actionPicker: null, presentation: null,
   arcadeUi: null, staleSandbox: null, lastManeuver: null, trayState: 'compact', arrangeMode: false, playHeaderOpen: false,
@@ -990,6 +1002,7 @@ function result(reply) {
     state.refreshed = new Date();
     syncEncounterScreen(previousView, state.view);
     announceDescent(previousView?.descent, state.view?.descent);
+    recordSightings(state.view);
     // A Turn 0 cascade resolves before initiative; say so once, in the log.
     const turnZero = state.view?.combat?.turn_zero;
     if (Array.isArray(turnZero) && turnZero.length && !(previousView?.combat?.turn_zero || []).length) {
@@ -1172,6 +1185,7 @@ const TITLE_SLOGANS = [
 const TITLE_CHOICES = [
   ['Story Mode', 'menu:menu-story', 'intro-action-primary'],
   ['Simulation Mode', 'menu:menu-simulation', 'intro-action-primary'],
+  ['Memory Archive', 'menu:archive', 'intro-action-secondary'],
   ['Options', 'menu:options', 'intro-action-secondary'],
 ];
 // Fixed-seed scatter so the sky is identical on every render.
@@ -1207,7 +1221,7 @@ function title() {
         <div class="intro-title-rule" aria-hidden="true"></div>
         <p class="intro-subtitle" aria-live="polite" data-title-slogan><span class="title-slogan-layer is-visible">${E(TITLE_SLOGANS[state.titleSlogan % TITLE_SLOGANS.length])}</span><span class="title-slogan-layer" aria-hidden="true"></span></p>
         <div class="intro-actions">
-          ${TITLE_CHOICES.map(([label, action, cls], i) => `<button type="button" class="action ${cls}${i === active ? ' is-active' : ''}" data-action="${E(action)}">${E(label)}</button>${i === 2 ? '<div class="intro-title-rule intro-action-rule" aria-hidden="true"></div>' : ''}`).join('\n          ')}
+          ${TITLE_CHOICES.map(([label, action, cls], i) => `<button type="button" class="action ${cls}${i === active ? ' is-active' : ''}" data-action="${E(action)}">${E(label)}</button>${i === 1 ? '<div class="intro-title-rule intro-action-rule" aria-hidden="true"></div>' : ''}`).join('\n          ')}
         </div>
         <p class="intro-mode-help">Story Mode carries the Reliquary's authored modules and your account progression. Completed runs bank Platinum for permanent upgrades, and victories raise the Loop tier so future descents grow richer and more demanding. Simulation Mode remains the open sandbox for stats, cheats, and rehearsal.</p>
         <p class="intro-workbench"><a href="/content-workbench.html" class="label" aria-label="Open Content Workbench">Content Workbench ↗</a></p>
@@ -1500,12 +1514,194 @@ function modeBadge(mode) {
   const cls = mode === 'FORGE' ? 'mode-forge' : mode === 'SANDBOX' ? 'mode-sandbox' : 'mode-other';
   return `<span class="mode-badge ${cls}">${E(MODE_LABELS[mode] || mode)}</span>`;
 }
+// ---- The Hollow Star: memory, archive, Meta Shop ----------------------------
+// Sound is produced outside this repo; the system plays whatever the audio
+// manifest lists and silently skips ids it doesn't have yet.
+var audio = createAudioSystem({settings: () => state.preferences.audio});
+function textSpeedMs() { return TEXT_SPEEDS[state.preferences.story?.textSpeed] ?? 34; }
+function metaShopUnlocked() { return Boolean(state.star?.meta_shop_unlocked); }
+async function loadStar() {
+  try {
+    const reply = await state.client.request('star_memory', {}, {dedupeKey: 'star_memory'});
+    if (reply.ok) state.star = reply.result?.star || state.star;
+  } catch { /* the archive still opens with only always-unlocked scenes */ }
+  return state.star;
+}
+async function playScene(id, {auto = false} = {}) {
+  const scene = CUTSCENES.find(row => row.id === id);
+  if (!scene) return;
+  if (auto && state.preferences.story?.skipSeenCutscenes && (state.star?.seen_cutscenes || []).includes(id)) return;
+  await playCutscene(scene, {textSpeed: textSpeedMs(), audio});
+  try {
+    const reply = await state.client.request('star_mark_seen', {cutscene: id});
+    if (reply.ok) state.star = reply.result?.star || state.star;
+  } catch {}
+}
+function starGlyph() {
+  return `<svg class="star-glyph" viewBox="0 0 100 100" aria-hidden="true"><defs><radialGradient id="sg"><stop offset=".38" stop-color="#fff6d8" stop-opacity="0"/><stop offset=".5" stop-color="#fff6d8"/><stop offset=".62" stop-color="#e8c46a" stop-opacity=".5"/><stop offset="1" stop-color="#e8c46a" stop-opacity="0"/></radialGradient></defs><circle cx="50" cy="50" r="48" fill="url(#sg)"/><circle cx="50" cy="50" r="15" fill="#07060b"/></svg>`;
+}
+function starStatus() {
+  const s = state.star;
+  if (!s) return `<div class="star-status">${starGlyph()}<div><p class="star-tier">${E(t('star.unawakened'))}</p><p class="star-facts"><span>${E(t('star.offline'))}</span></p></div></div>`;
+  return `<div class="star-status">${starGlyph()}<div><p class="label">Hollow Star · Awareness ${E(s.awareness?.tier ?? 0)}</p><p class="star-tier">${E(s.awareness?.name || 'Ember')}</p>
+    <p class="star-facts"><span>${E(t('star.vessels', {n: s.runs}))}</span><span>${E(t('star.completions', {n: s.completions}))}</span><span>${E(t('star.falls', {n: s.deaths}))}</span></p></div></div>`;
+}
+function archiveScreen() {
+  const seen = new Set(state.star?.seen_cutscenes || []);
+  const cards = CUTSCENES.map(scene => {
+    const open = cutsceneUnlocked(scene, state.star);
+    return `<button type="button" class="archive-card${open ? '' : ' is-sealed'}" ${open ? `data-action="cutscene:${E(scene.id)}"` : 'aria-disabled="true"'}>
+      <span class="archive-thumb" aria-hidden="true">${open ? scene.thumb : ''}</span>
+      <em>${open ? t(seen.has(scene.id) ? 'archive.remembered' : 'archive.new') : t('archive.sealed')}</em>
+      <strong>${E(open ? scene.title : '· · ·')}</strong><small>${E(open ? scene.blurb : t('archive.sealed_blurb'))}</small></button>`;
+  }).join('');
+  return `<div class="mode-menu">${breadcrumb('Main Menu', t('archive.title'))}${atmosphere('gateway', t('archive.title'), t('archive.subtitle'))}${card(t('archive.title'), `${starStatus()}<div class="archive-grid">${cards}</div>
+    <div class="mode-menu-footer"><div class="footer-left">${button('Speak with the Star', 'dialogue:star-between-runs', 'secondary')}${button(t('codex.title'), 'menu:codex', 'secondary')}</div><div class="footer-right">${button('Back', 'back', 'secondary')}</div></div>`, 'mode-menu-card')}</div>`;
+}
+async function loadStory() {
+  try {
+    const reply = await state.client.request('story_state', {}, {dedupeKey: 'story_state'});
+    if (reply.ok) state.story = reply.result?.story || state.story;
+  } catch {}
+  return state.story;
+}
+// Fire-and-forget: story events never block play, and never fail it.
+function emitStory(event, payload = {}) {
+  state.client.request('story_emit', {event, payload}, {dedupeKey: `story:${event}:${JSON.stringify(payload)}:${Date.now()}`})
+    .then(reply => { if (reply.ok) state.story = reply.result?.story || state.story; }).catch(() => {});
+}
+async function talkTo(id) {
+  const dialogue = DIALOGUES[id];
+  if (!dialogue) return;
+  await loadStar(); await loadStory();
+  const party = (state.view?.party || []).map(row => row.selector || row.identity).filter(Boolean);
+  await runDialogue(dialogue, {context: {star: state.star, flags: state.story?.flags || {}, party}, textSpeed: textSpeedMs(),
+    onEffect: effect => {
+      if (effect.type === 'flag') state.client.request('story_flag', {flag: effect.flag, value: effect.value}).catch(() => {});
+      if (effect.type === 'emit') emitStory(effect.event);
+    }});
+  await loadStory();
+}
+function slug(value) { return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 90) || 'unknown'; }
+// Codex: the first time a creature or resident is seen, record it. Once per name per session.
+function recordSightings(view) {
+  state.codexSeen = state.codexSeen || new Set();
+  for (const row of view?.opposition || []) {
+    const name = row.name || row.id; if (!name) continue;
+    const kind = String(row.role || row.kind || '').includes('resident') ? 'resident' : 'monster';
+    const id = slug(name);
+    if (state.codexSeen.has(`${kind}:${id}`)) continue;
+    state.codexSeen.add(`${kind}:${id}`);
+    state.client.request('codex_discover', {kind, entry: id, title: name}).catch(() => {});
+  }
+}
+// The run-end pipeline: once per run, the host settles progression, feeds the
+// Star and emits run_ended. The client only reports what changed.
+async function finalizeRun(runId) {
+  if (!runId || state.finalizedRuns.has(runId)) return;
+  state.finalizedRuns.add(runId);
+  try {
+    const reply = await state.client.request('run_end', {run_id: runId});
+    if (!reply.ok) { addMessage(`Run could not be finalized: ${reply.error?.message || 'host error'}`, 'note'); state.finalizedRuns.delete(runId); return; }
+    const out = reply.result?.run_end || {};
+    state.star = out.star || state.star; state.story = out.story || state.story;
+    if (out.meta_shop_newly_unlocked) storyToast(t('shop.unlocked_toast'));
+    if ((out.awareness_after?.tier ?? 0) > (out.awareness_before?.tier ?? 0)) storyToast(t('run.star_awareness', {tier: out.awareness_after.tier, name: out.awareness_after.name}));
+    for (const row of out.errors || []) addMessage(`Settlement skipped for ${row.identity}: ${row.error}`, 'note');
+    for (const [champ, view] of Object.entries(out.ladder || {})) if (view.picks_left) storyToast(t('ladder.picks_toast', {name: champ[0].toUpperCase() + champ.slice(1), n: view.picks_left}));
+    if (out.star_revealed) { await playScene('last-standing'); render(); }
+  } catch { state.finalizedRuns.delete(runId); }
+}
+function codexScreen() {
+  const codex = state.story?.codex || {};
+  const kinds = ['floor', 'monster', 'resident', 'location', 'item', 'lore'].filter(kind => Object.keys(codex[kind] || {}).length);
+  const shelves = kinds.map(kind => `<section class="codex-shelf"><h3>${E(t(`codex.kind.${kind}`))}</h3><div class="codex-entries">${Object.entries(codex[kind]).map(([id, row]) => `<div class="codex-entry"><strong>${E(row.title || id)}</strong><small>${E(String(row.discovered_at || '').slice(0, 10))}</small></div>`).join('')}</div></section>`).join('');
+  return `<div class="mode-menu">${breadcrumb('Main Menu', t('codex.title'))}${atmosphere('journal', t('codex.title'), t('codex.subtitle'))}${card(t('codex.title'), `<div class="codex-shelves">${shelves || `<p class="notice">${E(t('codex.empty'))}</p>`}</div>
+    <div class="mode-menu-footer"><div class="footer-right">${button('Back', 'back', 'secondary')}</div></div>`, 'mode-menu-card')}</div>`;
+}
+function storyDebugPanel() {
+  const s = state.star;
+  const flags = Object.entries(state.story?.flags || {});
+  const a = audio.status(); const art = assetStatus();
+  return `<section class="card"><p class="label">Story debug · Hollow Star</p>
+    <p class="notice">Account-wide story state. Changes here are real saves on this machine.</p>
+    <p>Awareness ${E(s?.awareness?.tier ?? '—')} (${E(s?.awareness?.name ?? 'unloaded')}) · runs ${E(s?.runs ?? 0)} · completions ${E(s?.completions ?? 0)} · deaths ${E(s?.deaths ?? 0)}</p>
+    <div class="actions">${button('Load story state', 'story-debug:load', 'secondary')}${button('+1 run', 'story-debug:runs', 'secondary')}${button('+1 completion', 'story-debug:completions', 'secondary')}${button('Reveal Star (tier 4)', 'story-debug:reveal', 'secondary')}${button('Forget seen cutscenes', 'story-debug:forget', 'secondary')}${button('Reset Star memory', 'story-debug:reset', 'secondary')}</div>
+    <p class="label">Replay any cutscene (ignores locks)</p><div class="actions">${CUTSCENES.map(row => button(row.title, `cutscene:${row.id}`, 'secondary')).join('')}</div>
+    <p class="label">Dialogues</p><div class="actions">${Object.keys(DIALOGUES).map(id => button(id, `dialogue:${id}`, 'secondary')).join('')}</div>
+    <p class="label">Story flags</p><form class="actions" data-story-flag-form><input name="flag" placeholder="flag_name" aria-label="Flag name"><button type="submit" class="action secondary">Set flag</button></form>
+    <p>${flags.length ? flags.map(([k, v]) => `<code>${E(k)}=${E(v)}</code>`).join(' ') : '<span class="notice">No flags set.</span>'}</p>
+    <p class="label">Champion ladder (set level)</p><div class="actions">${['doran', 'wren'].flatMap(c => [1, 25, 50, 100].map(n => button(`${c[0].toUpperCase() + c.slice(1)} ${n}`, `ladder-debug:${c}:${n}`, 'secondary'))).join('')}</div>
+    <p>${Object.values(state.ladders || {}).map(v => `${E(v.champion)} L${E(v.level)} · ${E(v.picks_left)} picks`).join(' · ') || '<span class="notice">Ladder not loaded.</span>'}</p>
+    <p class="label">Content systems</p><p>Audio: ${E(a.known)} sounds in manifest · music ${E(a.music || 'none')}${a.missing.length ? ` · missing: ${E(a.missing.slice(0, 6).join(', '))}` : ''}<br>Art: ${E(art.images)} images, ${E(art.sprites)} sprites${art.missing.length ? ` · placeholders for: ${E(art.missing.slice(0, 6).join(', '))}` : ''}</p>
+  </section>`;
+}
+function storyOptions() {
+  const st = state.preferences.story; const au = state.preferences.audio;
+  const sel = (key, value, opts) => `<select data-pref-group="story" data-pref-key="${key}">${opts.map(([v, l]) => `<option value="${v}" ${value === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+  return `<label class="option-row"><span><strong>Text speed</strong><small>How fast cutscene and dialogue lines type out.</small></span>${sel('textSpeed', st.textSpeed, [['slow', 'Slow'], ['normal', 'Normal'], ['fast', 'Fast'], ['instant', 'Instant']])}</label>
+    <label class="option-row"><span><strong>Skip cutscenes already seen</strong><small>Automatic scenes you have watched stay in the Memory Archive instead of replaying.</small></span><input type="checkbox" data-pref-group="story" data-pref-key="skipSeenCutscenes" ${st.skipSeenCutscenes ? 'checked' : ''}></label>
+    <label class="option-row"><span><strong>Floor title cards</strong><small>Show a title card when a new floor begins.</small></span><input type="checkbox" data-pref-group="story" data-pref-key="floorCards" ${st.floorCards ? 'checked' : ''}></label>
+    <label class="option-row"><span><strong>Colour-blind support</strong><small>Add patterns and symbols wherever colour carries meaning.</small></span><input type="checkbox" data-pref="colorblind" ${state.preferences.colorblind === 'on' ? 'checked' : ''}></label>
+    <label class="option-row"><span><strong>Mute all audio</strong></span><input type="checkbox" data-pref-group="audio" data-pref-key="muted" ${au.muted ? 'checked' : ''}></label>
+    ${['master', ...AUDIO_CATEGORIES].map(cat => `<label class="option-row"><span><strong>${E(cat[0].toUpperCase() + cat.slice(1))} volume — ${Math.round(au[cat] * 100)}%</strong></span><input type="range" min="0" max="1" step=".05" value="${E(au[cat])}" data-pref-group="audio" data-pref-key="${cat}"></label>`).join('')}`;
+}
+async function loadLadders() {
+  try { const reply = await state.client.request('unlock_ladder', {}, {dedupeKey: 'unlock_ladder'}); if (reply.ok) state.ladders = reply.result?.ladders || null; } catch {}
+}
+function ladderScreen() {
+  const back = `<div class="mode-menu-footer"><div class="footer-right">${button('Back', 'back', 'secondary')}</div></div>`;
+  const ladders = state.ladders;
+  const body = !ladders ? `<p class="notice">${E(t('star.offline'))}</p>` : Object.values(ladders).map(v => {
+    const name = v.champion[0].toUpperCase() + v.champion.slice(1);
+    const tiles = v.entries.map(e => `<div class="ladder-entry${e.unlocked ? ' is-unlocked' : e.available ? ' is-available' : ''}">
+      <strong>${E(e.label)}</strong><small>${E(t('ladder.min_level', {n: e.min_level}))}</small>
+      ${e.unlocked ? `<em>${E(t('ladder.unlocked'))}</em>` : e.available && v.picks_left ? `<button type="button" class="action secondary" data-action="unlock:${E(v.champion)}:${E(e.key)}">${E(t('ladder.unlock'))}</button>` : ''}</div>`).join('');
+    return `<section class="ladder-champion"><header class="ladder-head"><h3>${E(name)}</h3><span class="ladder-level">${E(t('ladder.level', {n: v.level, max: v.max_level}))}</span>
+      <span class="ladder-picks">${E(t('ladder.picks', {n: v.picks_left}))}</span>${v.slot_cap ? `<span class="ladder-picks">${E(t('ladder.slots', {n: v.slot_cap}))}</span>` : ''}</header>
+      <div class="journey-progress"><span style="width:${Math.round(v.level / v.max_level * 100)}%"></span></div>
+      <div class="ladder-grid">${tiles}</div></section>`;
+  }).join('');
+  return `<div class="mode-menu">${breadcrumb('Main Menu', 'Story Mode', t('ladder.title'))}${atmosphere('gateway', t('ladder.title'), t('ladder.subtitle'))}${card(t('ladder.title'), `<div class="ladder">${body}</div>${back}`, 'mode-menu-card')}</div>`;
+}
+function metaShopScreen() {
+  const back = `<div class="mode-menu-footer"><div class="footer-right">${button('Back', 'back', 'secondary')}</div></div>`;
+  if (!metaShopUnlocked()) {
+    return `<div class="mode-menu">${breadcrumb('Main Menu', 'Story Mode', 'Meta Shop')}${card('Meta Shop', `<div class="meta-lock">${starGlyph()}<strong>Sealed</strong><p>The Hollow Star has nothing to trade until a vessel's run has ended.</p></div>${back}`, 'mode-menu-card')}</div>`;
+  }
+  const p = state.progression;
+  const rows = state.metaShop || Object.entries(UPGRADE_TRACKS).map(([key, spec]) => {
+    const tier = p?.upgrades?.[key] ?? 0;
+    return {key, effect: spec.effect, tier, cap: spec.cap, capped: tier >= spec.cap, next_cost: tier >= spec.cap ? null : spec.base_cost * (tier + 1)};
+  });
+  const platinum = p?.platinum ?? 0;
+  const tracks = rows.map(row => `<div class="meta-track${row.capped ? ' is-capped' : ''}"><h3>${E(row.key.replaceAll('_', ' '))}</h3><p>${E(row.effect)}</p>
+    <div class="meta-pips" aria-label="Tier ${E(row.tier)} of ${E(row.cap)}">${Array.from({length: row.cap}, (_, i) => `<i class="${i < row.tier ? 'on' : ''}"></i>`).join('')}</div>
+    ${row.capped ? `<span class="notice">${E(t('shop.mastered'))}</span>` : `<button type="button" class="action secondary" data-upgrade="${E(row.key)}"${platinum < row.next_cost ? ' disabled' : ''}>${E(t('shop.absorb', {cost: row.next_cost}))}</button>`}</div>`).join('');
+  return `<div class="mode-menu">${breadcrumb('Main Menu', 'Story Mode', 'Meta Shop')}${atmosphere('gateway', 'Meta Shop', 'What the Star absorbs, every vessel inherits.')}${card('Meta Shop', `<div class="meta-shop">
+    <div class="meta-shop-purse">${starGlyph()}<div><p class="label">Platinum · ${E(state.accountIdentity)}</p><span class="plat">${E(platinum)}</span></div></div>
+    <div class="meta-shop-grid">${tracks}</div></div>${back}`, 'mode-menu-card')}</div>`;
+}
+async function loadMetaShop() {
+  const reply = await state.client.request('meta_shop', {identity: state.accountIdentity});
+  if (reply.ok) { state.progression = reply.result?.progression || state.progression; state.metaShop = reply.result?.meta_shop || null; }
+}
 function storyMenu() {
   return `<div class="mode-menu">${breadcrumb('Main Menu', 'Story Mode')}${atmosphere('gateway', 'Story Mode', 'Choose a Champion or create an adventurer for the Reliquary’s authored story.')}${card('Story Mode', `<div class="menu-list-stack">
     <div class="menu-grid-row-3">
       <button type="button" class="action menu-item-card" data-action="mode:FORGE" data-tooltip="Begin a new authored descent into the Reliquary with certified Champions or a custom build."><strong>New Game</strong><small>Begin a new authored descent into the Reliquary</small></button>
       <button type="button" class="action menu-item-card" data-action="continue:FORGE" data-tooltip="Resume an existing saved Story Mode expedition."><strong>Continue</strong><small>Resume a saved Story Mode expedition</small></button>
       <button type="button" class="action menu-item-card" data-action="menu:statistics" data-tooltip="Review past journeys, records, and progression."><strong>Statistics</strong><small>Review past journeys, records, and progression</small></button>
+    </div>
+    <div class="menu-grid-row-2">
+      ${metaShopUnlocked()
+        ? `<button type="button" class="action menu-item-card" data-action="menu:meta-shop" data-tooltip="Spend Platinum on permanent upgrades the Hollow Star carries into every vessel."><strong>Meta Shop</strong><small>Permanent upgrades carried between runs</small></button>`
+        : `<button type="button" class="action menu-item-card is-locked" aria-disabled="true" data-tooltip="The Hollow Star has nothing to trade yet. Finish your first run."><strong>Meta Shop · Sealed</strong><small>Unlocks after your first run ends</small></button>`}
+      <button type="button" class="action menu-item-card" data-action="menu:archive" data-tooltip="Replay the Hollow Star's memories."><strong>Memory Archive</strong><small>Cutscenes the Star has lived through</small></button>
+    </div>
+    <div class="menu-grid-row-2">
+      <button type="button" class="action menu-item-card" data-action="menu:ladder" data-tooltip="Doran and Wren earn their own power back, level 1 to 100."><strong>Champion Ladder</strong><small>Unlock Doran and Wren's abilities as they level</small></button>
+      <button type="button" class="action menu-item-card" data-action="menu:codex" data-tooltip="Floors, creatures and residents you have discovered."><strong>Codex</strong><small>What the Reliquary has let you learn</small></button>
     </div>
   </div><div class="mode-menu-footer"><div class="footer-right">${button('Back', 'back', 'secondary')}</div></div>`, 'mode-menu-card')}</div>`;
 }
@@ -2818,13 +3014,22 @@ function room() {
 }
 // Floor arrivals and the run's end are host facts; the client only says them once.
 function announceDescent(before, after) {
+  // A run's first readout has no "before": that is arriving on its opening floor.
+  if (after && !before && after.status === 'active' && state.runId && state.floorAnnounced !== state.runId) {
+    state.floorAnnounced = state.runId;
+    emitStory('floor_entered', {floor: after.floor, floor_name: after.floor_name || null});
+    if (state.preferences.story?.floorCards !== false && after.floor === 1 && (after.room ?? 1) <= 1) titleCard(t('floor.card', {n: after.floor}), after.floor_name || '');
+  }
   if (!after || !before) return;
   if (after.floor > before.floor) {
+    emitStory('floor_entered', {floor: after.floor, floor_name: after.floor_name || null});
+    if (state.preferences.story?.floorCards !== false) titleCard(t('floor.card', {n: after.floor}), after.floor_name || '');
     const line = `Floor ${after.floor} of ${after.floors_total}${after.floor_name ? ` · ${after.floor_name}` : ''}`;
     addMessage(`Descended — ${line}.`, 'note');
     state.note = `Descended to ${line}.`;
   }
   if (before.status === 'active' && after.status !== 'active') {
+    finalizeRun(state.runId);
     addMessage(after.status === 'cleared' ? 'The Reliquary is cleared.' : `The run has ended: ${after.status}.`, 'note');
   }
 }
@@ -3557,7 +3762,7 @@ function optionsSection(id, title, summary, body, open = false) {
 function optionsIndex() {
   const rows = [
     ['options-interface', 'Interface layout'], ['options-visibility', 'Visible blocks'],
-    ['options-style', 'Style and accessibility'], ['options-combat', 'Combat presentation'], ['options-voices', 'Voices'],
+    ['options-style', 'Style and accessibility'], ['options-story', 'Story and audio'], ['options-combat', 'Combat presentation'], ['options-voices', 'Voices'],
     ['options-link', 'Connection and clock'], ['options-text', 'Commands and vocabulary'],
   ];
   return `<nav class="options-index" aria-label="Options index"><strong>Jump to</strong>${rows.map(([id, label]) => `<a href="#${id}">${E(label)}</a>`).join('')}</nav>`;
@@ -3598,7 +3803,7 @@ function options() {
   const pointerBody = `<label class="option-row"><span><strong>Swap Mouse Buttons</strong><small>Use right-click for main actions and left-click for the context menu.</small></span><input type="checkbox" data-pref="swapMouseButtons" ${p.swapMouseButtons ? 'checked' : ''}></label>
        <label class="option-row"><span><strong>Double Click Speed — ${p.doubleClickSpeed || 500}ms</strong><small>Adjust how fast you need to click for double-click actions.</small></span><input type="range" min="100" max="1000" step="50" value="${E(p.doubleClickSpeed || 500)}" data-pref="doubleClickSpeed" aria-label="Double click speed"></label>`;
   const textBody = `<p>Use these host-routed phrases anywhere the intent box appears. Talk buttons on visible residents prefill a conversation request; the NPC response and consequences come back only through the public host receipt.</p>${textOptions || '<p class="notice">Text vocabulary is unavailable until the local gateway refreshes.</p>'}`;
-  return `<div class="mode-menu">${state.phase === 'options' ? breadcrumb('Main Menu', 'Options') : breadcrumb('Game', 'Options')}${atmosphere('options', 'Display options', 'Tune the illustrated interface without changing a roll, room, item, or saved run.')}${card('Options', `<h2>HSR Interface</h2><p>Preferences are local to this browser and survive game-mode changes, navigation, and reloads.</p>${optionsIndex()}${optionsSection('options-interface', 'Interface layout', 'Workspace composition, density, and action placement.', interfaceBody, true)}${optionsSection('options-visibility', 'Visible blocks', 'Toggle the Menu and Navigation surfaces, and Debug/Simulation/Nerdy Mode.', visibilityBody)}${optionsSection('options-style', 'Style and accessibility', 'Accent, text scale, motion, effects, and status details.', styleBody)}${optionsSection('options-pointer', 'Pointer and Mouse', 'Double click timing, swap mouse buttons, and hover behavior.', pointerBody)}${optionsSection('options-combat', 'Combat presentation', 'Playback timing, targets, and tactical display.', combatOptions())}${optionsSection('options-voices', 'Voices and sound cues', 'Speech cards, divine presence, sound effects, and who speaks.', voiceOptions())}${optionsSection('options-link', 'Connection and clock', 'Heartbeat, clock format, drift, and latency history.', linkOptions())}${optionsSection('options-text', 'Commands and vocabulary', 'Host-routed intent phrases available in the current gateway.', textBody)}<div class="mode-menu-footer"><div class="footer-left">${button('Reset display preferences', 'reset-preferences', 'secondary')}${button('Refresh engine state', 'refresh-readout', 'secondary')}</div><div class="footer-right">${button('Back', 'back-options', 'secondary')}${state.phase === 'ready' ? button('Return to Game', 'return-game', 'primary') : ''}</div></div>`, 'mode-menu-card')}</div>`;
+  return `<div class="mode-menu">${state.phase === 'options' ? breadcrumb('Main Menu', 'Options') : breadcrumb('Game', 'Options')}${atmosphere('options', 'Display options', 'Tune the illustrated interface without changing a roll, room, item, or saved run.')}${card('Options', `<h2>HSR Interface</h2><p>Preferences are local to this browser and survive game-mode changes, navigation, and reloads.</p>${optionsIndex()}${optionsSection('options-interface', 'Interface layout', 'Workspace composition, density, and action placement.', interfaceBody, true)}${optionsSection('options-visibility', 'Visible blocks', 'Toggle the Menu and Navigation surfaces, and Debug/Simulation/Nerdy Mode.', visibilityBody)}${optionsSection('options-style', 'Style and accessibility', 'Accent, text scale, motion, effects, and status details.', styleBody)}${optionsSection('options-pointer', 'Pointer and Mouse', 'Double click timing, swap mouse buttons, and hover behavior.', pointerBody)}${optionsSection('options-story', 'Story, audio and accessibility', 'Text speed, cutscenes, colour-blind support, and volume by category.', storyOptions())}${optionsSection('options-combat', 'Combat presentation', 'Playback timing, targets, and tactical display.', combatOptions())}${optionsSection('options-voices', 'Voices and sound cues', 'Speech cards, divine presence, sound effects, and who speaks.', voiceOptions())}${optionsSection('options-link', 'Connection and clock', 'Heartbeat, clock format, drift, and latency history.', linkOptions())}${optionsSection('options-text', 'Commands and vocabulary', 'Host-routed intent phrases available in the current gateway.', textBody)}<div class="mode-menu-footer"><div class="footer-left">${button('Reset display preferences', 'reset-preferences', 'secondary')}${button('Refresh engine state', 'refresh-readout', 'secondary')}</div><div class="footer-right">${button('Back', 'back-options', 'secondary')}${state.phase === 'ready' ? button('Return to Game', 'return-game', 'primary') : ''}</div></div>`, 'mode-menu-card')}</div>`;
 }
 // Context menus describe public game targets only. Unrelated interface controls
 // keep their normal browser context menu.
@@ -4327,7 +4532,7 @@ function scenarioEditor() {
 }
 function cheatsPanel() {
   const debug = state.debugReadout;
-  return `<div class="mode-menu">${breadcrumb('Main Menu', 'Simulation Mode', 'Cheats')}${atmosphere('gateway', 'Cheats', 'Private sandbox debug state — rehearsal only, never canon.')}${card('Cheats', `<p class="notice">Reveals state normally hidden from the public view: exact HP pools, hidden checks, undiscovered content, and engine internals for the current Simulation run.</p>${state.runId ? `<div class="actions cheats-actions">${button('Reveal debug state', 'load-debug-state', 'primary')}</div>${debug ? `<div class="code-viewer"><pre>${E(JSON.stringify(debug, null, 2))}</pre></div>` : ''}` : '<p class="notice">Start or resume a Simulation run first, then return here.</p>'}<div class="mode-menu-footer"><div class="footer-right">${button('Back', 'back', 'secondary')}</div></div>`, 'mode-menu-card')}</div>`;
+  return `<div class="mode-menu">${breadcrumb('Main Menu', 'Simulation Mode', 'Cheats')}${atmosphere('gateway', 'Cheats', 'Private sandbox debug state — rehearsal only, never canon.')}${storyDebugPanel()}${card('Cheats', `<p class="notice">Reveals state normally hidden from the public view: exact HP pools, hidden checks, undiscovered content, and engine internals for the current Simulation run.</p>${state.runId ? `<div class="actions cheats-actions">${button('Reveal debug state', 'load-debug-state', 'primary')}</div>${debug ? `<div class="code-viewer"><pre>${E(JSON.stringify(debug, null, 2))}</pre></div>` : ''}` : '<p class="notice">Start or resume a Simulation run first, then return here.</p>'}<div class="mode-menu-footer"><div class="footer-right">${button('Back', 'back', 'secondary')}</div></div>`, 'mode-menu-card')}</div>`;
 }
 const GAMBIT_WHEN = [
   ['always', 'Always'], ['self_hp_below', 'Own HP below %'], ['ally_hp_below', 'Ally HP below %'],
@@ -4994,7 +5199,7 @@ function renderNow() {
     state.phase === 'create' ? creator() : state.phase === 'entry-select' ? entrySelect() :
     state.phase === 'preview' ? preview() : state.phase === 'runs' ? runs() :
     state.phase === 'statistics' ? statisticsScreen() : state.phase === 'edit-scenario' ? scenarioEditor() :
-    state.phase === 'cheats' ? cheatsPanel() : state.phase === 'toolbox' ? toolboxScreen() : state.phase === 'options' ? options() : shell();
+    state.phase === 'cheats' ? cheatsPanel() : state.phase === 'archive' ? archiveScreen() : state.phase === 'codex' ? codexScreen() : state.phase === 'ladder' ? ladderScreen() : state.phase === 'meta-shop' ? metaShopScreen() : state.phase === 'toolbox' ? toolboxScreen() : state.phase === 'options' ? options() : shell();
   // The desktop app is a locked-ratio frame, so long pre-game/menu screens
   // need one named in-frame scrolling region.  Gameplay owns its centre-stage
   // scroller and the fixed creator owns its stage; wrapping either here would
@@ -6201,6 +6406,13 @@ function bind() {
         state.statistics = null; state.statisticsDetail = null; state.statisticsView = 'menu';
       }
       go(phase); render();
+      if (['archive', 'menu-story', 'meta-shop', 'codex', 'cheats', 'ladder'].includes(phase)) {
+        await loadStar();
+        if (phase === 'ladder' || phase === 'cheats') await loadLadders();
+        if (phase === 'codex' || phase === 'cheats') await loadStory();
+        if (phase === 'meta-shop' && metaShopUnlocked()) await loadMetaShop();
+        if (state.phase === phase) render();
+      }
       // Both screens name the chosen scenario, so the catalog is fetched on the
       // way into Simulation Mode rather than only inside the picker.
       if ((phase === 'edit-scenario' || phase === 'menu-simulation') && state.scenarios === null) { await loadScenarios(); render(); }
@@ -6209,10 +6421,39 @@ function bind() {
     else if (action === 'restart') { resetCreationDraft(); go('create'); render(); await ensureCreationSeed(); render(); scheduleLivePreview(0); }
     else if (state.phase === 'create' && await creatorAction(action)) { /* handled by the paged creator */ }
     else if (action === 'engine' || action === 'start-engine') await connect('engine-host', 'title');
+    else if (action.startsWith('cutscene:')) { await playScene(action.slice(9)); render(); }
+    else if (action.startsWith('dialogue:')) { await talkTo(action.slice(9)); render(); }
+    else if (action.startsWith('unlock:')) {
+      const [, champion, ...rest] = action.split(':');
+      await work(async () => { const reply = await state.client.request('unlock_pick', {champion, key: rest.join(':')}); if (!reply.ok) throw Error(reply.error?.message || 'Unlock failed'); await loadLadders(); });
+    }
+    else if (action.startsWith('ladder-debug:')) {
+      const [, champion, level] = action.split(':');
+      await work(async () => { const reply = await state.client.request('unlock_debug', {champion, level: Number(level)}); if (!reply.ok) throw Error(reply.error?.message); await loadLadders(); });
+    }
+    else if (action.startsWith('story-debug:')) {
+      const op = action.slice(12);
+      await work(async () => {
+        if (op !== 'load') {
+          const s = state.star || await loadStar() || {};
+          const payload = op === 'runs' || op === 'completions' ? {op, value: (s[op] || 0) + 1}
+            : op === 'reveal' ? {op: 'set_flag', value: 'star_revealed'} : op === 'forget' ? {op: 'forget_cutscenes'} : {op: 'reset'};
+          const reply = await state.client.request('star_debug', payload);
+          if (!reply.ok) throw Error(reply.error?.message || 'Star debug failed');
+          state.star = reply.result?.star;
+        }
+        await loadStar(); await loadStory();
+      });
+    }
     else if (action.startsWith('mode:')) {
       state.pendingMode = action.slice(5);
       if (state.connected) { go('party-select'); render(); }
       else await connect('engine-host', 'party-select');
+      // The first Story descent opens on the Star's birth; after that it lives in the archive.
+      if (state.pendingMode === 'FORGE' && state.connected && !(state.star?.seen_cutscenes || []).includes('opening')) {
+        await loadStar();
+        if (state.star && !state.star.seen_cutscenes.includes('opening')) { await playScene('opening', {auto: true}); render(); }
+      }
     }
     else if (action === 'champion-select') { go('champion-select'); render(); }
     else if (action.startsWith('champion:')) {
@@ -6347,6 +6588,9 @@ function bind() {
     });
     else if (action === 'return-menu') { clearScreenTransientState(); state.route = ['title']; state.phase = 'title'; state.note = ''; render(); }
     else if (action.startsWith('tab:')) { refreshScreen(action.slice(4)); }
+    else if (action.startsWith('talk:') && DIALOGUES[`npc:${slug(action.slice(5))}`]) {
+      await talkTo(`npc:${slug(action.slice(5))}`); render();
+    }
     else if (action.startsWith('talk:') || action.startsWith('intent:')) {
       state.pendingConversation = null;
       state.consoleDraft = action.startsWith('talk:') ? `talk to ${action.slice(5)}` : action.slice(7);
@@ -6375,12 +6619,23 @@ function bind() {
       render();
     };
   });
+  document.querySelectorAll('[data-pref-group]').forEach(node => node.onchange = () => {
+    const group = state.preferences[node.dataset.prefGroup]; const key = node.dataset.prefKey;
+    group[key] = node.type === 'checkbox' ? node.checked : node.type === 'range' ? Number(node.value) : node.value;
+    savePreferences(); applyPreferences(); render();
+  });
+  document.querySelector('[data-story-flag-form]')?.addEventListener('submit', event => {
+    event.preventDefault();
+    const flag = new FormData(event.target).get('flag');
+    work(async () => { const reply = await state.client.request('story_flag', {flag, value: true}); if (!reply.ok) throw Error(reply.error?.message); state.story = reply.result?.story; });
+  });
   document.querySelectorAll('[data-pref]').forEach(node => node.onchange = () => {
     const key = node.dataset.pref;
     if (key === 'iconActions') state.preferences.iconActions = node.checked;
     else if (key === 'swapMouseButtons') state.preferences.swapMouseButtons = node.checked;
     else if (key === 'motion') state.preferences.motion = node.checked ? 'reduced' : 'full';
     else if (key === 'effects') state.preferences.effects = node.checked ? 'soft' : 'full';
+    else if (key === 'colorblind') state.preferences.colorblind = node.checked ? 'on' : 'off';
     else if (key === 'layout') state.preferences.layout = node.value;
     else if (key === 'menuDensity') state.preferences.menuDensity = node.value;
     else if (key === 'stageMode') state.preferences.stageMode = node.value;
@@ -6487,6 +6742,7 @@ function bind() {
     const reply = await state.client.purchaseUpgrade(state.accountIdentity, node.dataset.upgrade);
     if (!reply.ok) throw Error(reply.error?.message || 'Purchase failed');
     state.progression = reply.result?.progression || state.progression;
+    if (state.phase === 'meta-shop') await loadMetaShop();
   }));
   document.querySelectorAll('[data-create-field]').forEach(node => node.onchange = () => {
     const key = node.dataset.createField;

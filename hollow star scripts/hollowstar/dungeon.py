@@ -8,6 +8,8 @@ from pathlib import Path
 
 from hollowstar import __version__ as ENGINE_VERSION
 from hollowstar.actors import Actor, Band, Provenance
+from hollowstar.fastcopy import fast_deepcopy
+from hollowstar.rng import clone_random
 from hollowstar.items import Item, public_item
 from hollowstar.tags import DamageTag
 from hollowstar import tactical as t
@@ -246,12 +248,14 @@ def clone_for_transition(run):
     for returned state.
     """
     candidate = copy.copy(run)
-    candidate.party = copy.deepcopy(run.party)
-    candidate.opposition = copy.deepcopy(run.opposition)
-    candidate.environment = copy.deepcopy(run.environment)
+    # One memo per roster (as deepcopy did) so effects shared between actors
+    # stay shared; each Actor copies itself via Actor.__deepcopy__/fast_clone.
+    candidate.party = fast_deepcopy(run.party)
+    candidate.opposition = fast_deepcopy(run.opposition)
+    candidate.environment = fast_deepcopy(run.environment)
     candidate.transcript = list(run.transcript)
     candidate.rng = copy.copy(run.rng)
-    candidate.rng._r = copy.deepcopy(run.rng._r)
+    candidate.rng._r = clone_random(run.rng._r)
 
     def share_append_only_records(memo, records):
         if not isinstance(records, list):
@@ -296,7 +300,9 @@ def clone_for_transition(run):
         share_append_only_records(shared, combat_state.get('events'))
     share_append_only_records(shared, run.context.get('dungeon_history'))
     share_append_only_records(shared, run.context.get('reset_history'))
-    candidate.context = copy.deepcopy(run.context, shared)
+    # JSON-shaped state walks through fast_deepcopy; Actors/Items/dataclasses
+    # inside it still reach copy.deepcopy with the same memo.
+    candidate.context = fast_deepcopy(run.context, shared)
     return candidate
 
 

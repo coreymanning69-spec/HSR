@@ -256,6 +256,14 @@ class Actor:
         gear = [f"  {i.display_name}" for i in self.equipment]
         return "\n".join([head, stats] + gear)
 
+    def fast_clone(self, memo: dict | None = None) -> Actor:
+        """Explicit field copy; the transactional clone path's per-actor copy.
+
+        Scalars are shared, owned containers are copied one level, and only
+        effects/equipment (mutable objects with their own state) recurse.
+        """
+        return self.__deepcopy__({} if memo is None else memo)
+
     def __deepcopy__(self, memo: dict) -> Actor:
         copied = memo.get(id(self))
         if copied is not None:

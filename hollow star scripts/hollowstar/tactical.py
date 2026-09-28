@@ -11,6 +11,7 @@ import re
 from functools import lru_cache
 
 from hollowstar.actors import Actor
+from hollowstar.fastcopy import fast_deepcopy
 from hollowstar.items import public_item, item_presentation
 from hollowstar.phases import Phase, Direction
 from hollowstar.tags import DamageTag
@@ -2022,7 +2023,7 @@ def apply(run, action):
     origin_position = list(position(run, key))
     before = {"actor": a.name, "actor_id": key, "hp": a.hp,
               "statuses": dict(a.statuses), "resources": dict(a.resources),
-              "economy": copy.deepcopy(state["economy"].get(key, {}))}
+              "economy": fast_deepcopy(state["economy"].get(key, {}))}
     if state["surprised"].get(key) and kind != "end_turn":
         raise ActionError("surprised actors must end their first turn")
     if kind in {"reaction", "decline_reaction", "legendary", "staff_absorb", "domain_reaction"}:
@@ -2294,7 +2295,7 @@ def apply(run, action):
     if isinstance(result, dict) and "evidence" not in result:
         after = {"hp": a.hp, "statuses": dict(a.statuses),
                  "resources": dict(a.resources),
-                 "economy": copy.deepcopy(state["economy"].get(key, {}))}
+                 "economy": fast_deepcopy(state["economy"].get(key, {}))}
         result["evidence"] = {
             "actor": before["actor"], "actor_id": key,
             "target": action.get("target"), "action": kind,
@@ -2338,8 +2339,8 @@ def apply(run, action):
             ],
         }
         if isinstance(result.get("evidence"), dict):
-            result["evidence"]["presentation"] = copy.deepcopy(result["presentation"])
-    state["events"].append(copy.deepcopy(result))
+            result["evidence"]["presentation"] = fast_deepcopy(result["presentation"])
+    state["events"].append(fast_deepcopy(result))
     return result
 
 

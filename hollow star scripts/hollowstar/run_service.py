@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from hollowstar.actors import Actor
+from hollowstar.fastcopy import fast_deepcopy
 from hollowstar.combat import Encounter
 from hollowstar.loader import load_roster
 from hollowstar.profiles import ProfileError, ProfileService, actor_sheet
@@ -1004,7 +1005,7 @@ class RunService:
                                     "state_committed":True,
                                     "source":"authoritative RunService fallback"}
             if "dungeon" in candidate.context:
-                record = copy.deepcopy(event)
+                record = fast_deepcopy(event)
                 if player_intent is not None:
                     record["player_intent"] = player_intent
                 candidate.context["dungeon"]["events"].append(record)

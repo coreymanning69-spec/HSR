@@ -112,6 +112,56 @@ def _witnesses(world: dict, location: str) -> list[dict]:
     return [row for row in _visible_residents(world, location) if row["id"] != world["player"].get("resident_id")]
 
 
+# id -> (label, category, cost, help_text). Mirrors tactical.ACTION_HELP's
+# shape so the client's category-grouping and cost/help rendering code
+# (app.js actionBar()) works identically for combat and exploration.
+ACTION_HELP = {
+    "survey": ("Look around or search the area", "room", "free",
+               "Take stock of the location: exits, objects, and who is visibly present."),
+    "move": ("Travel to a connected place", "room", "free",
+             "Move to a connected location; travel time advances the world clock."),
+    "talk": ("Talk, ask, lie, threaten, or insult", "room", "free",
+             "Open a conversation with a visible resident."),
+    "attack": ("Attack a visible resident", "room", "free",
+               "Attack a visible, living resident of this location. Witnesses react and may raise the alarm."),
+    "inspect": ("Inspect an object or body", "room", "free",
+                "Examine a visible object or body more closely."),
+    "take": ("Take a visible object", "room", "free",
+             "Take a visible, unfixed object."),
+    "world_tick": ("Let time pass", "room", "free",
+                   "Advance the world clock without acting."),
+    "descend": ("Descend into the Reliquary", "room", "free",
+                "Leave the town for the procedural dungeon below."),
+}
+
+
+def contextual_actions(run, world: dict) -> list[dict]:
+    """What the player could legally attempt right now, with public help
+    text — the life_sim analogue of tactical.contextual_actions."""
+    location = _location(world)
+    player_location = world["player"]["location"]
+    visible = _visible_residents(world, player_location)
+    objects = location.get("objects", {})
+    bodies = location.get("bodies", [])
+    rows = []
+    for action_id, (label, category, cost, text) in ACTION_HELP.items():
+        reason, targets = None, []
+        if action_id == "descend":
+            if player_location not in {"well", "waterwheel"}:
+                continue  # only offered in those rooms, same as before
+        elif action_id in {"talk", "attack"}:
+            targets = [row["id"] for row in visible]
+            if not targets:
+                reason = "No visible resident to attack." if action_id == "attack" else "No one is visible here to talk to."
+        elif action_id in {"inspect", "take"}:
+            targets = list(objects) + [b.get("resident_id") for b in bodies if b.get("resident_id")]
+            if not targets:
+                reason = "Nothing visible here to inspect or take."
+        rows.append({"id": action_id, "type": action_id, "label": label, "category": category, "cost": cost,
+                     "help": text, "available": reason is None, "reason": reason, "targets": targets})
+    return rows
+
+
 def _alarm(world: dict, *, reason: str, witnesses: list[dict], location: str) -> None:
     world["civic_alarm"] = {"active": True, "reason": reason, "origin": location,
                             "raised_at": world["world_time"], "witnesses": [r["id"] for r in witnesses]}
@@ -327,20 +377,10 @@ def view(run, *, debug: bool = False) -> dict:
         "civic_alarm": copy.deepcopy(world["civic_alarm"]),
         "intruder_party": {k: copy.deepcopy(world["intruder_party"][k]) for k in
                             ("status", "location", "goal", "members")},
-        "available_actions": [
-            {"type": "survey", "label": "Look around or search the area"},
-            {"type": "move", "label": "Travel to a connected place"},
-            {"type": "talk", "label": "Talk, ask, lie, threaten, or insult"},
-            {"type": "attack", "label": "Attack a visible resident"},
-            {"type": "inspect", "label": "Inspect an object or body"},
-            {"type": "take", "label": "Take a visible object"},
-            {"type": "world_tick", "label": "Let time pass"},
-        ],
+        "available_actions": contextual_actions(run, world),
         "recent_events": [copy.deepcopy(row["public"]) for row in world["events"][-5:]],
         "conversation": copy.deepcopy(world.get("conversation", [])[-8:]),
     }
-    if location["id"] in {"well", "waterwheel"}:
-        public["available_actions"].append({"type": "descend", "label": "Descend into the Reliquary"})
     if debug:
         public["debug"] = {"residents": copy.deepcopy(world["residents"]), "events": copy.deepcopy(world["events"])}
     return public

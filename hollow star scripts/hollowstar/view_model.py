@@ -212,11 +212,12 @@ def _arcade_view(state: dict, event: dict | None = None) -> dict | None:
 
 
 def _available_actions(state: dict, combat: dict) -> list[dict]:
-    """Describe visible affordances; legality remains owned by the host."""
-    if state.get("schema") == "hollow-star-floor-one-public-1":
-        return [{"id": action, "label": label} for action, label in (
-            ("investigate", "Look around"), ("talk", "Talk"), ("inspect", "Inspect"),
-            ("move", "Travel"), ("idle_tick", "Advance safely"), ("descend", "Descend"),)]
+    """Describe visible affordances; legality remains owned by the host.
+
+    Floor One (schema "hollow-star-floor-one-public-1") is not handled here:
+    life_sim.view() always populates "available_actions" itself (via
+    life_sim.contextual_actions), so this function is never reached for it.
+    """
     if combat and not combat.get("complete"):
         if combat.get("pending"):
             return [{"id": "resolve_reaction", "label": "Resolve reaction"},

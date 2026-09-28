@@ -27,6 +27,11 @@ from hollowstar.transfer import capsule
 ROOT = Path(__file__).resolve().parent
 _startup_lock = threading.Lock()
 _host = None  # the one in-process HSRHost every request is served from
+# ThreadingHTTPServer runs each request on its own thread, and the life-tick
+# loop runs on another. HSRHost is not thread-safe (session cache, companion
+# memory, active-run dicts), so every call into it is serialized here.
+# Re-entrant so a handler that re-enters the host on the same thread is safe.
+_host_lock = threading.RLock()
 _server = None  # set once main() binds the port; lets a dead engine stop the host itself
 _shutting_down = threading.Event()
 _hosted_controls = HostedControls(ROOT / ".local" / "hosted_controls.json")
@@ -153,10 +158,12 @@ def _stats_loop(stop):
 
 def _advance_life_worlds(now, last_tick: dict[str, float]) -> None:
     """Let active Floor One worlds advance through the host on their own."""
-    service = _host._run_service
-    if not _host.booted or service is None:
-        return
-    for run_id, run in list(service._active.items()):
+    with _host_lock:
+        service = _host._run_service
+        if not _host.booted or service is None:
+            return
+        active = list(service._active.items())
+    for run_id, run in active:
         if not isinstance(run.context.get("life_world"), dict):
             continue
         previous = last_tick.get(run_id, now)
@@ -164,8 +171,9 @@ def _advance_life_worlds(now, last_tick: dict[str, float]) -> None:
         if elapsed < LIFE_TICK_SECONDS:
             continue
         elapsed = min(elapsed, LIFE_TICK_SECONDS * 120)
-        result = _host.handle({"id": f"life-tick:{run_id}:{int(now)}", "command": "design_action",
-                               "run_id": run_id, "action": {"type": "world_tick", "elapsed_seconds": elapsed}})
+        with _host_lock:
+            result = _host.handle({"id": f"life-tick:{run_id}:{int(now)}", "command": "design_action",
+                                   "run_id": run_id, "action": {"type": "world_tick", "elapsed_seconds": elapsed}})
         if result.get("ok"):
             last_tick[run_id] = now
             _say(f"[web] life tick {run_id}: {elapsed}s")
@@ -207,7 +215,8 @@ def _engine(request, route="POST /api/host"):
     _say(f"[web] IN  {route} {_describe_request(request)}")
     began = time.perf_counter()
     try:
-        result = _host.handle(request)
+        with _host_lock:
+            result = _host.handle(request)
     except Exception as exc:
         ms = (time.perf_counter() - began) * 1000
         _record(ms, ok=False)

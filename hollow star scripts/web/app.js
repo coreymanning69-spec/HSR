@@ -894,7 +894,7 @@ function consoleBar() {
   const caption = talk ? `Replying to ${talk.npc} · ${talk.mode}` : 'Command or chat line to the host';
   const log = open ? messageLog() : null;
   const toggle = `<button type="button" class="console-toggle" data-action="toggle-messages" aria-expanded="${open}" aria-controls="console-log" aria-label="${open ? 'Collapse the message log' : 'Expand the message log'}"><span>${open ? 'Hide log' : 'Log'}</span><i aria-hidden="true">${open ? '▾' : '▴'}</i></button>`;
-  const head = open ? `<div class="console-head"><strong class="console-caption">${E(caption)}</strong>${log.tabs}<span class="console-head-tools">${log.tools}</span></div><div class="console-log" id="console-log">${log.history}</div>` : '';
+  const head = open ? `<div class="console-head"><strong class="console-caption">${E(caption)}</strong>${log.tabs}<span class="console-head-tools">${log.tools}</span></div><div class="console-log" id="console-log" role="log" aria-live="polite">${log.history}</div>` : '';
   const chip = talk && !open ? `<span class="console-chip" title="${E(caption)}">${E(talk.npc)}</span>` : '';
   return `<form id="console-form" class="hsr-console hsr-command-bar is-input ${open ? 'is-expanded' : 'is-collapsed'}" data-panel="console" style="${consoleSizeStyle()}">
     ${CONSOLE_EDGES.map(edge => `<span class="console-resize console-resize-${edge}" data-console-resize="${edge}" aria-hidden="true"></span>`).join('')}
@@ -2436,18 +2436,34 @@ function battleCharacterFigure(item = {}, index = 0, layout = null) {
 // Minimal DOM morph: keeps elements whose tag matches and only patches what
 // changed, so CSS transitions (the HP bar width) run instead of snapping and
 // already-decoded images are not re-requested.
+// Keyed reconciliation: children carrying data-key (or id) are matched by key,
+// so inserting at the top of a list moves nodes instead of rewriting every
+// sibling below it (focus, canvases and scroll survive). Unkeyed children keep
+// the original positional morph.
+const nodeKey = node => node.nodeType === Node.ELEMENT_NODE ? (node.getAttribute('data-key') || node.id || null) : null;
 function morphChildren(target, source) {
-  const from = [...target.childNodes]; const to = [...source.childNodes];
+  const to = [...source.childNodes];
+  const keyed = new Map();
+  target.childNodes.forEach(node => { const key = nodeKey(node); if (key && !keyed.has(key)) keyed.set(key, node); });
+  const used = new Set();
   to.forEach((next, i) => {
-    const cur = from[i];
-    if (!cur) { target.append(next.cloneNode(true)); return; }
-    if (cur.nodeType !== next.nodeType || cur.nodeName !== next.nodeName) { cur.replaceWith(next.cloneNode(true)); return; }
+    const key = nodeKey(next);
+    let cur = key ? keyed.get(key) : target.childNodes[i];
+    if (cur && (used.has(cur) || (!key && nodeKey(cur) && to.some(n => nodeKey(n) === nodeKey(cur))))) cur = null;
+    const slot = target.childNodes[i] || null;
+    if (!cur || cur.nodeType !== next.nodeType || cur.nodeName !== next.nodeName) {
+      const fresh = next.cloneNode(true);
+      if (cur && !key && cur === slot) cur.replaceWith(fresh); else target.insertBefore(fresh, slot);
+      used.add(fresh); return;
+    }
+    if (cur !== slot) target.insertBefore(cur, slot);
+    used.add(cur);
     if (cur.nodeType === Node.TEXT_NODE) { if (cur.data !== next.data) cur.data = next.data; return; }
     if (cur.nodeType !== Node.ELEMENT_NODE) return;
     syncAttributes(cur, next);
     if (cur.innerHTML !== next.innerHTML) morphChildren(cur, next);
   });
-  from.slice(to.length).forEach(node => node.remove());
+  [...target.childNodes].slice(to.length).forEach(node => node.remove());
 }
 function syncAttributes(target, source) {
   [...target.attributes].forEach(({name}) => { if (!source.hasAttribute(name)) target.removeAttribute(name); });

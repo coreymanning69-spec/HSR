@@ -14,6 +14,8 @@ import {themeFor} from './stage-set.js';
 import {bodyOf} from './stage-world.js';
 import {createToolbox} from './actor-toolbox.js';
 import {mountBattleBackdrop, createWoundLayer} from './battle-backdrop.js';
+import {playCutscene} from './cutscene-player.js?v=cs-1';
+import {CUTSCENES, cutsceneUnlocked} from './cutscenes.js?v=cs-1';
 import {characterFigure as drawDoll, visualRole, visualIdentity, presentationAppearance, visualExpression} from './paperdoll.js?v=puppet-1';
 
 const E = globalThis.HSRUI.escape;
@@ -419,7 +421,7 @@ const state = {
   selected: screens.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'room',
   selectedActor: null,
   busy: false, connected: false, note: '', error: '', refreshed: null, initialized: false, activity: {label: 'Idle', started: 0, requests: 0, line: 'Awaiting a request; the reliquary is pretending to be patient.'}, requestKeys: new Set(),
-  pendingMode: 'DESIGN', pendingLead: null, accountIdentity: readAccountIdentity(), progression: null, terminal: null,
+  pendingMode: 'DESIGN', pendingLead: null, accountIdentity: readAccountIdentity(), progression: null, star: null, metaShop: null, terminal: null,
   statisticsMode: null, statistics: null, statisticsView: 'menu', statisticsDetail: null,
   pendingConversation: null, consoleDraft: '', actionPicker: null, presentation: null,
   arcadeUi: null, staleSandbox: null, lastManeuver: null, trayState: 'compact', arrangeMode: false, playHeaderOpen: false,
@@ -1172,6 +1174,7 @@ const TITLE_SLOGANS = [
 const TITLE_CHOICES = [
   ['Story Mode', 'menu:menu-story', 'intro-action-primary'],
   ['Simulation Mode', 'menu:menu-simulation', 'intro-action-primary'],
+  ['Memory Archive', 'menu:archive', 'intro-action-secondary'],
   ['Options', 'menu:options', 'intro-action-secondary'],
 ];
 // Fixed-seed scatter so the sky is identical on every render.
@@ -1207,7 +1210,7 @@ function title() {
         <div class="intro-title-rule" aria-hidden="true"></div>
         <p class="intro-subtitle" aria-live="polite" data-title-slogan><span class="title-slogan-layer is-visible">${E(TITLE_SLOGANS[state.titleSlogan % TITLE_SLOGANS.length])}</span><span class="title-slogan-layer" aria-hidden="true"></span></p>
         <div class="intro-actions">
-          ${TITLE_CHOICES.map(([label, action, cls], i) => `<button type="button" class="action ${cls}${i === active ? ' is-active' : ''}" data-action="${E(action)}">${E(label)}</button>${i === 2 ? '<div class="intro-title-rule intro-action-rule" aria-hidden="true"></div>' : ''}`).join('\n          ')}
+          ${TITLE_CHOICES.map(([label, action, cls], i) => `<button type="button" class="action ${cls}${i === active ? ' is-active' : ''}" data-action="${E(action)}">${E(label)}</button>${i === 1 ? '<div class="intro-title-rule intro-action-rule" aria-hidden="true"></div>' : ''}`).join('\n          ')}
         </div>
         <p class="intro-mode-help">Story Mode carries the Reliquary's authored modules and your account progression. Completed runs bank Platinum for permanent upgrades, and victories raise the Loop tier so future descents grow richer and more demanding. Simulation Mode remains the open sandbox for stats, cheats, and rehearsal.</p>
         <p class="intro-workbench"><a href="/content-workbench.html" class="label" aria-label="Open Content Workbench">Content Workbench ↗</a></p>
@@ -1500,12 +1503,79 @@ function modeBadge(mode) {
   const cls = mode === 'FORGE' ? 'mode-forge' : mode === 'SANDBOX' ? 'mode-sandbox' : 'mode-other';
   return `<span class="mode-badge ${cls}">${E(MODE_LABELS[mode] || mode)}</span>`;
 }
+// ---- The Hollow Star: memory, archive, Meta Shop ----------------------------
+function metaShopUnlocked() { return Boolean(state.star?.meta_shop_unlocked); }
+async function loadStar() {
+  try {
+    const reply = await state.client.request('star_memory', {}, {dedupeKey: 'star_memory'});
+    if (reply.ok) state.star = reply.result?.star || state.star;
+  } catch { /* the archive still opens with only always-unlocked scenes */ }
+  return state.star;
+}
+async function playScene(id) {
+  const scene = CUTSCENES.find(row => row.id === id);
+  if (!scene) return;
+  await playCutscene(scene);
+  try {
+    const reply = await state.client.request('star_mark_seen', {cutscene: id});
+    if (reply.ok) state.star = reply.result?.star || state.star;
+  } catch {}
+}
+function starGlyph() {
+  return `<svg class="star-glyph" viewBox="0 0 100 100" aria-hidden="true"><defs><radialGradient id="sg"><stop offset=".38" stop-color="#fff6d8" stop-opacity="0"/><stop offset=".5" stop-color="#fff6d8"/><stop offset=".62" stop-color="#e8c46a" stop-opacity=".5"/><stop offset="1" stop-color="#e8c46a" stop-opacity="0"/></radialGradient></defs><circle cx="50" cy="50" r="48" fill="url(#sg)"/><circle cx="50" cy="50" r="15" fill="#07060b"/></svg>`;
+}
+function starStatus() {
+  const s = state.star;
+  if (!s) return `<div class="star-status">${starGlyph()}<div><p class="star-tier">Unawakened</p><p class="star-facts"><span>Connect to the engine to read the Star's memory.</span></p></div></div>`;
+  return `<div class="star-status">${starGlyph()}<div><p class="label">Hollow Star · Awareness ${E(s.awareness?.tier ?? 0)}</p><p class="star-tier">${E(s.awareness?.name || 'Ember')}</p>
+    <p class="star-facts"><span>${E(s.runs)} vessels carried</span><span>${E(s.completions)} descents completed</span><span>${E(s.deaths)} falls remembered</span></p></div></div>`;
+}
+function archiveScreen() {
+  const seen = new Set(state.star?.seen_cutscenes || []);
+  const cards = CUTSCENES.map(scene => {
+    const open = cutsceneUnlocked(scene, state.star);
+    return `<button type="button" class="archive-card${open ? '' : ' is-sealed'}" ${open ? `data-action="cutscene:${E(scene.id)}"` : 'aria-disabled="true"'}>
+      <span class="archive-thumb" aria-hidden="true">${open ? scene.thumb : ''}</span>
+      <em>${open ? (seen.has(scene.id) ? 'Remembered' : 'New') : 'Sealed'}</em>
+      <strong>${E(open ? scene.title : '· · ·')}</strong><small>${E(open ? scene.blurb : 'The Star has not lived this yet.')}</small></button>`;
+  }).join('');
+  return `<div class="mode-menu">${breadcrumb('Main Menu', 'Memory Archive')}${atmosphere('gateway', 'Memory Archive', 'What the Hollow Star keeps between vessels.')}${card('Memory Archive', `${starStatus()}<div class="archive-grid">${cards}</div>
+    <div class="mode-menu-footer"><div class="footer-right">${button('Back', 'back', 'secondary')}</div></div>`, 'mode-menu-card')}</div>`;
+}
+function metaShopScreen() {
+  const back = `<div class="mode-menu-footer"><div class="footer-right">${button('Back', 'back', 'secondary')}</div></div>`;
+  if (!metaShopUnlocked()) {
+    return `<div class="mode-menu">${breadcrumb('Main Menu', 'Story Mode', 'Meta Shop')}${card('Meta Shop', `<div class="meta-lock">${starGlyph()}<strong>Sealed</strong><p>The Hollow Star has nothing to trade until a vessel's run has ended.</p></div>${back}`, 'mode-menu-card')}</div>`;
+  }
+  const p = state.progression;
+  const rows = state.metaShop || Object.entries(UPGRADE_TRACKS).map(([key, spec]) => {
+    const tier = p?.upgrades?.[key] ?? 0;
+    return {key, effect: spec.effect, tier, cap: spec.cap, capped: tier >= spec.cap, next_cost: tier >= spec.cap ? null : spec.base_cost * (tier + 1)};
+  });
+  const platinum = p?.platinum ?? 0;
+  const tracks = rows.map(row => `<div class="meta-track${row.capped ? ' is-capped' : ''}"><h3>${E(row.key.replaceAll('_', ' '))}</h3><p>${E(row.effect)}</p>
+    <div class="meta-pips" aria-label="Tier ${E(row.tier)} of ${E(row.cap)}">${Array.from({length: row.cap}, (_, i) => `<i class="${i < row.tier ? 'on' : ''}"></i>`).join('')}</div>
+    ${row.capped ? '<span class="notice">Mastered</span>' : `<button type="button" class="action secondary" data-upgrade="${E(row.key)}"${platinum < row.next_cost ? ' disabled' : ''}>Absorb · ${E(row.next_cost)} Platinum</button>`}</div>`).join('');
+  return `<div class="mode-menu">${breadcrumb('Main Menu', 'Story Mode', 'Meta Shop')}${atmosphere('gateway', 'Meta Shop', 'What the Star absorbs, every vessel inherits.')}${card('Meta Shop', `<div class="meta-shop">
+    <div class="meta-shop-purse">${starGlyph()}<div><p class="label">Platinum · ${E(state.accountIdentity)}</p><span class="plat">${E(platinum)}</span></div></div>
+    <div class="meta-shop-grid">${tracks}</div></div>${back}`, 'mode-menu-card')}</div>`;
+}
+async function loadMetaShop() {
+  const reply = await state.client.request('meta_shop', {identity: state.accountIdentity});
+  if (reply.ok) { state.progression = reply.result?.progression || state.progression; state.metaShop = reply.result?.meta_shop || null; }
+}
 function storyMenu() {
   return `<div class="mode-menu">${breadcrumb('Main Menu', 'Story Mode')}${atmosphere('gateway', 'Story Mode', 'Choose a Champion or create an adventurer for the Reliquary’s authored story.')}${card('Story Mode', `<div class="menu-list-stack">
     <div class="menu-grid-row-3">
       <button type="button" class="action menu-item-card" data-action="mode:FORGE" data-tooltip="Begin a new authored descent into the Reliquary with certified Champions or a custom build."><strong>New Game</strong><small>Begin a new authored descent into the Reliquary</small></button>
       <button type="button" class="action menu-item-card" data-action="continue:FORGE" data-tooltip="Resume an existing saved Story Mode expedition."><strong>Continue</strong><small>Resume a saved Story Mode expedition</small></button>
       <button type="button" class="action menu-item-card" data-action="menu:statistics" data-tooltip="Review past journeys, records, and progression."><strong>Statistics</strong><small>Review past journeys, records, and progression</small></button>
+    </div>
+    <div class="menu-grid-row-2">
+      ${metaShopUnlocked()
+        ? `<button type="button" class="action menu-item-card" data-action="menu:meta-shop" data-tooltip="Spend Platinum on permanent upgrades the Hollow Star carries into every vessel."><strong>Meta Shop</strong><small>Permanent upgrades carried between runs</small></button>`
+        : `<button type="button" class="action menu-item-card is-locked" aria-disabled="true" data-tooltip="The Hollow Star has nothing to trade yet. Finish your first run."><strong>Meta Shop · Sealed</strong><small>Unlocks after your first run ends</small></button>`}
+      <button type="button" class="action menu-item-card" data-action="menu:archive" data-tooltip="Replay the Hollow Star's memories."><strong>Memory Archive</strong><small>Cutscenes the Star has lived through</small></button>
     </div>
   </div><div class="mode-menu-footer"><div class="footer-right">${button('Back', 'back', 'secondary')}</div></div>`, 'mode-menu-card')}</div>`;
 }
@@ -4994,7 +5064,7 @@ function renderNow() {
     state.phase === 'create' ? creator() : state.phase === 'entry-select' ? entrySelect() :
     state.phase === 'preview' ? preview() : state.phase === 'runs' ? runs() :
     state.phase === 'statistics' ? statisticsScreen() : state.phase === 'edit-scenario' ? scenarioEditor() :
-    state.phase === 'cheats' ? cheatsPanel() : state.phase === 'toolbox' ? toolboxScreen() : state.phase === 'options' ? options() : shell();
+    state.phase === 'cheats' ? cheatsPanel() : state.phase === 'archive' ? archiveScreen() : state.phase === 'meta-shop' ? metaShopScreen() : state.phase === 'toolbox' ? toolboxScreen() : state.phase === 'options' ? options() : shell();
   // The desktop app is a locked-ratio frame, so long pre-game/menu screens
   // need one named in-frame scrolling region.  Gameplay owns its centre-stage
   // scroller and the fixed creator owns its stage; wrapping either here would
@@ -6201,6 +6271,11 @@ function bind() {
         state.statistics = null; state.statisticsDetail = null; state.statisticsView = 'menu';
       }
       go(phase); render();
+      if (['archive', 'menu-story', 'meta-shop'].includes(phase)) {
+        await loadStar();
+        if (phase === 'meta-shop' && metaShopUnlocked()) await loadMetaShop();
+        if (state.phase === phase) render();
+      }
       // Both screens name the chosen scenario, so the catalog is fetched on the
       // way into Simulation Mode rather than only inside the picker.
       if ((phase === 'edit-scenario' || phase === 'menu-simulation') && state.scenarios === null) { await loadScenarios(); render(); }
@@ -6209,10 +6284,16 @@ function bind() {
     else if (action === 'restart') { resetCreationDraft(); go('create'); render(); await ensureCreationSeed(); render(); scheduleLivePreview(0); }
     else if (state.phase === 'create' && await creatorAction(action)) { /* handled by the paged creator */ }
     else if (action === 'engine' || action === 'start-engine') await connect('engine-host', 'title');
+    else if (action.startsWith('cutscene:')) { await playScene(action.slice(9)); render(); }
     else if (action.startsWith('mode:')) {
       state.pendingMode = action.slice(5);
       if (state.connected) { go('party-select'); render(); }
       else await connect('engine-host', 'party-select');
+      // The first Story descent opens on the Star's birth; after that it lives in the archive.
+      if (state.pendingMode === 'FORGE' && state.connected && !(state.star?.seen_cutscenes || []).includes('opening')) {
+        await loadStar();
+        if (state.star && !state.star.seen_cutscenes.includes('opening')) { await playScene('opening'); render(); }
+      }
     }
     else if (action === 'champion-select') { go('champion-select'); render(); }
     else if (action.startsWith('champion:')) {
@@ -6487,6 +6568,7 @@ function bind() {
     const reply = await state.client.purchaseUpgrade(state.accountIdentity, node.dataset.upgrade);
     if (!reply.ok) throw Error(reply.error?.message || 'Purchase failed');
     state.progression = reply.result?.progression || state.progression;
+    if (state.phase === 'meta-shop') await loadMetaShop();
   }));
   document.querySelectorAll('[data-create-field]').forEach(node => node.onchange = () => {
     const key = node.dataset.createField;

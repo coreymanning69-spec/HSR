@@ -1140,7 +1140,7 @@ class HSRHost:
         except (spell_workshop.WorkshopError, OSError, ValueError, TypeError) as exc:
             return self._error(request, "SPELL_WORKSHOP_INVALID", str(exc))
 
-    @command_handler(*({"character_options", "character_roll", "peek_creation_seed", "allocate_creation_seed", "randomize_build", "preview_character", "build_character", "content_catalog", "design_start", "design_action", "design_turn", "arcade_tick", "arcade_toggle_flight", "arcade_set_movement_mode", "idle_tick", "auto_travel", "observe", "readout", "report", "reveal-room-record", "test-perception", "register_ruling", "spell_catalog", "design_auto", "design_auto_combat", "design_drain_npc", "checkpoint", "bank_checkpoint", "resume_checkpoint", "terminal_receipt", "progression", "settle_run", "upgrade", "meta_shop", "meta_shop_purchase", "identify", "combine", "replay_token", "inspect_replay_token", "design_auto", "sandbox_start", "sandbox_release", "sandbox_action", "sandbox_debug", "sandbox_branch", "finished_runs", "sandbox_prestige", "forge_start", "forge_action", "forge_receipt"} | EXPEDITION_COMMANDS))
+    @command_handler(*({"character_options", "character_roll", "peek_creation_seed", "allocate_creation_seed", "randomize_build", "preview_character", "build_character", "content_catalog", "design_start", "design_action", "design_turn", "arcade_tick", "arcade_toggle_flight", "arcade_set_movement_mode", "idle_tick", "auto_travel", "observe", "readout", "report", "reveal-room-record", "test-perception", "register_ruling", "spell_catalog", "design_auto", "design_auto_combat", "design_drain_npc", "checkpoint", "bank_checkpoint", "resume_checkpoint", "terminal_receipt", "progression", "settle_run", "upgrade", "meta_shop", "meta_shop_purchase", "star_memory", "star_mark_seen", "identify", "combine", "replay_token", "inspect_replay_token", "design_auto", "sandbox_start", "sandbox_release", "sandbox_action", "sandbox_debug", "sandbox_branch", "finished_runs", "sandbox_prestige", "forge_start", "forge_action", "forge_receipt"} | EXPEDITION_COMMANDS))
     def _cmd_design_runtime(self, request: dict, command: str) -> dict | None:
         blocked = self._require_booted(request)
         if blocked:
@@ -1153,6 +1153,15 @@ class HSRHost:
             # it, so two back-to-back readouts would no longer agree.
             self._touch_active_clock(request.get("run_id"))
         try:
+            if command in {"star_memory","star_mark_seen"}:
+                from hollowstar.star_memory import StarMemory
+                star=StarMemory(self.paths.run_root.parent / "reliquary_progress")
+                if command=="star_mark_seen": return self._ok(request,{"star":star.mark_seen(request.get("cutscene"))})
+                try:
+                    history=self._history().statistics(None)["all_runs"]
+                except Exception:  # history is a convenience source; memory still reads
+                    history=[]
+                return self._ok(request,{"star":star.absorb_history(history)})
             if command in {"progression","settle_run","upgrade","meta_shop","meta_shop_purchase"}:
                 from hollowstar.progression import Progression, shop_catalog
                 progress=Progression(self.paths.run_root.parent / "reliquary_progress")
@@ -1173,7 +1182,12 @@ class HSRHost:
                 if command=="upgrade": return self._ok(request,{"progression":progress.purchase(identity,request.get("upgrade"))})
                 run=self._runs()._active.get(request.get("run_id"))
                 if run is None:raise RunServiceError("load the run first")
-                return self._ok(request,{"progression":progress.settle(identity,request.get("run_id"),run)})
+                settled=progress.settle(identity,request.get("run_id"),run)
+                from hollowstar.star_memory import StarMemory
+                receipt=settled["runs"][request.get("run_id")]
+                star=StarMemory(self.paths.run_root.parent / "reliquary_progress").record_run(
+                    request.get("run_id"),identity,receipt,{"name":identity.split(":",1)[1]})
+                return self._ok(request,{"progression":settled,"star":star})
             if command == "content_catalog":
                 catalog = self._runs().content_catalog(request.get("run_id"))
                 from hollowstar.loader import load_items

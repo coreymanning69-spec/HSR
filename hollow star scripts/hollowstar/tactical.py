@@ -380,6 +380,8 @@ def incoming_spell(run, source, target, spell_level):
         raise ActionError("spell requires living source and target")
     if same_side(source, target) or not has_capability(run, target, "spell_absorption"):
         raise ActionError("Staff absorption requires an enemy spell targeting Wren")
+    if ladder_locked(rules(run, target), "staff_absorb"):
+        raise ActionError(ladder_reason(rules(run, target), "staff_absorb"))
     number(spell_level, "spell level", 1, 9)
     window={"kind":"spell","reactor":target,"source":source,
             "target":target,"spell_level":spell_level}
@@ -397,6 +399,8 @@ def incoming_failed_save(run, source, target, failed_save):
                if capable(r, "unbound_save_conversion") and actor(run,k).alive),None)
     if wren is None or distance(run,wren,target) > 30:
         raise ActionError("no living Wren within 30 feet for save conversion")
+    if ladder_locked(rules(run, wren), "domain:Aura of the Unbound"):
+        raise ActionError(ladder_reason(rules(run, wren), "domain:Aura of the Unbound"))
     window={'kind':'save','reactor':wren,
             'target':target,'source':source,'feature':'Aura of the Unbound','failed_save':failed_save}
     run.context['combat']['pending'].append(window)
@@ -1337,9 +1341,10 @@ def weapon_attack(run, source, target, mode="weapon", *, bonus=False, reaction=F
         # A miss is a real persisted reaction window.  Deft Answer remains the
         # default option; Riposte is offered only from this exact miss, never
         # from a caller assertion.
+        riposte = [] if ladder_locked(rules(run, target), "maneuver:Riposte") else ["riposte"]
         run.context["combat"]["pending"].append({"kind": "deft_answer", "reactor": target,
                                                    "target": source,
-                                                   "options": ["deft_answer", "riposte"]})
+                                                   "options": ["deft_answer"] + riposte})
     return event
 
 
@@ -1544,11 +1549,12 @@ def move(run, key, destination):
     for other in actors(run):
         if same_side(other, key) or not conscious(actor(run, other)):
             continue
+        brace_locked = ladder_locked(rules(run, other), "maneuver:Brace")
         if distance(run, other, key) <= 5 and max(abs(position(run, other)[i]-destination[i]) for i in range(3)) > 5:
             if key not in rules(run,other).get("declined_targets",[]) and economy(run, other)["reaction"] and not r.get("mobile") and ("DISENGAGED" not in a.statuses or capable(rules(run, other), "ignores_disengage")):
                 reactions.append({"kind": "opportunity", "reactor": other, "target": key,
-                                  "options": ["opportunity"] + (["brace"] if capable(rules(run, other), "brace") else [])})
-        elif capable(rules(run, other), "entry_reaction") and distance(run, other, key) > 5 \
+                                  "options": ["opportunity"] + (["brace"] if capable(rules(run, other), "brace") and not brace_locked else [])})
+        elif not brace_locked and capable(rules(run, other), "entry_reaction") and distance(run, other, key) > 5 \
                 and max(abs(position(run, other)[i]-destination[i]) for i in range(3)) <= 5 \
                 and economy(run, other)["reaction"]:
             reactions.append({"kind":"brace","reactor":other,"target":key,"options":["brace"]})
@@ -1883,6 +1889,16 @@ def forecast_contest(run, key, action):
     return out
 
 
+def ladder_locked(r, ladder_key):
+    """Story Mode: is this Champion Ladder key still locked for these rules?"""
+    return ladder_key in (r.get("locked_actions") or ())
+
+
+def ladder_reason(r, ladder_key):
+    from hollowstar.unlock_ladder import lock_reason
+    return lock_reason(r, ladder_key)
+
+
 def contextual_actions(run, key):
     """What this actor could legally attempt right now, with public help text.
 
@@ -1982,6 +1998,13 @@ def contextual_actions(run, key):
         reach = 5 if state.get('terrain',{}).get('human_tight') else 10
         champion('cleaver_attack','Giant Cleaver','attack','40 fixed damage, critical 80; carry through until the first survivor.',
                  None if has_attack else 'No attack remains.', [k for k in alive_foes if distance(run,key,k)<=reach])
+    if r.get("locked_actions"):
+        from hollowstar.unlock_ladder import action_locked
+        for row in rows:
+            probe = {"type": "maneuver", "maneuver": row["maneuver"]} if row.get("maneuver") else {"type": row["id"]}
+            locked = action_locked(r, probe)
+            if locked:
+                row.update(available=False, locked=True, reason=ladder_reason(r, locked))
     return rows
 
 
@@ -2054,7 +2077,7 @@ def apply(run, action):
         from hollowstar.unlock_ladder import action_locked
         locked = action_locked(r, action)
         if locked:
-            raise ActionError(f"{locked} is still locked (champion level {r.get('champion_level', 1)}); unlock it on the ladder")
+            raise ActionError(ladder_reason(r, locked))
     if kind in {"flight_move", "ascend", "descend"}:
         if not capable(r, "flight"):
             raise ActionError("only Wren may use flight controls")

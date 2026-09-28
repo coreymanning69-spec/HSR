@@ -1608,7 +1608,11 @@ async function finalizeRun(runId) {
     if (out.meta_shop_newly_unlocked) storyToast(t('shop.unlocked_toast'));
     if ((out.awareness_after?.tier ?? 0) > (out.awareness_before?.tier ?? 0)) storyToast(t('run.star_awareness', {tier: out.awareness_after.tier, name: out.awareness_after.name}));
     for (const row of out.errors || []) addMessage(`Settlement skipped for ${row.identity}: ${row.error}`, 'note');
-    for (const [champ, view] of Object.entries(out.ladder || {})) if (view.picks_left) storyToast(t('ladder.picks_toast', {name: champ[0].toUpperCase() + champ.slice(1), n: view.picks_left}));
+    for (const [champ, view] of Object.entries(out.ladder || {})) {
+      const name = champ[0].toUpperCase() + champ.slice(1);
+      if (view.levels_gained > 0) storyToast(t('ladder.level_toast', {name, n: view.level}));
+      if (view.picks_left) storyToast(t(view.picks_left === 1 ? 'ladder.picks_toast_one' : 'ladder.picks_toast', {name, n: view.picks_left}));
+    }
     if (out.star_revealed) { await playScene('last-standing'); render(); }
   } catch { state.finalizedRuns.delete(runId); }
 }
@@ -1649,20 +1653,40 @@ function storyOptions() {
 async function loadLadders() {
   try { const reply = await state.client.request('unlock_ladder', {}, {dedupeKey: 'unlock_ladder'}); if (reply.ok) state.ladders = reply.result?.ladders || null; } catch {}
 }
+function ladderPicksLabel(n) {
+  return n === 1 ? t('ladder.picks_one') : n ? t('ladder.picks', {n}) : t('ladder.picks_none');
+}
+
+function ladderTile(v, e) {
+  const state = e.unlocked ? 'is-unlocked' : e.available ? 'is-available' : 'is-locked';
+  const foot = e.unlocked ? `<em>${E(t('ladder.unlocked'))}</em>`
+    : !e.available ? `<small class="ladder-when">${E(t('ladder.opens_at', {n: e.min_level}))}</small>`
+    : v.picks_left ? `<button type="button" class="action secondary" data-action="unlock:${E(v.champion)}:${E(e.key)}">${E(t('ladder.unlock'))}</button>`
+    : `<small class="ladder-when">${E(t('ladder.needs_pick'))}${v.next_pick_level ? ` · ${E(t('ladder.next_pick', {n: v.next_pick_level}))}` : ''}</small>`;
+  const from = e.available || e.unlocked ? `<small>${E(t('ladder.min_level', {n: e.min_level}))}</small>` : '';
+  return `<div class="ladder-entry ${state}"><strong>${E(e.label)}</strong>${from}${foot}</div>`;
+}
+
 function ladderScreen() {
   const back = `<div class="mode-menu-footer"><div class="footer-right">${button('Back', 'back', 'secondary')}</div></div>`;
   const ladders = state.ladders;
   const body = !ladders ? `<p class="notice">${E(t('star.offline'))}</p>` : Object.values(ladders).map(v => {
     const name = v.champion[0].toUpperCase() + v.champion.slice(1);
-    const tiles = v.entries.map(e => `<div class="ladder-entry${e.unlocked ? ' is-unlocked' : e.available ? ' is-available' : ''}">
-      <strong>${E(e.label)}</strong><small>${E(t('ladder.min_level', {n: e.min_level}))}</small>
-      ${e.unlocked ? `<em>${E(t('ladder.unlocked'))}</em>` : e.available && v.picks_left ? `<button type="button" class="action secondary" data-action="unlock:${E(v.champion)}:${E(e.key)}">${E(t('ladder.unlock'))}</button>` : ''}</div>`).join('');
+    const done = v.level >= v.max_level;
+    const per = v.xp_per_level || 1;
+    const into = v.xp_into_level || 0;
+    const unlocked = v.entries.filter(e => e.unlocked).length;
+    const xp = done ? t('ladder.xp_max') : t('ladder.xp', {x: into, per, next: v.level + 1});
+    const nextPick = !done && v.next_pick_level ? ` · ${t('ladder.next_pick', {n: v.next_pick_level})}` : '';
     return `<section class="ladder-champion"><header class="ladder-head"><h3>${E(name)}</h3><span class="ladder-level">${E(t('ladder.level', {n: v.level, max: v.max_level}))}</span>
-      <span class="ladder-picks">${E(t('ladder.picks', {n: v.picks_left}))}</span>${v.slot_cap ? `<span class="ladder-picks">${E(t('ladder.slots', {n: v.slot_cap}))}</span>` : ''}</header>
-      <div class="journey-progress"><span style="width:${Math.round(v.level / v.max_level * 100)}%"></span></div>
-      <div class="ladder-grid">${tiles}</div></section>`;
+      <span class="ladder-picks${v.picks_left ? ' has-picks' : ''}">${E(ladderPicksLabel(v.picks_left))}</span>${v.slot_cap ? `<span class="ladder-picks">${E(t('ladder.slots', {n: v.slot_cap}))}</span>` : ''}
+      <span class="ladder-count">${E(t('ladder.count', {unlocked, total: v.entries.length}))}</span></header>
+      <div class="journey-progress" role="progressbar" aria-label="${E(name)} champion level" aria-valuemin="1" aria-valuemax="${E(v.max_level)}" aria-valuenow="${E(v.level)}"><span style="width:${Math.round(v.level / v.max_level * 100)}%"></span></div>
+      <p class="ladder-xp"><span class="ladder-xp-bar" aria-hidden="true"><span style="width:${done ? 100 : Math.round(into / per * 100)}%"></span></span>${E(xp + nextPick)}</p>
+      <div class="ladder-grid">${v.entries.map(e => ladderTile(v, e)).join('')}</div></section>`;
   }).join('');
-  return `<div class="mode-menu">${breadcrumb('Main Menu', 'Story Mode', t('ladder.title'))}${atmosphere('gateway', t('ladder.title'), t('ladder.subtitle'))}${card(t('ladder.title'), `<div class="ladder">${body}</div>${back}`, 'mode-menu-card')}</div>`;
+  const hint = ladders ? `<p class="ladder-hint">${E(t('ladder.earn_hint'))}</p>` : '';
+  return `<div class="mode-menu">${breadcrumb('Main Menu', 'Story Mode', t('ladder.title'))}${atmosphere('gateway', t('ladder.title'), t('ladder.subtitle'))}${card(t('ladder.title'), `<div class="ladder">${body}</div>${hint}${back}`, 'mode-menu-card')}</div>`;
 }
 function metaShopScreen() {
   const back = `<div class="mode-menu-footer"><div class="footer-right">${button('Back', 'back', 'secondary')}</div></div>`;

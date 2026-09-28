@@ -190,7 +190,20 @@ def candidate_actions(run, key, *, informed_forecast=None, include_illegal=False
     rows = []
     for _name, source in CANDIDATE_SOURCES:
         rows.extend(source(run, key, know))
+    r = t.rules(run, key)
+    for row in rows:
+        locked = _ladder_lock(r, row["action"])
+        if locked:
+            row.update(legal=False, reason=t.ladder_reason(r, locked))
     return rows if include_illegal else [row for row in rows if row["legal"]]
+
+
+def _ladder_lock(rules, action):
+    """Story Mode: the Champion Ladder key this action still needs, if any."""
+    if not rules.get("locked_actions"):
+        return None
+    from hollowstar.unlock_ladder import action_locked
+    return action_locked(rules, action)
 
 
 def _spends_resources(row):
@@ -444,6 +457,8 @@ def _legal_now(run, actor_key, action):
     Only meaningful on the actor's own turn; an off-turn preview returns the
     first matching gambit exactly as before.
     """
+    if _ladder_lock(t.rules(run, actor_key), action):
+        return False  # a gambit naming a still-locked ability falls through
     combat = run.context.get("combat") or {}
     if combat.get("complete") or combat.get("pending") or not combat.get("order") or t.current(run) != actor_key:
         return True
@@ -663,9 +678,12 @@ def combat_action(run):
     selected = macro_action(run, key, configured)
     if selected is not None:
         return selected
-    if identity == 'doran' and e['bonus'] and a.hp < a.max_hp / 2 and a.resources.get('second_wind'):
+    r=t.rules(run,key)
+    if identity == 'doran' and e['bonus'] and a.hp < a.max_hp / 2 and a.resources.get('second_wind') \
+            and not t.ladder_locked(r, 'second_wind'):
         return {'type':'second_wind','actor':key}
-    if identity == 'wren' and e['bonus'] and a.hp < a.max_hp / 2 and a.resources.get('unearthly_recovery'):
+    if identity == 'wren' and e['bonus'] and a.hp < a.max_hp / 2 and a.resources.get('unearthly_recovery') \
+            and not t.ladder_locked(r, 'unearthly_recovery'):
         return {'type':'unearthly_recovery','actor':key}
     if identity=='wren':
         # Preserve a real support line in automated rehearsals.  Healing Word

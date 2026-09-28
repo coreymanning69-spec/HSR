@@ -46,6 +46,12 @@ def picks_for(level: int, spec: dict | None = None) -> int:
     return level // p["every"] + level // p["bonus_every"]
 
 
+def next_pick_level(level: int, spec: dict | None = None) -> int | None:
+    """The first level above ``level`` that grants another pick (None at 100)."""
+    spec = spec or ladder()
+    return next((n for n in range(level + 1, MAX_LEVEL + 1) if picks_for(n, spec) > picks_for(level, spec)), None)
+
+
 def slot_cap(level: int, champ: dict) -> int | None:
     rule = champ.get("slot_levels")
     if not rule:
@@ -82,9 +88,13 @@ class UnlockLadder:
         unlocked = {e["key"] for e in c["unlocks"]} if level >= MAX_LEVEL else set(row["picked"])
         entries = [{**e, "unlocked": e["key"] in unlocked, "available": e["min_level"] <= level and e["key"] not in unlocked}
                    for e in c["unlocks"]]
+        entries.sort(key=lambda e: (e["min_level"], e["label"]))
+        per = int(spec.get("xp_per_level", 2))
         return {"champion": champ, "xp": row["xp"], "level": level, "max_level": MAX_LEVEL,
+                "xp_per_level": per, "xp_into_level": 0 if level >= MAX_LEVEL else row["xp"] % per,
                 "picks_total": picks_for(level, spec), "picks_spent": len(row["picked"]),
                 "picks_left": max(0, picks_for(level, spec) - len(row["picked"])),
+                "next_pick_level": next_pick_level(level, spec),
                 "slot_cap": slot_cap(level, c), "always": list(c["always"]), "entries": entries}
 
     def pick(self, champ: str, key: object) -> dict:
@@ -106,11 +116,13 @@ class UnlockLadder:
     def credit(self, champ: str, run_id: str, xp: int) -> dict:
         data = self._load()
         row = self._row(data, champ)
+        before = level_for(row["xp"])
         if run_id not in row["credited_runs"]:
             row["credited_runs"] = (row["credited_runs"] + [run_id])[-500:]
             row["xp"] += max(0, int(xp))
             atomic_json(self.path, data)
-        return self.view(champ)
+        view = self.view(champ)
+        return {**view, "levels_gained": view["level"] - before}
 
     def debug_set_level(self, champ: str, level: object) -> dict:
         if type(level) is not int or not 1 <= level <= MAX_LEVEL:
@@ -121,9 +133,11 @@ class UnlockLadder:
         return self.view(champ)
 
     def run_locks(self, champ: str) -> dict:
-        """What a Story run copies into party rules: locked keys and slot cap."""
+        """What a Story run copies into party rules: locked keys, when each
+        opens, and the slot cap."""
         view = self.view(champ)
-        return {"locked_actions": sorted(e["key"] for e in view["entries"] if not e["unlocked"]),
+        locked = {e["key"]: e["min_level"] for e in view["entries"] if not e["unlocked"]}
+        return {"locked_actions": sorted(locked), "locked_levels": locked,
                 "champion_level": view["level"], "slot_cap": view["slot_cap"]}
 
 
@@ -143,13 +157,38 @@ def apply_slot_cap(actor, cap: int | None) -> list[str]:
     return closed
 
 
+# Ladder features that fire from a reaction window rather than their own
+# action type: the window's chosen defense (or the reaction type itself) names
+# the ladder key it spends.
+REACTION_KEYS = {"brace": "maneuver:Brace", "riposte": "maneuver:Riposte", "parry": "maneuver:Parry"}
+DOMAIN_REACTION_KEY = "domain:Aura of the Unbound"
+
+
+def is_locked(rules: dict, key: str) -> bool:
+    return key in (rules.get("locked_actions") or ())
+
+
 def action_locked(rules: dict, action: dict) -> str | None:
     locked = rules.get("locked_actions")
     if not locked:
         return None
     kind = action.get("type")
+    if kind == "reaction":
+        key = REACTION_KEYS.get(action.get("defense"))
+        return key if key in locked else None
+    if kind == "domain_reaction":
+        return DOMAIN_REACTION_KEY if DOMAIN_REACTION_KEY in locked else None
     sub = action.get("maneuver") or action.get("feature") or action.get("spell")
     for key in (kind, f"{kind}:{sub}" if sub else None):
         if key and key in locked:
             return key
     return None
+
+
+def lock_reason(rules: dict, key: str) -> str:
+    """Player-facing text for a locked ladder key, from a run's party rules."""
+    level = rules.get("champion_level", 1)
+    opens = (rules.get("locked_levels") or {}).get(key)
+    if opens and opens > level:
+        return f"Locked: opens on the Champion Ladder at level {opens} (now {level})."
+    return f"Locked: spend a Champion Ladder pick to unlock it (level {level})."

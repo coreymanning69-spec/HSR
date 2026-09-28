@@ -11,6 +11,7 @@ import re
 from functools import lru_cache
 
 from hollowstar.actors import Actor
+from hollowstar.fastcopy import fast_deepcopy
 from hollowstar.items import public_item, item_presentation
 from hollowstar.phases import Phase, Direction
 from hollowstar.tags import DamageTag
@@ -83,6 +84,21 @@ def dice(run, expression, *, critical=False, maximize=False):
     return max(0, sum(values) + modifier), values
 
 
+def capable(rules_row, capability, default=False):
+    """Capability tag lookup for an actor's combat rules row.
+
+    Authored champion features live in champion_rules.CHAMPION_RULES; the
+    resolver asks for the capability ("brace", "parry", ...) rather than
+    comparing identity names, so a new champion gains a rule by data alone.
+    """
+    return champion_rules.flag((rules_row or {}).get("identity"), capability, default)
+
+
+def has_capability(run, key, capability, default=False):
+    """capable() for the actor at ``key`` in the current combat."""
+    return capable(rules(run, key), capability, default)
+
+
 # --- Odds ---------------------------------------------------------------------
 # The rolls above and below, computed instead of rolled. Planners, gambits and
 # previews read these; each mirrors the resolver function its docstring names,
@@ -114,10 +130,38 @@ def check_odds(bonus, dc, *, advantage=False, disadvantage=False):
     return sum(odds[n] for n in range(1, 21) if n + bonus >= dc)
 
 
-def contest_odds(active_bonus, passive_bonus):
-    """P(contest() goes to the active side): it must beat the passive total; a tie holds."""
-    return sum(1 for a in range(1, 21) for b in range(1, 21)
-               if a + active_bonus > b + passive_bonus) / 400
+def contest_odds(active_bonus, passive_bonus, *, active_adv=False, active_dis=False,
+                 passive_adv=False, passive_dis=False):
+    """P(contest() goes to the active side): it must beat the passive total; a tie holds.
+
+    Exact over both sides' d20 distributions (the integer numerators of
+    d20_odds, out of 400), so advantage and disadvantage on either side use the
+    same order statistics roll_check rolls. Summed as integers and divided once,
+    the straight-roll result is bit-identical to counting the 400 pairings.
+    """
+    w_active = _d20_weights(active_adv, active_dis)
+    w_passive = _d20_weights(passive_adv, passive_dis)
+    diff = active_bonus - passive_bonus
+    wins = 0
+    below = 0  # sum of passive weights for naturals < n + diff
+    edge = 1
+    for n in range(1, 21):
+        # active wins with natural n against every passive natural b < n + diff
+        limit = max(1, min(21, n + diff))
+        while edge < limit:
+            below += w_passive[edge]
+            edge += 1
+        wins += w_active[n] * below
+    return wins / 160000
+
+
+def _d20_weights(advantage=False, disadvantage=False):
+    """d20_odds as integer numerators over 400 (index 0 unused)."""
+    if advantage and not disadvantage:
+        return [0] + [2 * n - 1 for n in range(1, 21)]
+    if disadvantage and not advantage:
+        return [0] + [41 - 2 * n for n in range(1, 21)]
+    return [0] + [20] * 20
 
 
 @lru_cache(maxsize=256)
@@ -272,7 +316,7 @@ def save_odds(run, key, ability, dc, magical=False, concentration=False):
 def indomitable(run, key, failed_save):
     """Doran's authored once-per-use reroll of a failed saving throw."""
     a, r = actor(run, key), rules(run, key)
-    if r.get("identity") != "doran":
+    if not capable(r, "indomitable"):
         raise ActionError("Indomitable is not available")
     if not isinstance(failed_save, dict) or failed_save.get("success") is not False:
         raise ActionError("Indomitable requires a failed saving throw")
@@ -302,7 +346,7 @@ STAFF_COSTS = {"detect_magic": 0, "enlarge_reduce": 0, "light": 0,
 
 def staff_cast(run, key, spell):
     a, r = actor(run, key), rules(run, key)
-    if r.get("identity") != "wren":
+    if not capable(r, "staff_caster"):
         raise ActionError("Staff of the Magi is not available")
     if a.resources.get("staff_destroyed"):
         raise ActionError("staff has already been destroyed")
@@ -319,7 +363,7 @@ def staff_cast(run, key, spell):
 
 def staff_absorb(run, key, spell_level):
     a, r = actor(run, key), rules(run, key)
-    if r.get("identity") != "wren":
+    if not capable(r, "staff_caster"):
         raise ActionError("Staff absorption is not available")
     if a.resources.get("staff_destroyed"):
         raise ActionError("staff has already been destroyed")
@@ -334,7 +378,7 @@ def staff_absorb(run, key, spell_level):
 def incoming_spell(run, source, target, spell_level):
     if not actor(run, source).alive or not actor(run, target).alive:
         raise ActionError("spell requires living source and target")
-    if same_side(source, target) or rules(run, target).get("identity") != "wren":
+    if same_side(source, target) or not has_capability(run, target, "spell_absorption"):
         raise ActionError("Staff absorption requires an enemy spell targeting Wren")
     number(spell_level, "spell level", 1, 9)
     window={"kind":"spell","reactor":target,"source":source,
@@ -350,7 +394,7 @@ def incoming_failed_save(run, source, target, failed_save):
     if not isinstance(failed_save, dict) or failed_save.get('success') is not False:
         raise ActionError("reaction conversion requires a failed save")
     wren=next((k for k,r in run.context['combat']['rules'].items()
-               if r.get('identity')=='wren' and actor(run,k).alive),None)
+               if capable(r, "unbound_save_conversion") and actor(run,k).alive),None)
     if wren is None or distance(run,wren,target) > 30:
         raise ActionError("no living Wren within 30 feet for save conversion")
     window={'kind':'save','reactor':wren,
@@ -361,7 +405,7 @@ def incoming_failed_save(run, source, target, failed_save):
 
 def staff_retributive_strike(run, key, targets):
     a, r = actor(run, key), rules(run, key)
-    if r.get("identity") != "wren":
+    if not capable(r, "retributive_strike"):
         raise ActionError("Retributive strike is not available")
     if a.resources.get("staff_destroyed"):
         raise ActionError("staff has already been destroyed")
@@ -381,7 +425,7 @@ def staff_retributive_strike(run, key, targets):
 
 def staff_utility(run, key, mode, target=None):
     """Wren's Staff of the Magi physical utility lane."""
-    if rules(run,key).get('identity') != 'wren':
+    if not has_capability(run,key, "staff_utility"):
         raise ActionError('staff utility belongs to Wren')
     if actor(run,key).resources.get('staff_destroyed'):
         raise ActionError('staff has already been destroyed')
@@ -400,7 +444,7 @@ FORCE_CONSTRUCTS = {"wall_of_force", "forcecage", "resilient_sphere", "blade_bar
 
 def dagger_cut_structure(run, key, structure_id, mode="thrown"):
     a, r = actor(run, key), rules(run, key)
-    if r.get("identity") != "doran" or mode not in {"thrown", "dual_held"}:
+    if not capable(r, "dagger_structure_cut") or mode not in {"thrown", "dual_held"}:
         raise ActionError("force-construct access requires Doran's dagger mode")
     structures = run.context["combat"]["terrain"].get("structures", [])
     if not isinstance(structure_id, int) or structure_id < 0 or structure_id >= len(structures):
@@ -463,7 +507,7 @@ def _refuse_indomitable_spirit(run, key, name, mental):
 
 @statuses.refusal
 def _refuse_mind_lock(run, key, name, mental):
-    if rules(run, key).get("identity") == "wren" and (mental or name in MENTAL_CONDITIONS):
+    if has_capability(run, key, "mind_lock_immune") and (mental or name in MENTAL_CONDITIONS):
         return {"reason": "mind lock"}
 
 
@@ -597,7 +641,7 @@ def mitigation(run, source, target, damage_type, *, bypass_resistance=False):
         weapon=actor(run,source).weapon()
         mundane = not weapon or weapon.tier==Tier.MUNDANE
     plate = None
-    if r.get("identity") == "doran":
+    if capable(r, "divine_plate"):
         plate = 0 if damage_type in {"FIRE", "ICE"} else DORAN_PLATE.get(armor_damage_type, 1)
     affix_resistances = damage_resistances(run, target)
     return {"printed_type": printed_type, "damage_type": damage_type, "conversions": conversions,
@@ -723,7 +767,7 @@ def damage(run, source, target, amount, damage_type, *, bypass_resistance=False,
                           "resisted": profile["resisted"],
                           "affix_resistances": sorted(profile["affix_resistances"]),
                           "vulnerable": profile["vulnerable"],
-                          "armor_treatment": "doran_divine_plate" if r.get("identity") == "doran" else None,
+                          "armor_treatment": "doran_divine_plate" if capable(r, "divine_plate") else None,
                           "ward_before": ward, "target_hp_before": before,
                           "adjustments": adjustments}}
     if conversions:
@@ -760,7 +804,7 @@ def heal(run, target, expression):
     a = actor(run, target)
     resources_before = dict(a.resources)
     hp_before = a.hp
-    maximized = rules(run, target).get("identity") == "doran"
+    maximized = capable(rules(run, target), "maximized_healing")
     amount, rolls = dice(run, expression, maximize=maximized)
     a.adjust_hp(amount)
     adjustments = [] if a.hp - hp_before == amount else [{"label": "max HP", "amount": a.hp - hp_before}]
@@ -794,13 +838,11 @@ def begin(run, party_rules=None):
         r.setdefault("base_ac", a.armor_class)
         # DM044_0's authored Alert ruling is identity-owned for the two
         # promoted residents. Explicit encounter values remain authoritative.
-        if r.get("identity") in {"doran", "wren"}:
+        if capable(r, "alert"):
             r.setdefault("alert", True)
-        if is_doran(r.get("identity")):
-            r.setdefault("vision_range", 120)
-        elif r.get("identity") == "wren":
-            r.setdefault("vision_range", 120)
-        if r.get("identity")=="wren":
+        if capable(r, "vision_range"):
+            r.setdefault("vision_range", capable(r, "vision_range"))
+        if capable(r, "default_resources"):
             a.resources.setdefault("misty_step_free",5)
             a.resources.setdefault("simulacrum_cast",1)
             a.resources.setdefault("staff_charges",50)
@@ -841,7 +883,7 @@ def begin(run, party_rules=None):
         raise ActionError("initiative requires living actors")
     recovered = []
     for key, r in state["rules"].items():
-        if r.get("identity") == "doran" and actor(run, key).resources.get("superiority_dice") == 0:
+        if capable(r, "superiority_round_recovery") and actor(run, key).resources.get("superiority_dice") == 0:
             actor(run, key).resources["superiority_dice"] = 1
             recovered.append(key)
     result = {"type": "initiative", "order": state["order"], "rolls": rolls,
@@ -1045,7 +1087,7 @@ def weapon_mode(run, source, mode="weapon", *, bonus=False):
     if not weapon:
         raise ActionError("no weapon equipped")
     identity = r.get("identity")
-    if identity == "doran":
+    if capable(r, "dagger_mode"):
         if mode not in {"weapon", "dagger", "cleaver"}:
             raise ActionError("unsupported weapon mode")
         cleaver = mode == "cleaver"
@@ -1054,7 +1096,7 @@ def weapon_mode(run, source, mode="weapon", *, bonus=False):
         expression, kind = (DORAN_CLEAVER_FLAT_DAMAGE, "SLASHING") if cleaver else ("1d8+10", "PIERCING")
         reach = (5 if tight else 10) if cleaver else 70
         long_range = 30 if not cleaver else reach
-    elif identity == "wren":
+    elif capable(r, "staff_weapon"):
         if mode not in {"weapon", "crown"}:
             raise ActionError("unsupported Wren weapon")
         if not bonus:
@@ -1131,7 +1173,7 @@ def attack_situation(run, source, target, *, long_range, weapon=True):
             "cover": cover, "aimed": aimed, "distance": gap,
             "advantage": bool(advantage), "disadvantage": bool(disadvantage),
             "reasons": {"advantage": advantage, "disadvantage": disadvantage}, "help": helped,
-            "glare": rules(run, target).get("identity") == "doran"
+            "glare": capable(rules(run, target), "daylight_glare")
                      and bool(run.context["combat"]["terrain"].get("daylight")) and gap <= 60,
             # Aim and Precision Attack's die are one-shot; the rest is permanent.
             "precision_bonus": (r.get("precision_bonus", 0) + (2 if aimed else 0)) if weapon else 0,
@@ -1152,7 +1194,7 @@ def attack_threshold(run, source, target, mode):
     """The natural roll that crits: 16 once Doran has read this target (not
     with the Cleaver), otherwise the actor's critical_min, 20 by default."""
     r = rules(run, source)
-    if r.get("identity") == "doran" and r.get("read_target") == target and mode != "cleaver":
+    if capable(r, "read_the_seam") and r.get("read_target") == target and mode != "cleaver":
         return 16
     return r.get("critical_min", 20)
 
@@ -1180,10 +1222,10 @@ def weapon_attack(run, source, target, mode="weapon", *, bonus=False, reaction=F
         # a pool declared in their rules and pays it here, so a fixture
         # resident spends a real quantifier rather than getting a free swing.
         pool = r.get("bonus_attack_resource")
-        if identity not in {"doran", "wren"} and not pool:
+        if not capable(r, "innate_bonus_attack") and not pool:
             raise ActionError("no implemented bonus-action weapon")
         use(run, source, "bonus")
-        if identity not in {"doran", "wren"}:
+        if not capable(r, "innate_bonus_attack"):
             spend(a, pool)
     else:
         e = economy(run, source)
@@ -1191,7 +1233,7 @@ def weapon_attack(run, source, target, mode="weapon", *, bonus=False, reaction=F
             use(run, source, "action")
             e["attacks"] = r.get("attacks", a.attacks_per_action)
         e["attacks"] -= 1
-    if identity == "wren":
+    if capable(r, "staff_weapon"):
         spend(a, "crown_motes")
     defender = actor(run, target)
     situation = attack_situation(run, source, target, long_range=long_range)
@@ -1258,11 +1300,11 @@ def weapon_attack(run, source, target, mode="weapon", *, bonus=False, reaction=F
         event["evidence"]["damage_rolled"] = amount
         defender_rules=rules(run,target)
         if economy(run,target)['reaction'] and conscious(defender) and not reaction:
-            eligible_shield=defender_rules.get('identity')=='wren' and defender.resources.get('slot_1_general',0)>0 and not defender_rules.get('shield')
-            eligible_parry=defender_rules.get('identity')=='doran' and defender.resources.get('superiority_dice',0)>0 and distance(run,source,target)<=5
+            eligible_shield=capable(defender_rules,'shield_reaction') and defender.resources.get('slot_1_general',0)>0 and not defender_rules.get('shield')
+            eligible_parry=capable(defender_rules,'parry') and defender.resources.get('superiority_dice',0)>0 and distance(run,source,target)<=5
             if eligible_shield or eligible_parry:
                 window={'kind':'hit','reactor':target,'target':source,'amount':amount,'damage_type':kind,
-                        'attack_total':hit['total'],'critical':critical,'bypass':identity=='doran' and mode!='cleaver',
+                        'attack_total':hit['total'],'critical':critical,'bypass':capable(r,'dagger_bypass') and mode!='cleaver',
                         'options':['shield'] if eligible_shield else ['parry']}
                 run.context['combat']['pending'].append(window)
                 event['pending_defense']=window
@@ -1273,13 +1315,13 @@ def weapon_attack(run, source, target, mode="weapon", *, bonus=False, reaction=F
         event["evidence"]["damage_steps"] = [] if amount == rolled else [{"label": "affix", "amount": amount}]
         event["evidence"]["offensive_tags"] = sorted(active_tags)
         event["result"] = damage(run, source, target, amount, kind,
-                                 bypass_resistance=identity == "doran" and mode != "cleaver",
+                                 bypass_resistance=capable(r, "dagger_bypass") and mode != "cleaver",
                                  riders=affix_riders)
         event["evidence"].update({"damage_type": kind, "damage_before_resistance": amount,
                                    "resources_after": dict(a.resources),
                                    "economy_after": copy.deepcopy(economy(run, source)),
                                    "target_hp_after": defender.hp})
-        if critical and identity == "doran" and r.get("critical_recovery_round") != run.round_number:
+        if critical and capable(r, "critical_superiority_recovery") and r.get("critical_recovery_round") != run.round_number:
             a.resources["superiority_dice"] = min(16, a.resources.get("superiority_dice", 0)+1)
             r["critical_recovery_round"] = run.round_number
         if mode == "cleaver" and (critical or event["result"]["damage"] >= defender.max_hp/4):
@@ -1291,7 +1333,7 @@ def weapon_attack(run, source, target, mode="weapon", *, bonus=False, reaction=F
             else:
                 event["skid"] = _cleaver_skid(run, source, target, amount)
     # A persisted reaction window is offered; no UI decides it independently.
-    elif rules(run, target).get("identity") == "doran" and economy(run, target)["reaction"]:
+    elif capable(rules(run, target), "riposte") and economy(run, target)["reaction"]:
         # A miss is a real persisted reaction window.  Deft Answer remains the
         # default option; Riposte is offered only from this exact miss, never
         # from a caller assertion.
@@ -1310,15 +1352,15 @@ def _attack_economy_problem(run, source, *, bonus=False, reaction=False):
             return "reaction already spent"
     elif bonus:
         pool = r.get("bonus_attack_resource")
-        if identity not in {"doran", "wren"} and not pool:
+        if not capable(r, "innate_bonus_attack") and not pool:
             return "no implemented bonus-action weapon"
         if not e.get("bonus", 0):
             return "bonus already spent"
-        if identity not in {"doran", "wren"} and a.resources.get(pool, 0) < 1:
+        if not capable(r, "innate_bonus_attack") and a.resources.get(pool, 0) < 1:
             return f"insufficient {pool}: need 1, have {a.resources.get(pool, 0)}"
     elif not e.get("attacks") and not e.get("action", 0):
         return "action already spent"
-    if identity == "wren" and a.resources.get("crown_motes", 0) < 1:
+    if capable(r, "staff_weapon") and a.resources.get("crown_motes", 0) < 1:
         return f"insufficient crown_motes: need 1, have {a.resources.get('crown_motes', 0)}"
     return None
 
@@ -1392,7 +1434,7 @@ def forecast_attack(run, source, target, mode=None, *, bonus=False, reaction=Fal
                reasons=situation["reasons"], glare=situation["glare"], critical_threshold=threshold,
                hit=hit, crit=crit, lands=hit)
     reduction = known_mitigation(run, source, target, profile["damage_type"],
-                                 bypass_resistance=identity == "doran" and mode != "cleaver", informed=informed)
+                                 bypass_resistance=capable(r, "dagger_bypass") and mode != "cleaver", informed=informed)
     magnify = magnitude_preview(run, source, target)
     ally_near = any(other != source and other.startswith(source[0]) and creature.alive
                     and distance(run, other, target) <= 5 for other, creature in actors(run).items())
@@ -1428,9 +1470,9 @@ def forecast_attack(run, source, target, mode=None, *, bonus=False, reaction=Fal
     out["damage_range"] = [min(normal), max(critical) if crit else max(normal)]
     defender_rules = rules(run, target)
     if economy(run, target)["reaction"] and conscious(defender) and not reaction and (
-            (defender_rules.get("identity") == "wren" and defender.resources.get("slot_1_general", 0) > 0
+            (capable(defender_rules, "shield_reaction") and defender.resources.get("slot_1_general", 0) > 0
              and not defender_rules.get("shield"))
-            or (defender_rules.get("identity") == "doran" and defender.resources.get("superiority_dice", 0) > 0
+            or (capable(defender_rules, "parry") and defender.resources.get("superiority_dice", 0) > 0
                 and distance(run, source, target) <= 5)):
         out["notes"].append("the defender may answer a hit with Shield or Parry")
     if mode == "cleaver":
@@ -1464,7 +1506,7 @@ def move_cost(run, key, destination):
     a, r = actor(run, key), rules(run, key)
     if {"GRAPPLED", "RESTRAINED"}.intersection(a.statuses) or r.get("planted"):
         return None
-    if destination[2] and not r.get("fly_speed") and not (r.get("identity") == "doran" and destination[2] <= 20):
+    if destination[2] and not r.get("fly_speed") and not (capable(r, "jump_ceiling") and destination[2] <= capable(r, "jump_ceiling")):
         return None
     terrain = run.context["combat"]["terrain"]
     path = path_squares(run, key, destination)
@@ -1488,7 +1530,7 @@ def move(run, key, destination):
     origin = list(position(run, key))
     if {"GRAPPLED", "RESTRAINED"}.intersection(a.statuses) or r.get("planted"):
         raise ActionError("movement is restrained")
-    if destination[2] and not r.get("fly_speed") and not (r.get("identity") == "doran" and destination[2] <= 20):
+    if destination[2] and not r.get("fly_speed") and not (capable(r, "jump_ceiling") and destination[2] <= capable(r, "jump_ceiling")):
         raise ActionError("no flight permission")
     ceiling = state["terrain"].get("ceiling_z")
     if ceiling is not None and destination[2] > ceiling:
@@ -1503,10 +1545,10 @@ def move(run, key, destination):
         if same_side(other, key) or not conscious(actor(run, other)):
             continue
         if distance(run, other, key) <= 5 and max(abs(position(run, other)[i]-destination[i]) for i in range(3)) > 5:
-            if key not in rules(run,other).get("declined_targets",[]) and economy(run, other)["reaction"] and not r.get("mobile") and ("DISENGAGED" not in a.statuses or rules(run, other).get("identity") == "doran"):
+            if key not in rules(run,other).get("declined_targets",[]) and economy(run, other)["reaction"] and not r.get("mobile") and ("DISENGAGED" not in a.statuses or capable(rules(run, other), "ignores_disengage")):
                 reactions.append({"kind": "opportunity", "reactor": other, "target": key,
-                                  "options": ["opportunity"] + (["brace"] if rules(run, other).get("identity") == "doran" else [])})
-        elif rules(run, other).get("identity") == "doran" and distance(run, other, key) > 5 \
+                                  "options": ["opportunity"] + (["brace"] if capable(rules(run, other), "brace") else [])})
+        elif capable(rules(run, other), "entry_reaction") and distance(run, other, key) > 5 \
                 and max(abs(position(run, other)[i]-destination[i]) for i in range(3)) <= 5 \
                 and economy(run, other)["reaction"]:
             reactions.append({"kind":"brace","reactor":other,"target":key,"options":["brace"]})
@@ -1586,13 +1628,16 @@ def _best_skill(run, key, skills):
     return max(((skill, skill_check_bonus(run, key, skill)) for skill in skills), key=lambda row: row[1])
 
 
-def contest(run, active, active_skills, passive, passive_skills):
+def contest(run, active, active_skills, passive, passive_skills, *,
+            active_adv=False, active_dis=False, passive_adv=False, passive_dis=False):
     """An opposed check. The active side must beat the passive total; a tie
-    leaves the situation unchanged, as in the PHB."""
+    leaves the situation unchanged, as in the PHB. Advantage flags mirror
+    contest_odds so a forecast that passes them predicts this roll exactly;
+    no caller sets them yet, so every existing contest still rolls straight."""
     active_skill, active_bonus = _best_skill(run, active, active_skills)
     passive_skill, passive_bonus = _best_skill(run, passive, passive_skills)
-    active_roll = roll_check(run, active_bonus, 0)
-    passive_roll = roll_check(run, passive_bonus, 0)
+    active_roll = roll_check(run, active_bonus, 0, active_adv, active_dis)
+    passive_roll = roll_check(run, passive_bonus, 0, passive_adv, passive_dis)
     success = active_roll["total"] > passive_roll["total"]
     strip = lambda roll: {k: roll[k] for k in ("rolls", "natural", "bonus", "total")}
     return success, {"active": {"actor": active, "skill": active_skill, **strip(active_roll)},
@@ -1864,7 +1909,7 @@ def contextual_actions(run, key):
             reason = "Incapacitated; end the turn."
         elif action_id == "attack":
             targets = alive_foes
-            if not (has_attack or (e.get("bonus") and r.get("identity") == "wren")):
+            if not (has_attack or (e.get("bonus") and capable(r, "bonus_attack_menu"))):
                 reason = "No attack remains this turn."
         elif action_id in {"shove", "trip", "grapple"}:
             targets = adjacent
@@ -1906,7 +1951,7 @@ def contextual_actions(run, key):
                 reason = "No movement remains."
         rows.append({"id": action_id, "label": label, "category": category, "cost": cost, "help": text,
                      "available": reason is None, "reason": reason, "targets": list(targets)})
-    if r.get('identity') == 'doran':
+    if capable(r, 'steward_maneuvers'):
         def champion(action_id, label, cost, text, problem=None, targets=(), **extra):
             reason = ("It is not this actor's turn." if not my_turn else
                       'Incapacitated; end the turn.' if not conscious(a) else problem)
@@ -2006,7 +2051,7 @@ def apply(run, action):
     kind = action["type"]
     a, r = actor(run, key), rules(run, key)
     if kind in {"flight_move", "ascend", "descend"}:
-        if r.get("identity") != "wren":
+        if not capable(r, "flight"):
             raise ActionError("only Wren may use flight controls")
         origin = list(position(run, key))
         if kind == "flight_move":
@@ -2022,7 +2067,7 @@ def apply(run, action):
     origin_position = list(position(run, key))
     before = {"actor": a.name, "actor_id": key, "hp": a.hp,
               "statuses": dict(a.statuses), "resources": dict(a.resources),
-              "economy": copy.deepcopy(state["economy"].get(key, {}))}
+              "economy": fast_deepcopy(state["economy"].get(key, {}))}
     if state["surprised"].get(key) and kind != "end_turn":
         raise ActionError("surprised actors must end their first turn")
     if kind in {"reaction", "decline_reaction", "legendary", "staff_absorb", "domain_reaction"}:
@@ -2061,7 +2106,7 @@ def apply(run, action):
             from hollowstar.monsters import act as monster_act
             result=monster_act(run,key,action,legendary=True)
         elif window['kind'] in {'opportunity','brace'} and action.get('defense')=='brace':
-            if r.get('identity')!='doran': raise ActionError('Brace is Doran-only')
+            if not capable(r,'brace'): raise ActionError('Brace is Doran-only')
             spend(a,'superiority_dice')
             result=weapon_attack(run,key,window['target'],reaction=True)
             if result.get('roll',{}).get('success'):
@@ -2073,7 +2118,7 @@ def apply(run, action):
             if defense not in window.get('options', ['deft_answer']):
                 raise ActionError('choose an eligible miss reaction')
             if defense == 'riposte':
-                if r.get('identity') != 'doran':
+                if not capable(r, 'riposte'):
                     raise ActionError('Riposte is Doran-only')
                 spend(a, 'superiority_dice')
                 result = weapon_attack(run, key, window['target'], mode='dagger', reaction=True)
@@ -2088,7 +2133,7 @@ def apply(run, action):
                 result['feature'] = 'Deft Answer'
         else:
             result = weapon_attack(run, key, window["target"], reaction=True)
-            if window["kind"] == "opportunity" and r.get("identity") == "doran" and result["roll"]["success"]:
+            if window["kind"] == "opportunity" and capable(r, "opportunity_halts_movement") and result["roll"]["success"]:
                 economy(run, window["target"])["movement"] = 0
         if isinstance(result, dict):
             # Which window this answered, so a client can announce it.
@@ -2166,19 +2211,19 @@ def apply(run, action):
         elif kind in {"second_wind", "ring_heal", "unearthly_recovery"}:
             use(run,key,"bonus")
             if kind == "ring_heal":
-                if r.get("identity") != "doran":
+                if not capable(r, "regeneration_ring"):
                     raise ActionError("no regeneration ring")
                 hp_before=a.hp; a.adjust_hp(16)
                 result={"type":"healing","target":key,"healing":a.hp-hp_before}
             elif kind == "unearthly_recovery":
-                if r.get("identity") != "wren" or a.hp >= a.max_hp/2:
+                if not capable(r, "unearthly_recovery") or a.hp >= a.max_hp/2:
                     raise ActionError("Unearthly Recovery requires Wren below half HP")
                 spend(a,kind); hp_before=a.hp; a.adjust_hp(a.max_hp//2)
                 result={"type":"healing","target":key,"healing":a.hp-hp_before,
                         "actor":key,"feature":"unearthly_recovery"}
             else:
                 spend(a,kind)
-                result=heal(run,key,'30' if r.get('identity') == 'doran' else f"1d10+{r.get('level',20)}")
+                result=heal(run,key,capable(r,'fixed_potion_heal') or f"1d10+{r.get('level',20)}")
         elif kind == "arcane_recovery":
             if r.get("class_id") != "magician": raise ActionError("Arcane Recovery is Magician-only")
             use(run,key,"action"); spend(a,"arcane_recovery")
@@ -2194,7 +2239,7 @@ def apply(run, action):
             result=heal(run,target,f"1d8+{max(0,wisdom+r.get('level',1))}")
             result["type"]="channel_grace";result["actor"]=key
         elif kind == "read_seam":
-            if r.get("identity") != "doran":
+            if not capable(r, "read_the_seam"):
                 raise ActionError("Read the Seam is Doran's feature")
             target=action.get("target"); check_target(run,key,target,120)
             use(run,key,"bonus")
@@ -2202,7 +2247,7 @@ def apply(run, action):
             if check["success"]: r["read_target"]=target
             result={"type":kind,"roll":check,"target":target}
         elif kind == "stance":
-            if r.get("identity") != "doran" or action.get("stance") not in {"planted","mobile","kite","recover_kite"}:
+            if not capable(r, "stances") or action.get("stance") not in {"planted","mobile","kite","recover_kite"}:
                 raise ActionError("unsupported stance")
             stance=action["stance"]
             if stance in {"planted","mobile"}:
@@ -2262,14 +2307,14 @@ def apply(run, action):
             use(run,key,"action")
             result=dagger_cut_structure(run,key,action.get("structure_id"),action.get("mode","thrown"))
         elif kind in {"wings", "fly"}:
-            if r.get("identity") != "wren": raise ActionError("no Otherworldly Wings")
+            if not capable(r, "flight"): raise ActionError("no Otherworldly Wings")
             remaining = economy(run,key)["movement"]
             old_speed = r.get("fly_speed", a.speed)
             r["fly_speed"]=60
             economy(run,key)["movement"] = remaining * 60 // old_speed
             result={"type":"wings","speed":60}
         elif kind == "land":
-            if r.get("identity") != "wren": raise ActionError("no wings to land")
+            if not capable(r, "flight"): raise ActionError("no wings to land")
             if position(run,key)[2] > 0:
                 raise ActionError("descend to ground level before landing")
             old_speed = r.get("fly_speed", a.speed)
@@ -2290,11 +2335,11 @@ def apply(run, action):
     if run.finished():
         state["complete"]=True
         for k in actors(run):
-            if rules(run,k).get("identity")=="wren": actor(run,k).resources["ward"]=75
+            if has_capability(run,k, "ward_reset"): actor(run,k).resources["ward"]=75
     if isinstance(result, dict) and "evidence" not in result:
         after = {"hp": a.hp, "statuses": dict(a.statuses),
                  "resources": dict(a.resources),
-                 "economy": copy.deepcopy(state["economy"].get(key, {}))}
+                 "economy": fast_deepcopy(state["economy"].get(key, {}))}
         result["evidence"] = {
             "actor": before["actor"], "actor_id": key,
             "target": action.get("target"), "action": kind,
@@ -2319,7 +2364,7 @@ def apply(run, action):
             "target_id": target_key,
             "target_position": target_position,
             "animation": {
-                "attack": ("grand_cleave" if kind == "grand_cleave" else "dagger_throw" if r.get("identity") == "doran" and result.get("type") == "attack" and result.get("mode") != "cleaver" and (action.get("maneuver") == "Quick Toss" or (target_key and distance(run,key,target_key)>5)) else _attack_animation(a)) if kind in {"attack", "shove", "trip", "grapple", "grand_cleave", "maneuver", "reaction"} else None,
+                "attack": ("grand_cleave" if kind == "grand_cleave" else "dagger_throw" if capable(r, "dagger_mode") and result.get("type") == "attack" and result.get("mode") != "cleaver" and (action.get("maneuver") == "Quick Toss" or (target_key and distance(run,key,target_key)>5)) else _attack_animation(a)) if kind in {"attack", "shove", "trip", "grapple", "grand_cleave", "maneuver", "reaction"} else None,
                 "move": "run" if kind in {"move", "dash", "disengage"} else None,
                 "defense": "block" if kind in {"block", "brace", "guard"} else None,
                 "dodge": "dodge" if kind == "dodge" else None,
@@ -2327,7 +2372,7 @@ def apply(run, action):
                 "flight": "fly" if kind in {"wings", "fly"} else None,
             },
             "loadout": _actor_loadout_presentation(a),
-            "weapon_mode": 'cleaver' if kind == 'grand_cleave' else 'dagger' if r.get('identity') == 'doran' and result.get('type') == 'attack' and result.get('mode') != 'cleaver' else result.get('mode'),
+            "weapon_mode": 'cleaver' if kind == 'grand_cleave' else 'dagger' if capable(r, 'dagger_mode') and result.get('type') == 'attack' and result.get('mode') != 'cleaver' else result.get('mode'),
             "facing": action.get('facing') if kind == 'grand_cleave' else None,
             "steps": [
                 {"type": "move_to", "position": final_position, "duration_ms": 360}
@@ -2338,8 +2383,8 @@ def apply(run, action):
             ],
         }
         if isinstance(result.get("evidence"), dict):
-            result["evidence"]["presentation"] = copy.deepcopy(result["presentation"])
-    state["events"].append(copy.deepcopy(result))
+            result["evidence"]["presentation"] = fast_deepcopy(result["presentation"])
+    state["events"].append(fast_deepcopy(result))
     return result
 
 

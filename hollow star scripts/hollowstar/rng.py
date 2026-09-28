@@ -9,6 +9,17 @@ from __future__ import annotations
 import random
 
 
+def clone_random(source: random.Random) -> random.Random:
+    """Independent copy of a Mersenne Twister at the same position.
+
+    ``copy.deepcopy`` reaches Random through ``__reduce__`` and then walks the
+    625-int state tuple element by element; getstate/setstate copies it in C.
+    """
+    twin = type(source)(0)
+    twin.setstate(source.getstate())
+    return twin
+
+
 class RunRNG:
     def __init__(self, seed: int | str):
         self.seed = seed

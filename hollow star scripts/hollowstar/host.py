@@ -14,6 +14,7 @@ import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Callable
 
 from hollowstar import __version__ as ENGINE_VERSION
 from hollowstar.world import world_context
@@ -116,6 +117,26 @@ def _public_outcome(outcome: dict, *, mode: str | None, run_id: str) -> dict:
     if receipts:
         projected["receipts"] = receipts
     return projected
+
+
+# ---------------------------------------------------------------------------
+# Command registry (Open-Closed dispatch for HSRHost.handle)
+# ---------------------------------------------------------------------------
+# Each handler is an HSRHost method ``(self, request, command) -> dict | None``.
+# Adding a command means adding one decorated method; handle() never changes.
+CommandHandler = Callable[["HSRHost", dict, str], "dict | None"]
+_HANDLERS: dict[str, CommandHandler] = {}
+
+
+def command_handler(*command_names: str):
+    """Register the decorated HSRHost method for each named command."""
+    def decorator(fn: CommandHandler) -> CommandHandler:
+        for name in command_names:
+            if name in _HANDLERS:
+                raise RuntimeError(f"duplicate command handler: {name}")
+            _HANDLERS[name] = fn
+        return fn
+    return decorator
 
 
 @dataclass
@@ -747,93 +768,31 @@ class HSRHost:
             return self._error(request, "CONTENT_INVALID", str(exc))
 
     def handle(self, request: dict) -> dict:
+        """Route one request to its registered command handler.
+
+        Handlers are ``_cmd_*`` methods registered with ``@command_handler``; a
+        handler returning ``None`` means "not mine" and falls through to the
+        unknown-command error, exactly as the old if-chain did.
+        """
         # Reset per-request session cache so each handle() call starts fresh.
         # This preserves cross-request isolation while allowing multiple _session()
         # calls within the same handle() invocation to hit the cache.
         self._session_cache = None
-        request_id, command = self._request_identity(request)
+        _request_id, command = self._request_identity(request)
 
         if command in CONTENT_COMMANDS:
             return self._content_command(request, command)
 
-        if command == "start-run":
-            # Party decides the runtime when the caller does not name one:
-            # Doran and Wren are the Forge Stewards, everyone else is Sandbox.
-            if request.get("mode") is None:
-                party = request.get("party")
-                requested_mode = (runtime_for(party)
-                                  if isinstance(party, list) and all(isinstance(p, str) for p in party)
-                                  else (self.mode or "SANDBOX"))
-            else:
-                requested_mode = str(request.get("mode")).upper()
-            requested_scenario = request.get("scenario") or (
-                "floor_one_life" if requested_mode == "SANDBOX" else "reliquary"
-            )
-            launch_request = {
-                **request, "mode": requested_mode, "scenario": requested_scenario,
-            }
-            try:
-                validate_launch(
-                    mode=requested_mode,
-                    party=request.get("party"),
-                    scenario=requested_scenario,
-                    module_id=request.get("module_id"),
-                    require_authored_module=True,
-                )
-            except RunServiceError as exc:
-                return self._error(request, "LAUNCH_INVALID", str(exc))
-            if not self.booted:
-                booted = self._boot(launch_request)
-                if not booted.get("ok"):
-                    return booted
-            created = None
-            run_id = request.get("run_id")
-            if run_id:
-                loaded = self._load_run({**launch_request, "run_id": run_id})
-                if not loaded.get("ok") and loaded.get("error", {}).get("code") == "RUN_INVALID":
-                    created = self._create_run(launch_request)
-                    if not created.get("ok"):
-                        return created
-                    loaded = self._load_run({**launch_request, "run_id": run_id})
-                if not loaded.get("ok"):
-                    return loaded
-            else:
-                created = self._create_run(launch_request)
-                if not created.get("ok"):
-                    return created
-                run_id = created["result"]["run"]["run_id"]
-                loaded = self._load_run({**launch_request, "run_id": run_id})
-                if not loaded.get("ok"):
-                    return loaded
-            # The authored Story surface opens in the first village and only
-            # later descends into the generic Forge/dungeon threshold.  It is
-            # still a FORGE launch, so the champion-only and authored-module
-            # gates remain in force.
-            starter = {"SANDBOX": ("sandbox_start" if requested_scenario == "dd_sandbox"
-                                   else "design_start"),
-                       "FORGE": ("design_start" if requested_scenario in {"floor_one_life", "reliquary_city"}
-                                 else "forge_start")}.get(requested_mode, "design_start")
-            started = self.handle({**launch_request, "command": starter, "run_id": run_id})
-            if not started.get("ok"):
-                return started
-            # start-run is also a public transport boundary.  The normal
-            # design_start/readout calls project this state before it reaches
-            # the browser, so do the same here instead of serializing live
-            # Item instances from the champion's equipment.
-            started_result = started["result"]
-            if isinstance(started_result, dict) and isinstance(started_result.get("state"), dict):
-                visible_state = redact_public(narrator_state(started_result["state"]))
-                started_result = {
-                    **started_result,
-                    "state": visible_state,
-                    "public_view": build_public_view(
-                        visible_state, event=started_result.get("event"),
-                        mode=self.mode, run_id=run_id,
-                    ),
-                    "public_receipt": _public_receipt(started_result.get("event", {})),
-                }
-            return self._ok(request, {"run": created["result"]["run"] if created else
-                                      {"run_id": run_id}, "start": started_result})
+        request, command = self._resolve_alias(request, command)
+        handler = _HANDLERS.get(command)
+        if handler is not None:
+            result = handler(self, request, command)
+            if result is not None:
+                return result
+        return self._error(request, "UNSUPPORTED_OPERATION", f"unknown command: {command}")
+
+    def _resolve_alias(self, request: dict, command: str) -> tuple[dict, str]:
+        """Rewrite legacy/verb-style command names onto the canonical runtime commands."""
         if command == "submit-action":
             request = {**request, "command": "design_turn"}
             command = "design_turn"
@@ -867,582 +826,747 @@ class HSRHost:
             request = {**request, "command": "design_action",
                        "action": {**action, "type": command}}
             command = "design_action"
-        if command == "health":
-            return self._ok(
-                request,
-                {
-                    "host_version": HOST_VERSION,
-                    "engine_version": ENGINE_VERSION,
-                    "state": "booted" if self.booted else "ready",
-                    "local_location": self.paths.local_location_report(),
-                },
+        return request, command
+
+    @command_handler("start-run")
+    def _cmd_start_run_launch(self, request: dict, command: str) -> dict | None:
+        # Party decides the runtime when the caller does not name one:
+        # Doran and Wren are the Forge Stewards, everyone else is Sandbox.
+        if request.get("mode") is None:
+            party = request.get("party")
+            requested_mode = (runtime_for(party)
+                              if isinstance(party, list) and all(isinstance(p, str) for p in party)
+                              else (self.mode or "SANDBOX"))
+        else:
+            requested_mode = str(request.get("mode")).upper()
+        requested_scenario = request.get("scenario") or (
+            "floor_one_life" if requested_mode == "SANDBOX" else "reliquary"
+        )
+        launch_request = {
+            **request, "mode": requested_mode, "scenario": requested_scenario,
+        }
+        try:
+            validate_launch(
+                mode=requested_mode,
+                party=request.get("party"),
+                scenario=requested_scenario,
+                module_id=request.get("module_id"),
+                require_authored_module=True,
             )
-        if command == "ready":
-            return self._ready(request)
-        if command == "boot":
-            return self._boot(request)
-        if command == "validate":
-            return self._validate(request)
-        if command == "local-check":
-            try:
-                self.paths.assert_workspace_layout()
-                location = self.paths.assert_local_pc_workspace()
-                if location.get("via") == "bridge":
-                    return self._error(
-                        request,
-                        "LOCAL_LOCATION_REQUIRED",
-                        "local-check writes the handshake and must run natively on the "
-                        "approved desktop; a bridge mount may verify it but never rewrite it",
-                    )
-                self._refresh_party_snapshot()
-                handshake = write_handshake(self.paths)
-            except HostPathError as exc:
-                code = "LOCAL_LOCATION_REQUIRED" if "local ACore" in str(exc) else "PATH_NOT_FOUND"
-                return self._error(request, code, str(exc))
-            except HandshakeError as exc:
-                return self._error(request, "HANDSHAKE_INVALID", str(exc))
-            return self._ok(
-                request,
-                {
-                    "location": location,
-                    "handshake_path": str(self.paths.handshake_path),
-                    "handshake": handshake,
-                },
-            )
-        if command == "status":
-            return self._ok(
-                request,
-                {
-                    "state": "booted" if self.booted else "not_booted",
-                    "mode": self.mode,
-                    "workspace_root": str(self.paths.workspace_root),
-                },
-            )
-        if command == "party_status":
-            blocked = self._require_booted(request)
-            if blocked:
-                return blocked
-            run_id = request.get("run_id") or self._session().get("last_run_id")
-            if not run_id:
-                return self._error(request, "INVALID_REQUEST", "party_status requires a run_id")
-            try:
-                visible_state = narrator_state(self._runs().observe(run_id))
-                return self._ok(request, {
-                    "run_id": run_id,
-                    "public_view": build_public_view(
-                        visible_state, mode=self.mode, run_id=run_id,
-                    ),
-                    "narrator": {"source": "host-returned visible state only"},
-                })
-            except (RunStateError, OSError, ValueError) as exc:
-                return self._error(request, "RUN_INVALID", str(exc))
-        if command == "examine":
-            blocked = self._require_booted(request)
-            if blocked:
-                return blocked
-            try:
-                return self._ok(request, self._examine_run(request))
-            except (RunStateError, RunServiceError, OSError, ValueError) as exc:
-                return self._error(request, "EXAMINE_INVALID", str(exc))
-        if command == "companion_talk":
-            blocked = self._require_booted(request)
-            if blocked:
-                return blocked
-            try:
-                return self._ok(request, self._companion_talk(request))
-            except (RunStateError, RunServiceError, OSError, ValueError) as exc:
-                return self._error(request, "COMPANION_INVALID", str(exc))
-        if command == "session_intent":
-            intent = request.get("intent")
-            if not isinstance(intent, str) or not intent.strip():
-                return self._error(request, "INVALID_REQUEST", "session_intent requires a non-empty intent")
-            parsed = parse_session_intent(intent)
-            if parsed is None:
-                return self._error(request, "SESSION_INTENT_UNSUPPORTED", "could not translate session intent")
+        except RunServiceError as exc:
+            return self._error(request, "LAUNCH_INVALID", str(exc))
+        if not self.booted:
+            booted = self._boot(launch_request)
+            if not booted.get("ok"):
+                return booted
+        created = None
+        run_id = request.get("run_id")
+        if run_id:
+            loaded = self._load_run({**launch_request, "run_id": run_id})
+            if not loaded.get("ok") and loaded.get("error", {}).get("code") == "RUN_INVALID":
+                created = self._create_run(launch_request)
+                if not created.get("ok"):
+                    return created
+                loaded = self._load_run({**launch_request, "run_id": run_id})
+            if not loaded.get("ok"):
+                return loaded
+        else:
+            created = self._create_run(launch_request)
+            if not created.get("ok"):
+                return created
+            run_id = created["result"]["run"]["run_id"]
+            loaded = self._load_run({**launch_request, "run_id": run_id})
+            if not loaded.get("ok"):
+                return loaded
+        # The authored Story surface opens in the first village and only
+        # later descends into the generic Forge/dungeon threshold.  It is
+        # still a FORGE launch, so the champion-only and authored-module
+        # gates remain in force.
+        starter = {"SANDBOX": ("sandbox_start" if requested_scenario == "dd_sandbox"
+                               else "design_start"),
+                   "FORGE": ("design_start" if requested_scenario in {"floor_one_life", "reliquary_city"}
+                             else "forge_start")}.get(requested_mode, "design_start")
+        started = self.handle({**launch_request, "command": starter, "run_id": run_id})
+        if not started.get("ok"):
+            return started
+        # start-run is also a public transport boundary.  The normal
+        # design_start/readout calls project this state before it reaches
+        # the browser, so do the same here instead of serializing live
+        # Item instances from the champion's equipment.
+        started_result = started["result"]
+        if isinstance(started_result, dict) and isinstance(started_result.get("state"), dict):
+            visible_state = redact_public(narrator_state(started_result["state"]))
+            started_result = {
+                **started_result,
+                "state": visible_state,
+                "public_view": build_public_view(
+                    visible_state, event=started_result.get("event"),
+                    mode=self.mode, run_id=run_id,
+                ),
+                "public_receipt": _public_receipt(started_result.get("event", {})),
+            }
+        return self._ok(request, {"run": created["result"]["run"] if created else
+                                  {"run_id": run_id}, "start": started_result})
+
+    @command_handler("health")
+    def _cmd_health(self, request: dict, command: str) -> dict | None:
+        if command == "submit-action":
+            request = {**request, "command": "design_turn"}
+            command = "design_turn"
+        elif command == "resolve-round":
+            request = {**request, "command": "design_action",
+                       "action": request.get("action") or {"type": "end_turn"}}
+            command = "design_action"
+        elif command == "sanctum-check-in":
+            request = {**request, "command": "design_action",
+                       "action": request.get("action") or {"type": "check_in"}}
+            command = "design_action"
+        elif command == "create-forge-receipt":
+            request = {**request, "command": "forge_receipt"}
+            command = "forge_receipt"
+        elif command == "save-run":
+            request = {**request, "command": "save_run"}
+            command = "save_run"
+        elif command == "show-temporary-inventory":
+            request = {**request, "command": "readout", "public_only": True,
+                       "_temporary_inventory_only": True}
+            command = "readout"
+        elif command in {"conversation", "npc_list", "prepare_idle", "auto_battle",
+                         "salvage", "trade", "buy", "acquire_weapon", "acquire_armor",
+                         "imprint_rune", "decant", "release_attunement"}:
+            action = dict(request.get("action") or {})
+            action.update({key: request[key] for key in
+                           ("item", "item_id", "actor", "target", "npc", "mode",
+                           "text", "strategy", "product", "name", "slot", "base_damage", "base_ac", "max_steps", "macros",
+                           "replace", "lane")
+                           if key in request and request[key] is not None})
+            request = {**request, "command": "design_action",
+                       "action": {**action, "type": command}}
+            command = "design_action"
+        return self._ok(
+            request,
+            {
+                "host_version": HOST_VERSION,
+                "engine_version": ENGINE_VERSION,
+                "state": "booted" if self.booted else "ready",
+                "local_location": self.paths.local_location_report(),
+            },
+        )
+
+    @command_handler("ready")
+    def _cmd_ready(self, request: dict, command: str) -> dict | None:
+        return self._ready(request)
+
+    @command_handler("boot")
+    def _cmd_boot(self, request: dict, command: str) -> dict | None:
+        return self._boot(request)
+
+    @command_handler("validate")
+    def _cmd_validate(self, request: dict, command: str) -> dict | None:
+        return self._validate(request)
+
+    @command_handler("local-check")
+    def _cmd_local_check(self, request: dict, command: str) -> dict | None:
+        try:
+            self.paths.assert_workspace_layout()
+            location = self.paths.assert_local_pc_workspace()
+            if location.get("via") == "bridge":
+                return self._error(
+                    request,
+                    "LOCAL_LOCATION_REQUIRED",
+                    "local-check writes the handshake and must run natively on the "
+                    "approved desktop; a bridge mount may verify it but never rewrite it",
+                )
+            self._refresh_party_snapshot()
+            handshake = write_handshake(self.paths)
+        except HostPathError as exc:
+            code = "LOCAL_LOCATION_REQUIRED" if "local ACore" in str(exc) else "PATH_NOT_FOUND"
+            return self._error(request, code, str(exc))
+        except HandshakeError as exc:
+            return self._error(request, "HANDSHAKE_INVALID", str(exc))
+        return self._ok(
+            request,
+            {
+                "location": location,
+                "handshake_path": str(self.paths.handshake_path),
+                "handshake": handshake,
+            },
+        )
+
+    @command_handler("status")
+    def _cmd_status(self, request: dict, command: str) -> dict | None:
+        return self._ok(
+            request,
+            {
+                "state": "booted" if self.booted else "not_booted",
+                "mode": self.mode,
+                "workspace_root": str(self.paths.workspace_root),
+            },
+        )
+
+    @command_handler("party_status")
+    def _cmd_party_status(self, request: dict, command: str) -> dict | None:
+        blocked = self._require_booted(request)
+        if blocked:
+            return blocked
+        run_id = request.get("run_id") or self._session().get("last_run_id")
+        if not run_id:
+            return self._error(request, "INVALID_REQUEST", "party_status requires a run_id")
+        try:
+            visible_state = narrator_state(self._runs().observe(run_id))
             return self._ok(request, {
-                "session": parsed,
-                "input": intent.strip(),
-                "execution": "adapter-owned; host returned the shared envelope without mutating a run",
+                "run_id": run_id,
+                "public_view": build_public_view(
+                    visible_state, mode=self.mode, run_id=run_id,
+                ),
+                "narrator": {"source": "host-returned visible state only"},
             })
-        if command in {"validation_start", "validation_status", "validation_result"}:
-            blocked = self._require_booted(request)
-            if blocked:
-                return blocked
-            if self.mode not in {"DESIGN", "REVIEW"}:
-                return self._error(request, "MODE_BLOCKED", "local validation requires DESIGN or REVIEW mode")
-            try:
-                from hollowstar import validation
-                if command == "validation_start":
-                    result = validation.start(self.paths.workspace_root, self.paths.data_root, job_id=request.get("job_id"))
-                elif command == "validation_status":
-                    result = validation.status(self.paths.data_root, request.get("job_id"))
-                else:
-                    result = validation.result(self.paths.data_root, request.get("job_id"), include_log=bool(request.get("include_log", False)))
-                return self._ok(request, {"validation": result})
-            except (ValueError, OSError) as exc:
-                return self._error(request, "VALIDATION_INVALID", str(exc))
-        if command == "inspect":
-            target = str(request.get("target", "capabilities")).lower()
-            if target == "modules":
-                from hollowstar.modules import list_manifests
-                return self._ok(request, {"modules": list_manifests(self.paths.content_root / "modules")})
-            if target != "capabilities":
-                return self._error(request, "INVALID_REQUEST", f"unsupported inspection target: {target}")
-            return self._ok(request, {"capabilities": self.capabilities()})
-        if command == "inspect_modules":
+        except (RunStateError, OSError, ValueError) as exc:
+            return self._error(request, "RUN_INVALID", str(exc))
+
+    @command_handler("examine")
+    def _cmd_examine(self, request: dict, command: str) -> dict | None:
+        blocked = self._require_booted(request)
+        if blocked:
+            return blocked
+        try:
+            return self._ok(request, self._examine_run(request))
+        except (RunStateError, RunServiceError, OSError, ValueError) as exc:
+            return self._error(request, "EXAMINE_INVALID", str(exc))
+
+    @command_handler("companion_talk")
+    def _cmd_companion_talk(self, request: dict, command: str) -> dict | None:
+        blocked = self._require_booted(request)
+        if blocked:
+            return blocked
+        try:
+            return self._ok(request, self._companion_talk(request))
+        except (RunStateError, RunServiceError, OSError, ValueError) as exc:
+            return self._error(request, "COMPANION_INVALID", str(exc))
+
+    @command_handler("session_intent")
+    def _cmd_session_intent(self, request: dict, command: str) -> dict | None:
+        intent = request.get("intent")
+        if not isinstance(intent, str) or not intent.strip():
+            return self._error(request, "INVALID_REQUEST", "session_intent requires a non-empty intent")
+        parsed = parse_session_intent(intent)
+        if parsed is None:
+            return self._error(request, "SESSION_INTENT_UNSUPPORTED", "could not translate session intent")
+        return self._ok(request, {
+            "session": parsed,
+            "input": intent.strip(),
+            "execution": "adapter-owned; host returned the shared envelope without mutating a run",
+        })
+
+    @command_handler(*{"validation_start", "validation_status", "validation_result"})
+    def _cmd_validation_jobs(self, request: dict, command: str) -> dict | None:
+        blocked = self._require_booted(request)
+        if blocked:
+            return blocked
+        if self.mode not in {"DESIGN", "REVIEW"}:
+            return self._error(request, "MODE_BLOCKED", "local validation requires DESIGN or REVIEW mode")
+        try:
+            from hollowstar import validation
+            if command == "validation_start":
+                result = validation.start(self.paths.workspace_root, self.paths.data_root, job_id=request.get("job_id"))
+            elif command == "validation_status":
+                result = validation.status(self.paths.data_root, request.get("job_id"))
+            else:
+                result = validation.result(self.paths.data_root, request.get("job_id"), include_log=bool(request.get("include_log", False)))
+            return self._ok(request, {"validation": result})
+        except (ValueError, OSError) as exc:
+            return self._error(request, "VALIDATION_INVALID", str(exc))
+
+    @command_handler("inspect")
+    def _cmd_inspect(self, request: dict, command: str) -> dict | None:
+        target = str(request.get("target", "capabilities")).lower()
+        if target == "modules":
             from hollowstar.modules import list_manifests
             return self._ok(request, {"modules": list_manifests(self.paths.content_root / "modules")})
-        if command == "shutdown":
-            self.booted = False
-            return self._ok(request, {"shutdown": True, "state": "stopped"})
-        if command == "affix_catalog":
-            from hollowstar.loader import affix_catalog
-            return self._ok(request, {"affixes": affix_catalog()})
-        if command == "scenario_catalog":
-            # Read-only content description: answerable before boot so the client
-            # can show the scenario picker without holding an engine.
-            from hollowstar.run_service import RunService
-            mode = request.get("mode")
-            if mode is not None and not isinstance(mode, str):
-                return self._error(request, "INVALID_REQUEST", "mode must be a string")
-            return self._ok(request, {"scenarios": RunService.scenario_catalog(mode)})
-        if command == "statistics":
-            return self._statistics(request)
-        if command in {"spell_workshop_catalog", "spell_workshop_preview", "spell_workshop_save", "spell_workshop_list"}:
-            blocked = self._require_booted(request)
-            if blocked:
-                return blocked
-            if self.mode not in {"DESIGN", "SANDBOX"}:
-                return self._error(request, "MODE_BLOCKED", "spell workshop is available only in DESIGN or SANDBOX mode")
-            try:
-                from hollowstar import spell_workshop
-                if command == "spell_workshop_catalog":
-                    return self._ok(request, {"workshop": spell_workshop.catalog()})
-                if command == "spell_workshop_list":
-                    return self._ok(request, {"recipes": spell_workshop.list_recipes(self.paths.data_root), "scope": "local workshop only"})
-                recipe = spell_workshop.compose(
-                    request.get("spell_id"), request.get("metamagic", []), request.get("parameters", {}),
-                    available_sorcery_points=request.get("available_sorcery_points"),
-                )
-                if command == "spell_workshop_preview":
-                    return self._ok(request, {"recipe": recipe})
-                stored = spell_workshop.save_recipe(self.paths.data_root, recipe, request.get("name"))
-                return self._ok(request, {"recipe": stored, "storage": str(self.paths.data_root / "metamagic_workshop" / "recipes.json")})
-            except (spell_workshop.WorkshopError, OSError, ValueError, TypeError) as exc:
-                return self._error(request, "SPELL_WORKSHOP_INVALID", str(exc))
-        if command in {"character_options", "character_roll", "peek_creation_seed", "allocate_creation_seed", "randomize_build", "preview_character", "build_character", "content_catalog", "design_start", "design_action", "design_turn", "arcade_tick", "arcade_toggle_flight", "arcade_set_movement_mode", "idle_tick", "auto_travel", "observe", "readout", "report", "reveal-room-record", "test-perception", "register_ruling", "spell_catalog", "design_auto", "design_auto_combat", "design_drain_npc", "checkpoint", "bank_checkpoint", "resume_checkpoint", "terminal_receipt", "progression", "settle_run", "upgrade", "meta_shop", "meta_shop_purchase", "identify", "combine", "replay_token", "inspect_replay_token", "design_auto", "sandbox_start", "sandbox_release", "sandbox_action", "sandbox_debug", "sandbox_branch", "finished_runs", "sandbox_prestige", "forge_start", "forge_action", "forge_receipt"} | EXPEDITION_COMMANDS:
-            blocked = self._require_booted(request)
-            if blocked:
-                return blocked
-            if command in {"design_turn", "observe", "readout", "report"} and not request.get("run_id"):
-                request = {**request, "run_id": self._session().get("last_run_id")}
-            if command not in {"observe", "readout", "report"}:
-                # These three are read-only reports of current state; advancing
-                # the active-time clock here would make re-reading a run mutate
-                # it, so two back-to-back readouts would no longer agree.
-                self._touch_active_clock(request.get("run_id"))
-            try:
-                if command in {"progression","settle_run","upgrade","meta_shop","meta_shop_purchase"}:
-                    from hollowstar.progression import Progression, shop_catalog
-                    progress=Progression(self.paths.run_root.parent / "reliquary_progress")
-                    identity=request.get("identity")
-                    if command=="progression": return self._ok(request,{"progression":progress.load(identity)})
-                    if command=="meta_shop":
-                        # Read-only: every track with its tier, cap, and next Platinum cost.
-                        data=progress.load(identity)
-                        return self._ok(request,{"progression":data,"meta_shop":shop_catalog(data["upgrades"])})
-                    if command=="meta_shop_purchase":
-                        data=progress.purchase(identity,request.get("upgrade") or request.get("track"))
-                        return self._ok(request,{"progression":data,"meta_shop":shop_catalog(data["upgrades"])})
-                    if command=="upgrade" and request.get("run_id") and request.get("item"):
-                        action={"type":"upgrade","item":request.get("item"),
-                                "actor":request.get("actor","p0")}
-                        return self._ok(request,{"outcome":self._runs().design_action(
-                            request.get("run_id"),action)["event"]})
-                    if command=="upgrade": return self._ok(request,{"progression":progress.purchase(identity,request.get("upgrade"))})
-                    run=self._runs()._active.get(request.get("run_id"))
-                    if run is None:raise RunServiceError("load the run first")
-                    return self._ok(request,{"progression":progress.settle(identity,request.get("run_id"),run)})
-                if command == "content_catalog":
-                    catalog = self._runs().content_catalog(request.get("run_id"))
-                    from hollowstar.loader import load_items
-                    dungeon_path = self.paths.content_root / "dungeon.json"
-                    dungeon = json.loads(dungeon_path.read_text(encoding="utf-8")) if dungeon_path.is_file() else {}
-                    item_rows = []
-                    for item in load_items().values():
-                        item_rows.append({
-                            "name": item.name, "slot": item.slot, "tier": item.tier.name,
-                            "base_damage": item.base_damage, "attack_bonus": item.attack_bonus,
-                            "base_ac": item.base_ac, "tags": sorted(tag.name for tag in item.tags),
-                            "flavor": item.flavor, "utility_uses": list(item.utility_uses),
-                        })
-                    catalog.update({
-                        "items": item_rows,
-                        "rooms": [{
-                            "id": str(index + 1), "name": row.get("name"),
-                            "type": row.get("apparent_function"), "terrain": row.get("terrain"),
-                            "resident": row.get("resident"), "law": row.get("law"),
-                            "exit": row.get("exit"),
-                        } for index, row in enumerate(dungeon.get("floors", [])) if isinstance(row, dict)],
-                        "source": "hollowstar/content/items.json + hollowstar/content/dungeon.json",
+        if target != "capabilities":
+            return self._error(request, "INVALID_REQUEST", f"unsupported inspection target: {target}")
+        return self._ok(request, {"capabilities": self.capabilities()})
+
+    @command_handler("inspect_modules")
+    def _cmd_inspect_modules(self, request: dict, command: str) -> dict | None:
+        from hollowstar.modules import list_manifests
+        return self._ok(request, {"modules": list_manifests(self.paths.content_root / "modules")})
+
+    @command_handler("shutdown")
+    def _cmd_shutdown(self, request: dict, command: str) -> dict | None:
+        self.booted = False
+        return self._ok(request, {"shutdown": True, "state": "stopped"})
+
+    @command_handler("affix_catalog")
+    def _cmd_affix_catalog(self, request: dict, command: str) -> dict | None:
+        from hollowstar.loader import affix_catalog
+        return self._ok(request, {"affixes": affix_catalog()})
+
+    @command_handler("scenario_catalog")
+    def _cmd_scenario_catalog(self, request: dict, command: str) -> dict | None:
+        # Read-only content description: answerable before boot so the client
+        # can show the scenario picker without holding an engine.
+        from hollowstar.run_service import RunService
+        mode = request.get("mode")
+        if mode is not None and not isinstance(mode, str):
+            return self._error(request, "INVALID_REQUEST", "mode must be a string")
+        return self._ok(request, {"scenarios": RunService.scenario_catalog(mode)})
+
+    @command_handler("statistics")
+    def _cmd_statistics(self, request: dict, command: str) -> dict | None:
+        return self._statistics(request)
+
+    @command_handler(*{"spell_workshop_catalog", "spell_workshop_preview", "spell_workshop_save", "spell_workshop_list"})
+    def _cmd_spell_workshop(self, request: dict, command: str) -> dict | None:
+        blocked = self._require_booted(request)
+        if blocked:
+            return blocked
+        if self.mode not in {"DESIGN", "SANDBOX"}:
+            return self._error(request, "MODE_BLOCKED", "spell workshop is available only in DESIGN or SANDBOX mode")
+        try:
+            from hollowstar import spell_workshop
+            if command == "spell_workshop_catalog":
+                return self._ok(request, {"workshop": spell_workshop.catalog()})
+            if command == "spell_workshop_list":
+                return self._ok(request, {"recipes": spell_workshop.list_recipes(self.paths.data_root), "scope": "local workshop only"})
+            recipe = spell_workshop.compose(
+                request.get("spell_id"), request.get("metamagic", []), request.get("parameters", {}),
+                available_sorcery_points=request.get("available_sorcery_points"),
+            )
+            if command == "spell_workshop_preview":
+                return self._ok(request, {"recipe": recipe})
+            stored = spell_workshop.save_recipe(self.paths.data_root, recipe, request.get("name"))
+            return self._ok(request, {"recipe": stored, "storage": str(self.paths.data_root / "metamagic_workshop" / "recipes.json")})
+        except (spell_workshop.WorkshopError, OSError, ValueError, TypeError) as exc:
+            return self._error(request, "SPELL_WORKSHOP_INVALID", str(exc))
+
+    @command_handler(*({"character_options", "character_roll", "peek_creation_seed", "allocate_creation_seed", "randomize_build", "preview_character", "build_character", "content_catalog", "design_start", "design_action", "design_turn", "arcade_tick", "arcade_toggle_flight", "arcade_set_movement_mode", "idle_tick", "auto_travel", "observe", "readout", "report", "reveal-room-record", "test-perception", "register_ruling", "spell_catalog", "design_auto", "design_auto_combat", "design_drain_npc", "checkpoint", "bank_checkpoint", "resume_checkpoint", "terminal_receipt", "progression", "settle_run", "upgrade", "meta_shop", "meta_shop_purchase", "identify", "combine", "replay_token", "inspect_replay_token", "design_auto", "sandbox_start", "sandbox_release", "sandbox_action", "sandbox_debug", "sandbox_branch", "finished_runs", "sandbox_prestige", "forge_start", "forge_action", "forge_receipt"} | EXPEDITION_COMMANDS))
+    def _cmd_design_runtime(self, request: dict, command: str) -> dict | None:
+        blocked = self._require_booted(request)
+        if blocked:
+            return blocked
+        if command in {"design_turn", "observe", "readout", "report"} and not request.get("run_id"):
+            request = {**request, "run_id": self._session().get("last_run_id")}
+        if command not in {"observe", "readout", "report"}:
+            # These three are read-only reports of current state; advancing
+            # the active-time clock here would make re-reading a run mutate
+            # it, so two back-to-back readouts would no longer agree.
+            self._touch_active_clock(request.get("run_id"))
+        try:
+            if command in {"progression","settle_run","upgrade","meta_shop","meta_shop_purchase"}:
+                from hollowstar.progression import Progression, shop_catalog
+                progress=Progression(self.paths.run_root.parent / "reliquary_progress")
+                identity=request.get("identity")
+                if command=="progression": return self._ok(request,{"progression":progress.load(identity)})
+                if command=="meta_shop":
+                    # Read-only: every track with its tier, cap, and next Platinum cost.
+                    data=progress.load(identity)
+                    return self._ok(request,{"progression":data,"meta_shop":shop_catalog(data["upgrades"])})
+                if command=="meta_shop_purchase":
+                    data=progress.purchase(identity,request.get("upgrade") or request.get("track"))
+                    return self._ok(request,{"progression":data,"meta_shop":shop_catalog(data["upgrades"])})
+                if command=="upgrade" and request.get("run_id") and request.get("item"):
+                    action={"type":"upgrade","item":request.get("item"),
+                            "actor":request.get("actor","p0")}
+                    return self._ok(request,{"outcome":self._runs().design_action(
+                        request.get("run_id"),action)["event"]})
+                if command=="upgrade": return self._ok(request,{"progression":progress.purchase(identity,request.get("upgrade"))})
+                run=self._runs()._active.get(request.get("run_id"))
+                if run is None:raise RunServiceError("load the run first")
+                return self._ok(request,{"progression":progress.settle(identity,request.get("run_id"),run)})
+            if command == "content_catalog":
+                catalog = self._runs().content_catalog(request.get("run_id"))
+                from hollowstar.loader import load_items
+                dungeon_path = self.paths.content_root / "dungeon.json"
+                dungeon = json.loads(dungeon_path.read_text(encoding="utf-8")) if dungeon_path.is_file() else {}
+                item_rows = []
+                for item in load_items().values():
+                    item_rows.append({
+                        "name": item.name, "slot": item.slot, "tier": item.tier.name,
+                        "base_damage": item.base_damage, "attack_bonus": item.attack_bonus,
+                        "base_ac": item.base_ac, "tags": sorted(tag.name for tag in item.tags),
+                        "flavor": item.flavor, "utility_uses": list(item.utility_uses),
                     })
-                    return self._ok(request, {"content": catalog})
-                if command == "replay_token":
-                    return self._ok(request, {"replay":self._runs().replay_token(request.get("run_id"))})
-                if command == "inspect_replay_token":
-                    return self._ok(request, {"replay":self._runs().inspect_replay_token(request.get("token"))})
-                if command == "character_options":
-                    from hollowstar.character_builder import options
-                    payload = options()
-                    payload["champions"] = [
-                        {"id": row["name"], "title": row.get("identity", {}).get("name", "Tier-3 Sanctum field Steward"),
-                         "blurb": row.get("provenance", {}).get("note", "Certified Sanctum field Steward")}
-                        for row in self._profiles().roster()
-                        if row.get("name") in {"Doran", "Wren"} and row.get("kind") == "divine_mythos"
-                    ]
-                    return self._ok(request, payload)
-                if command == "character_roll":
-                    from hollowstar.character_builder import roll_abilities
-                    return self._ok(request, {"ability_roll": roll_abilities(
-                        request.get("creation_seed"), request.get("roll_set", 0))})
-                if command == "preview_character":
-                    from hollowstar.character_builder import preview_with_notes
-                    if not isinstance(request.get("build"), dict) or "background" not in request["build"]:
-                        raise ProfileError("background is required for a new character build")
-                    return self._ok(request, {"character": preview_with_notes(request.get("build"))})
-                if command == "allocate_creation_seed":
-                    return self._ok(request, {"seed": self._profiles().allocate_creation_seed()})
-                if command == "peek_creation_seed":
-                    return self._ok(request, {"seed": self._profiles().peek_creation_seed()})
-                if command == "randomize_build":
-                    from hollowstar.character_builder import preview_with_notes, randomize_build
-                    build = randomize_build(request.get("creation_seed"), request.get("level"))
-                    if isinstance(request.get("name"), str) and request["name"].strip():
-                        build["name"] = request["name"].strip()
-                    return self._ok(request, {"build": build, "character": preview_with_notes(build)})
-                if command == "build_character":
-                    from hollowstar.character_builder import preview
-                    if not isinstance(request.get("build"), dict) or "background" not in request["build"]:
-                        raise ProfileError("background is required for a new character build")
-                    result = preview(request.get("build"))
-                    if request.get("expected_build_hash") != result["build_hash"]:
-                        raise ProfileError("build hash mismatch; preview the exact character before saving")
-                    saved, created = self._profiles().save_confirmed_build(
-                        request.get("profile_id"), result["profile"]
-                    )
-                    seed_commit = self._profiles().commit_creation_seed(result["receipt"]["creation_seed"])
-                    return self._ok(request, {"profile": saved, "build_hash": result["build_hash"],
-                                              "creation_receipt": result["receipt"], "seed_commit": seed_commit,
-                                              "created": created})
-                if command == "design_start":
-                    outcome = self._runs().design_start(request.get("run_id"))
-                    return self._ok(request, _public_outcome(
-                        outcome, mode=self.mode, run_id=request.get("run_id"),
-                    ))
-                if command == "idle_tick":
-                    outcome = self._runs().idle_tick(
-                        request.get("run_id"), max_steps=request.get("max_steps", 1),
-                    )
-                    visible_state = narrator_state(outcome["state"])
-                    return self._ok(request, {"idle": {
-                        "run_id": request.get("run_id"),
-                        "event": redact_public(outcome["event"]),
-                        "public_view": build_public_view(
-                            visible_state, event=outcome["event"], mode=self.mode,
-                            run_id=request.get("run_id"),
-                        ),
-                        "public_receipt": _public_receipt(outcome["event"]),
-                    }})
-                if command == "auto_travel":
-                    outcome = self._runs().auto_travel(
-                        request.get("run_id"), destination=request.get("destination", "well"),
-                        max_steps=request.get("max_steps", 4),
-                        enter_descent=bool(request.get("enter_descent", False)),
-                    )
-                    visible_state = narrator_state(outcome["state"])
-                    return self._ok(request, {"travel": {
-                        "run_id": request.get("run_id"),
-                        "event": redact_public(outcome["event"]),
-                        "public_view": build_public_view(visible_state, event=outcome["event"], mode=self.mode, run_id=request.get("run_id")),
-                        "public_receipt": _public_receipt(outcome["event"]),
-                    }})
-                if command == "forge_start":
-                    outcome = self._runs().forge_start(request.get("run_id"))
-                    return self._ok(request, _public_outcome(
-                        outcome, mode=self.mode, run_id=request.get("run_id"),
-                    ))
-                if command == "forge_action":
-                    return self._ok(request, self._runs().design_action(
-                        request.get("run_id"), request.get("action"), intent=request.get("intent")))
-                if command == "forge_receipt":
-                    run = self._runs()._active.get(request.get("run_id"))
-                    if run is None:
-                        raise RunServiceError("load the run first")
-                    forge = run.context.get("forge")
-                    if not isinstance(forge, dict):
-                        raise RunServiceError("run is not a Forge run")
-                    return self._ok(request, {"receipt": forge.get("receipt"), "status": forge.get("status")})
-                if command == "sandbox_start":
-                    return self._ok(request, self._runs().sandbox_start(request.get("run_id")))
-                if command == "sandbox_release":
-                    return self._ok(request, self._runs().sandbox_release(request.get("run_id")))
-                if command == "sandbox_action":
-                    return self._ok(request, self._runs().design_action(request.get("run_id"), request.get("action"), intent=request.get("intent")))
-                if command == "sandbox_debug":
-                    return self._ok(request, self._runs().sandbox_debug(request.get("run_id")))
-                if command == "sandbox_branch":
-                    return self._ok(request, {"run": self._runs().branch(request.get("run_id"), request.get("new_run_id")).as_dict()})
-                if command == "finished_runs":
-                    return self._ok(request, {"runs": self._runs().finished_runs()})
-                if command == "sandbox_prestige":
-                    return self._ok(request, {"prestige": self._runs().sandbox_prestige()})
-                if command in EXPEDITION_COMMANDS:
-                    action = {"type": command}
-                    for field in ("node", "mode", "max_nodes", "retreat_below"):
-                        if field in request:
-                            action[field] = request[field]
-                    outcome = self._runs().design_action(request.get("run_id"), action)
-                    return self._ok(request, _public_outcome(
-                        outcome, mode=self.mode, run_id=request.get("run_id"),
-                    ))
-                if command in {"checkpoint","bank_checkpoint","resume_checkpoint"}:
-                    action_type="resume_checkpoint" if command=="resume_checkpoint" else "bank_checkpoint"
-                    return self._ok(request, self._runs().design_action(request.get("run_id"), {"type":action_type}))
-                if command == "terminal_receipt":
-                    run=self._runs()._active.get(request.get("run_id"))
-                    if run is None: raise RunServiceError("load the run first")
-                    return self._ok(request, {"terminal_receipt":run.context["dungeon"].get("terminal_receipt")})
-                if command == "design_auto":
-                    from hollowstar.policies import exploration_action
-                    run = self._runs()._active.get(request.get("run_id"))
-                    if run is None: raise RunServiceError("load the run first")
-                    outcome = self._runs().design_action(request.get("run_id"), exploration_action(run))
-                    return self._ok(request, _public_outcome(
-                        outcome, mode=self.mode, run_id=request.get("run_id"),
-                    ))
-                if command == "design_auto_combat":
-                    run = self._runs()._active.get(request.get("run_id"))
-                    if run is None: raise RunServiceError("load the run first")
-                    from hollowstar import tactical as _t
-                    if "combat" not in run.context or run.context["combat"].get("complete"):
-                        return self._error(request, "NOT_IN_COMBAT", "no active combat to auto-resolve")
-                    # npc_only callers stepping one NPC action at a time must stop
-                    # at a player decision; the client's Auto-turn button omits it.
-                    # (design_drain_npc runs its own multi-step loop instead.)
-                    if request.get("npc_only"):
-                        combat_state = run.context["combat"]
-                        decider = combat_state["pending"][0]["reactor"] if combat_state["pending"] else _t.current(run)
-                        if _t.actor(run, decider).controller == "player":
-                            return self._error(request, "PLAYER_TURN",
-                                               f"{decider} is player-controlled; awaiting a player decision")
-                    from hollowstar.policies import combat_action
-                    outcome = self._runs().design_action(request.get("run_id"), combat_action(run))
-                    return self._ok(request, _public_outcome(
-                        outcome, mode=self.mode, run_id=request.get("run_id"),
-                    ))
-                if command == "design_drain_npc":
-                    run = self._runs()._active.get(request.get("run_id"))
-                    if run is None: raise RunServiceError("load the run first")
-                    combat_state = run.context.get("combat")
-                    if not isinstance(combat_state, dict) or combat_state.get("complete"):
-                        return self._error(request, "NOT_IN_COMBAT", "no active combat to drain")
-                    from hollowstar.run_service import DRAIN_NPC_LIMIT
-                    outcome = self._runs().drain_npc(request.get("run_id"),
-                                                     max_steps=request.get("max_steps", DRAIN_NPC_LIMIT))
-                    public = _public_outcome(outcome, mode=self.mode, run_id=request.get("run_id"))
-                    event = outcome.get("event") or {}
-                    public["receipts"] = _step_receipts(redact_public(event))
-                    public["drain"] = {"steps": len(event.get("steps") or []), "stopped": event.get("stopped"),
-                                       "next_actor": event.get("next_actor")}
-                    return self._ok(request, public)
-                if command in {"arcade_tick", "arcade_toggle_flight", "arcade_set_movement_mode"}:
-                    action = request.get("action")
-                    if not isinstance(action, dict):
-                        action = {"type": command, **{k: v for k, v in request.items() if k not in {"command", "id", "run_id", "compact", "public_only"}}}
-                    outcome = self._runs().design_action(request.get("run_id"), action)
-                    return self._ok(request, _public_outcome(
-                        outcome, mode=self.mode, run_id=request.get("run_id"),
-                    ))
-                if command == "design_action":
-                    outcome = self._runs().design_action(request.get("run_id"), request.get("action"))
-                    return self._ok(request, _public_outcome(
-                        outcome, mode=self.mode, run_id=request.get("run_id"),
-                    ))
-                if command == "design_turn":
-                    public_only = request.get("public_only", True)
-                    if type(public_only) is not bool:
-                        return self._error(request, "INVALID_REQUEST", "public_only must be a boolean")
-                    intent = request.get("intent")
-                    if not isinstance(intent, str) or not intent.strip():
-                        return self._error(request, "INVALID_REQUEST", "design_turn requires a non-empty intent")
-                    if len(intent) > 2000:
-                        return self._error(request, "INVALID_REQUEST", "design_turn intent must be at most 2000 characters")
-                    action = request.get("action")
-                    if action is None:
-                        from hollowstar.intent import IntentClarification, parse_intent
-                        try:
-                            visible_context = self._runs().observe(request.get("run_id"))
-                            action = parse_intent(intent, visible_context)
-                        except IntentClarification as exc:
-                            return self._error(request, "INTENT_CLARIFICATION", exc.message)
-                    if isinstance(action, dict) and action.get("type") in {"examine", "explain"}:
-                        try:
-                            fields = dict(request)
-                            if action.get("type") == "explain":
-                                fields["entity_type"] = "result"
-                            else:
-                                fields.update({key: action[key] for key in ("entity_type", "entity_id", "query") if key in action})
-                            inspected = self._examine_run(fields)
-                        except (RunStateError, RunServiceError, OSError, ValueError) as exc:
-                            return self._error(request, "EXAMINE_INVALID", str(exc))
-                        return self._ok(request, {"turn": {
-                            "run_id": request.get("run_id"),
-                            "mode": self.mode,
-                            "player_intent": intent.strip(),
-                            "action": action,
-                            "examine": inspected["examine"],
-                            "public_view": inspected["public_view"],
-                            "public_receipt": inspected["public_receipt"],
-                            "narrator": {"source": "host-returned explanation and public view only",
-                                         "narration_source_block": "public_view"},
-                        }})
-                    if isinstance(action, dict) and action.get("type") == "query" and action.get("data") == "party_status":
-                        visible_state = narrator_state(self._runs().observe(request.get("run_id")))
-                        public_view = build_public_view(
-                            visible_state, mode=self.mode, run_id=request.get("run_id"),
-                        )
-                        return self._ok(request, {"turn": {
-                            "run_id": request.get("run_id"),
-                            "mode": self.mode,
-                            "player_intent": intent.strip(),
-                            "action": action,
-                            "public_view": public_view,
-                            "public_receipt": {"type": "party_status", "read_only": True},
-                            "narrator": {"source": "host-returned visible state only", "narration_source_block": "public_view"},
-                        }})
-                    outcome = self._runs().design_action(
-                        request.get("run_id"), action, intent=intent,
-                    )
-                    visible_state = narrator_state(outcome["state"])
-                    turn = {
+                catalog.update({
+                    "items": item_rows,
+                    "rooms": [{
+                        "id": str(index + 1), "name": row.get("name"),
+                        "type": row.get("apparent_function"), "terrain": row.get("terrain"),
+                        "resident": row.get("resident"), "law": row.get("law"),
+                        "exit": row.get("exit"),
+                    } for index, row in enumerate(dungeon.get("floors", [])) if isinstance(row, dict)],
+                    "source": "hollowstar/content/items.json + hollowstar/content/dungeon.json",
+                })
+                return self._ok(request, {"content": catalog})
+            if command == "replay_token":
+                return self._ok(request, {"replay":self._runs().replay_token(request.get("run_id"))})
+            if command == "inspect_replay_token":
+                return self._ok(request, {"replay":self._runs().inspect_replay_token(request.get("token"))})
+            if command == "character_options":
+                from hollowstar.character_builder import options
+                payload = options()
+                payload["champions"] = [
+                    {"id": row["name"], "title": row.get("identity", {}).get("name", "Tier-3 Sanctum field Steward"),
+                     "blurb": row.get("provenance", {}).get("note", "Certified Sanctum field Steward")}
+                    for row in self._profiles().roster()
+                    if row.get("name") in {"Doran", "Wren"} and row.get("kind") == "divine_mythos"
+                ]
+                return self._ok(request, payload)
+            if command == "character_roll":
+                from hollowstar.character_builder import roll_abilities
+                return self._ok(request, {"ability_roll": roll_abilities(
+                    request.get("creation_seed"), request.get("roll_set", 0))})
+            if command == "preview_character":
+                from hollowstar.character_builder import preview_with_notes
+                if not isinstance(request.get("build"), dict) or "background" not in request["build"]:
+                    raise ProfileError("background is required for a new character build")
+                return self._ok(request, {"character": preview_with_notes(request.get("build"))})
+            if command == "allocate_creation_seed":
+                return self._ok(request, {"seed": self._profiles().allocate_creation_seed()})
+            if command == "peek_creation_seed":
+                return self._ok(request, {"seed": self._profiles().peek_creation_seed()})
+            if command == "randomize_build":
+                from hollowstar.character_builder import preview_with_notes, randomize_build
+                build = randomize_build(request.get("creation_seed"), request.get("level"))
+                if isinstance(request.get("name"), str) and request["name"].strip():
+                    build["name"] = request["name"].strip()
+                return self._ok(request, {"build": build, "character": preview_with_notes(build)})
+            if command == "build_character":
+                from hollowstar.character_builder import preview
+                if not isinstance(request.get("build"), dict) or "background" not in request["build"]:
+                    raise ProfileError("background is required for a new character build")
+                result = preview(request.get("build"))
+                if request.get("expected_build_hash") != result["build_hash"]:
+                    raise ProfileError("build hash mismatch; preview the exact character before saving")
+                saved, created = self._profiles().save_confirmed_build(
+                    request.get("profile_id"), result["profile"]
+                )
+                seed_commit = self._profiles().commit_creation_seed(result["receipt"]["creation_seed"])
+                return self._ok(request, {"profile": saved, "build_hash": result["build_hash"],
+                                          "creation_receipt": result["receipt"], "seed_commit": seed_commit,
+                                          "created": created})
+            if command == "design_start":
+                outcome = self._runs().design_start(request.get("run_id"))
+                return self._ok(request, _public_outcome(
+                    outcome, mode=self.mode, run_id=request.get("run_id"),
+                ))
+            if command == "idle_tick":
+                outcome = self._runs().idle_tick(
+                    request.get("run_id"), max_steps=request.get("max_steps", 1),
+                )
+                visible_state = narrator_state(outcome["state"])
+                return self._ok(request, {"idle": {
+                    "run_id": request.get("run_id"),
+                    "event": redact_public(outcome["event"]),
+                    "public_view": build_public_view(
+                        visible_state, event=outcome["event"], mode=self.mode,
+                        run_id=request.get("run_id"),
+                    ),
+                    "public_receipt": _public_receipt(outcome["event"]),
+                }})
+            if command == "auto_travel":
+                outcome = self._runs().auto_travel(
+                    request.get("run_id"), destination=request.get("destination", "well"),
+                    max_steps=request.get("max_steps", 4),
+                    enter_descent=bool(request.get("enter_descent", False)),
+                )
+                visible_state = narrator_state(outcome["state"])
+                return self._ok(request, {"travel": {
+                    "run_id": request.get("run_id"),
+                    "event": redact_public(outcome["event"]),
+                    "public_view": build_public_view(visible_state, event=outcome["event"], mode=self.mode, run_id=request.get("run_id")),
+                    "public_receipt": _public_receipt(outcome["event"]),
+                }})
+            if command == "forge_start":
+                outcome = self._runs().forge_start(request.get("run_id"))
+                return self._ok(request, _public_outcome(
+                    outcome, mode=self.mode, run_id=request.get("run_id"),
+                ))
+            if command == "forge_action":
+                return self._ok(request, self._runs().design_action(
+                    request.get("run_id"), request.get("action"), intent=request.get("intent")))
+            if command == "forge_receipt":
+                run = self._runs()._active.get(request.get("run_id"))
+                if run is None:
+                    raise RunServiceError("load the run first")
+                forge = run.context.get("forge")
+                if not isinstance(forge, dict):
+                    raise RunServiceError("run is not a Forge run")
+                return self._ok(request, {"receipt": forge.get("receipt"), "status": forge.get("status")})
+            if command == "sandbox_start":
+                return self._ok(request, self._runs().sandbox_start(request.get("run_id")))
+            if command == "sandbox_release":
+                return self._ok(request, self._runs().sandbox_release(request.get("run_id")))
+            if command == "sandbox_action":
+                return self._ok(request, self._runs().design_action(request.get("run_id"), request.get("action"), intent=request.get("intent")))
+            if command == "sandbox_debug":
+                return self._ok(request, self._runs().sandbox_debug(request.get("run_id")))
+            if command == "sandbox_branch":
+                return self._ok(request, {"run": self._runs().branch(request.get("run_id"), request.get("new_run_id")).as_dict()})
+            if command == "finished_runs":
+                return self._ok(request, {"runs": self._runs().finished_runs()})
+            if command == "sandbox_prestige":
+                return self._ok(request, {"prestige": self._runs().sandbox_prestige()})
+            if command in EXPEDITION_COMMANDS:
+                action = {"type": command}
+                for field in ("node", "mode", "max_nodes", "retreat_below"):
+                    if field in request:
+                        action[field] = request[field]
+                outcome = self._runs().design_action(request.get("run_id"), action)
+                return self._ok(request, _public_outcome(
+                    outcome, mode=self.mode, run_id=request.get("run_id"),
+                ))
+            if command in {"checkpoint","bank_checkpoint","resume_checkpoint"}:
+                action_type="resume_checkpoint" if command=="resume_checkpoint" else "bank_checkpoint"
+                return self._ok(request, self._runs().design_action(request.get("run_id"), {"type":action_type}))
+            if command == "terminal_receipt":
+                run=self._runs()._active.get(request.get("run_id"))
+                if run is None: raise RunServiceError("load the run first")
+                return self._ok(request, {"terminal_receipt":run.context["dungeon"].get("terminal_receipt")})
+            if command == "design_auto":
+                from hollowstar.policies import exploration_action
+                run = self._runs()._active.get(request.get("run_id"))
+                if run is None: raise RunServiceError("load the run first")
+                outcome = self._runs().design_action(request.get("run_id"), exploration_action(run))
+                return self._ok(request, _public_outcome(
+                    outcome, mode=self.mode, run_id=request.get("run_id"),
+                ))
+            if command == "design_auto_combat":
+                run = self._runs()._active.get(request.get("run_id"))
+                if run is None: raise RunServiceError("load the run first")
+                from hollowstar import tactical as _t
+                if "combat" not in run.context or run.context["combat"].get("complete"):
+                    return self._error(request, "NOT_IN_COMBAT", "no active combat to auto-resolve")
+                # npc_only callers stepping one NPC action at a time must stop
+                # at a player decision; the client's Auto-turn button omits it.
+                # (design_drain_npc runs its own multi-step loop instead.)
+                if request.get("npc_only"):
+                    combat_state = run.context["combat"]
+                    decider = combat_state["pending"][0]["reactor"] if combat_state["pending"] else _t.current(run)
+                    if _t.actor(run, decider).controller == "player":
+                        return self._error(request, "PLAYER_TURN",
+                                           f"{decider} is player-controlled; awaiting a player decision")
+                from hollowstar.policies import combat_action
+                outcome = self._runs().design_action(request.get("run_id"), combat_action(run))
+                return self._ok(request, _public_outcome(
+                    outcome, mode=self.mode, run_id=request.get("run_id"),
+                ))
+            if command == "design_drain_npc":
+                run = self._runs()._active.get(request.get("run_id"))
+                if run is None: raise RunServiceError("load the run first")
+                combat_state = run.context.get("combat")
+                if not isinstance(combat_state, dict) or combat_state.get("complete"):
+                    return self._error(request, "NOT_IN_COMBAT", "no active combat to drain")
+                from hollowstar.run_service import DRAIN_NPC_LIMIT
+                outcome = self._runs().drain_npc(request.get("run_id"),
+                                                 max_steps=request.get("max_steps", DRAIN_NPC_LIMIT))
+                public = _public_outcome(outcome, mode=self.mode, run_id=request.get("run_id"))
+                event = outcome.get("event") or {}
+                public["receipts"] = _step_receipts(redact_public(event))
+                public["drain"] = {"steps": len(event.get("steps") or []), "stopped": event.get("stopped"),
+                                   "next_actor": event.get("next_actor")}
+                return self._ok(request, public)
+            if command in {"arcade_tick", "arcade_toggle_flight", "arcade_set_movement_mode"}:
+                action = request.get("action")
+                if not isinstance(action, dict):
+                    action = {"type": command, **{k: v for k, v in request.items() if k not in {"command", "id", "run_id", "compact", "public_only"}}}
+                outcome = self._runs().design_action(request.get("run_id"), action)
+                return self._ok(request, _public_outcome(
+                    outcome, mode=self.mode, run_id=request.get("run_id"),
+                ))
+            if command == "design_action":
+                outcome = self._runs().design_action(request.get("run_id"), request.get("action"))
+                return self._ok(request, _public_outcome(
+                    outcome, mode=self.mode, run_id=request.get("run_id"),
+                ))
+            if command == "design_turn":
+                public_only = request.get("public_only", True)
+                if type(public_only) is not bool:
+                    return self._error(request, "INVALID_REQUEST", "public_only must be a boolean")
+                intent = request.get("intent")
+                if not isinstance(intent, str) or not intent.strip():
+                    return self._error(request, "INVALID_REQUEST", "design_turn requires a non-empty intent")
+                if len(intent) > 2000:
+                    return self._error(request, "INVALID_REQUEST", "design_turn intent must be at most 2000 characters")
+                action = request.get("action")
+                if action is None:
+                    from hollowstar.intent import IntentClarification, parse_intent
+                    try:
+                        visible_context = self._runs().observe(request.get("run_id"))
+                        action = parse_intent(intent, visible_context)
+                    except IntentClarification as exc:
+                        return self._error(request, "INTENT_CLARIFICATION", exc.message)
+                if isinstance(action, dict) and action.get("type") in {"examine", "explain"}:
+                    try:
+                        fields = dict(request)
+                        if action.get("type") == "explain":
+                            fields["entity_type"] = "result"
+                        else:
+                            fields.update({key: action[key] for key in ("entity_type", "entity_id", "query") if key in action})
+                        inspected = self._examine_run(fields)
+                    except (RunStateError, RunServiceError, OSError, ValueError) as exc:
+                        return self._error(request, "EXAMINE_INVALID", str(exc))
+                    return self._ok(request, {"turn": {
                         "run_id": request.get("run_id"),
                         "mode": self.mode,
                         "player_intent": intent.strip(),
                         "action": action,
-                        "outcome": redact_public(outcome["event"]),
-                        "public_view": build_public_view(
-                            visible_state, event=outcome["event"], mode=self.mode,
-                            run_id=request.get("run_id"),
-                        ),
-                        "public_receipt": _public_receipt(outcome["event"]),
-                        "narrator": {
-                            "source": "host-returned visible state only",
-                            "narration_source_block": "public_view",
-                            "receipt_policy": "public receipt only; private sandbox debug requires explicit sandbox_debug",
-                            "voice": "residents and environment; divine dialogue remains Corey-owned",
-                            "next_input": "Ask for the next intent when the visible state leaves a decision open.",
-                        },
-                    }
-                    receipts = _step_receipts(redact_public(outcome["event"]))
-                    if receipts:
-                        turn["receipts"] = receipts
-                    if not public_only:
-                        turn["visible_state"] = visible_state
-                    self._record_session(
-                        self._runs().inspect(request.get("run_id")).as_dict(),
-                        turn["public_view"].get("summary", "Saved HSR run ready to resume."),
+                        "examine": inspected["examine"],
+                        "public_view": inspected["public_view"],
+                        "public_receipt": inspected["public_receipt"],
+                        "narrator": {"source": "host-returned explanation and public view only",
+                                     "narration_source_block": "public_view"},
+                    }})
+                if isinstance(action, dict) and action.get("type") == "query" and action.get("data") == "party_status":
+                    visible_state = narrator_state(self._runs().observe(request.get("run_id")))
+                    public_view = build_public_view(
+                        visible_state, mode=self.mode, run_id=request.get("run_id"),
                     )
-                    return self._ok(
-                        request,
-                        {"turn": turn},
-                    )
-                if command == "observe":
-                    return self._ok(request, {"state": self._runs().observe(request.get("run_id"))})
-                if command == "readout":
-                    public_only = request.get("public_only", True)
-                    if type(public_only) is not bool:
-                        return self._error(request, "INVALID_REQUEST", "public_only must be a boolean")
-                    visible_state = self._runs().observe(request.get("run_id"))
-                    persisted_progression = None
-                    identity = request.get("identity")
-                    if isinstance(identity, str) and identity.strip():
-                        from hollowstar.progression import Progression
-                        persisted_progression = Progression(self.paths.run_root.parent / "reliquary_progress").load(identity)
-                    visible_state = narrator_state(visible_state)
-                    readout = {
+                    return self._ok(request, {"turn": {
                         "run_id": request.get("run_id"),
                         "mode": self.mode,
-                        "progression": persisted_progression,
-                        "public_view": build_public_view(
-                            visible_state,
-                            event=visible_state.get("events", [])[-1] if visible_state.get("events") else None,
-                            mode=self.mode, progression=persisted_progression,
-                            run_id=request.get("run_id"),
-                        ),
-                        "public_receipt": _readout_receipt(visible_state),
-                        "narrator": {
-                            "source": "host-returned visible state only",
-                            "narration_source_block": "public_view",
-                            "receipt_policy": "public state only; private sandbox debug requires explicit sandbox_debug",
-                            "voice": "residents and environment; divine dialogue remains Corey-owned",
-                        },
-                    }
-                    if not public_only:
-                        readout["visible_state"] = visible_state
-                    if request.get("_temporary_inventory_only"):
-                        readout["temporary_inventory"] = [
-                            item for item in readout["public_view"].get("inventory", [])
-                            if item.get("temporary", True)
-                        ]
-                    return self._ok(
-                        request,
-                        {"readout": readout},
-                    )
-                if command == "report":
-                    visible_state = narrator_state(self._runs().observe(request.get("run_id")))
-                    identity = request.get("identity")
-                    account = None
-                    if isinstance(identity, str) and identity.strip():
-                        from hollowstar.progression import Progression
-                        account = Progression(self.paths.run_root.parent / "reliquary_progress").load(identity)
-                    public_view = build_public_view(visible_state, mode=self.mode,
-                                                     progression=account, run_id=request.get("run_id"))
-                    return self._ok(request, {"report": {"run": public_view,
-                        "account": account, "public_receipt": _readout_receipt(visible_state)}})
-                if command in {"reveal-room-record", "test-perception"}:
-                    action_type = command.replace('-', '_')
-                    action = {"type": action_type, "actor": request.get("actor", "p0")}
-                    if request.get("tell_id"):
-                        action["tell_id"] = request["tell_id"]
-                    outcome = self._runs().design_action(request.get("run_id"), action)
-                    return self._ok(request, {"outcome": outcome["event"], "visible_state": outcome["state"]})
-                if command == "register_ruling":
-                    return self._ok(request, self._runs().register_ruling(request.get("run_id"), request.get("ruling")))
-                from hollowstar.spells import display_catalog
-                run = self._runs()._active.get(request.get("run_id"))
-                if run is None:
-                    raise RunServiceError("load the run first")
-                return self._ok(request, {"spells": display_catalog(run)})
-            except (ValueError, RunStateError, OSError) as exc:
-                return self._error(request, "ACTION_INVALID", str(exc))
-        if command == "create_run":
-            return self._create_run(request)
-        if command == "load_run":
-            return self._load_run(request)
-        if command == "list_runs":
-            return self._list_runs(request)
-        if command == "inspect_run":
-            return self._inspect_run(request)
-        if command == "save_run":
-            return self._save_run(request)
-        if command in {"create_profile", "update_profile", "list_profiles", "inspect_profile", "list_roster"}:
-            return self._profile_command(request, command)
-        if command in {"start_run", "resume_run", "apply_action"}:
-            # Retired generic aliases: explicit mode-scoped commands preserve
-            # the authority and boundary of each gameplay surface.
-            return self._error(
-                request,
-                "UNSUPPORTED_OPERATION",
-                f"{command} is a retired generic alias; use design_start/design_turn/design_action or the corresponding sandbox/forge command",
-            )
-        return self._error(request, "UNSUPPORTED_OPERATION", f"unknown command: {command}")
+                        "player_intent": intent.strip(),
+                        "action": action,
+                        "public_view": public_view,
+                        "public_receipt": {"type": "party_status", "read_only": True},
+                        "narrator": {"source": "host-returned visible state only", "narration_source_block": "public_view"},
+                    }})
+                outcome = self._runs().design_action(
+                    request.get("run_id"), action, intent=intent,
+                )
+                visible_state = narrator_state(outcome["state"])
+                turn = {
+                    "run_id": request.get("run_id"),
+                    "mode": self.mode,
+                    "player_intent": intent.strip(),
+                    "action": action,
+                    "outcome": redact_public(outcome["event"]),
+                    "public_view": build_public_view(
+                        visible_state, event=outcome["event"], mode=self.mode,
+                        run_id=request.get("run_id"),
+                    ),
+                    "public_receipt": _public_receipt(outcome["event"]),
+                    "narrator": {
+                        "source": "host-returned visible state only",
+                        "narration_source_block": "public_view",
+                        "receipt_policy": "public receipt only; private sandbox debug requires explicit sandbox_debug",
+                        "voice": "residents and environment; divine dialogue remains Corey-owned",
+                        "next_input": "Ask for the next intent when the visible state leaves a decision open.",
+                    },
+                }
+                receipts = _step_receipts(redact_public(outcome["event"]))
+                if receipts:
+                    turn["receipts"] = receipts
+                if not public_only:
+                    turn["visible_state"] = visible_state
+                self._record_session(
+                    self._runs().inspect(request.get("run_id")).as_dict(),
+                    turn["public_view"].get("summary", "Saved HSR run ready to resume."),
+                )
+                return self._ok(
+                    request,
+                    {"turn": turn},
+                )
+            if command == "observe":
+                return self._ok(request, {"state": self._runs().observe(request.get("run_id"))})
+            if command == "readout":
+                public_only = request.get("public_only", True)
+                if type(public_only) is not bool:
+                    return self._error(request, "INVALID_REQUEST", "public_only must be a boolean")
+                visible_state = self._runs().observe(request.get("run_id"))
+                persisted_progression = None
+                identity = request.get("identity")
+                if isinstance(identity, str) and identity.strip():
+                    from hollowstar.progression import Progression
+                    persisted_progression = Progression(self.paths.run_root.parent / "reliquary_progress").load(identity)
+                visible_state = narrator_state(visible_state)
+                readout = {
+                    "run_id": request.get("run_id"),
+                    "mode": self.mode,
+                    "progression": persisted_progression,
+                    "public_view": build_public_view(
+                        visible_state,
+                        event=visible_state.get("events", [])[-1] if visible_state.get("events") else None,
+                        mode=self.mode, progression=persisted_progression,
+                        run_id=request.get("run_id"),
+                    ),
+                    "public_receipt": _readout_receipt(visible_state),
+                    "narrator": {
+                        "source": "host-returned visible state only",
+                        "narration_source_block": "public_view",
+                        "receipt_policy": "public state only; private sandbox debug requires explicit sandbox_debug",
+                        "voice": "residents and environment; divine dialogue remains Corey-owned",
+                    },
+                }
+                if not public_only:
+                    readout["visible_state"] = visible_state
+                if request.get("_temporary_inventory_only"):
+                    readout["temporary_inventory"] = [
+                        item for item in readout["public_view"].get("inventory", [])
+                        if item.get("temporary", True)
+                    ]
+                return self._ok(
+                    request,
+                    {"readout": readout},
+                )
+            if command == "report":
+                visible_state = narrator_state(self._runs().observe(request.get("run_id")))
+                identity = request.get("identity")
+                account = None
+                if isinstance(identity, str) and identity.strip():
+                    from hollowstar.progression import Progression
+                    account = Progression(self.paths.run_root.parent / "reliquary_progress").load(identity)
+                public_view = build_public_view(visible_state, mode=self.mode,
+                                                 progression=account, run_id=request.get("run_id"))
+                return self._ok(request, {"report": {"run": public_view,
+                    "account": account, "public_receipt": _readout_receipt(visible_state)}})
+            if command in {"reveal-room-record", "test-perception"}:
+                action_type = command.replace('-', '_')
+                action = {"type": action_type, "actor": request.get("actor", "p0")}
+                if request.get("tell_id"):
+                    action["tell_id"] = request["tell_id"]
+                outcome = self._runs().design_action(request.get("run_id"), action)
+                return self._ok(request, {"outcome": outcome["event"], "visible_state": outcome["state"]})
+            if command == "register_ruling":
+                return self._ok(request, self._runs().register_ruling(request.get("run_id"), request.get("ruling")))
+            from hollowstar.spells import display_catalog
+            run = self._runs()._active.get(request.get("run_id"))
+            if run is None:
+                raise RunServiceError("load the run first")
+            return self._ok(request, {"spells": display_catalog(run)})
+        except (ValueError, RunStateError, OSError) as exc:
+            return self._error(request, "ACTION_INVALID", str(exc))
+
+    @command_handler("create_run")
+    def _cmd_create_run(self, request: dict, command: str) -> dict | None:
+        return self._create_run(request)
+
+    @command_handler("load_run")
+    def _cmd_load_run(self, request: dict, command: str) -> dict | None:
+        return self._load_run(request)
+
+    @command_handler("list_runs")
+    def _cmd_list_runs(self, request: dict, command: str) -> dict | None:
+        return self._list_runs(request)
+
+    @command_handler("inspect_run")
+    def _cmd_inspect_run(self, request: dict, command: str) -> dict | None:
+        return self._inspect_run(request)
+
+    @command_handler("save_run")
+    def _cmd_save_run(self, request: dict, command: str) -> dict | None:
+        return self._save_run(request)
+
+    @command_handler(*{"create_profile", "update_profile", "list_profiles", "inspect_profile", "list_roster"})
+    def _cmd_profiles(self, request: dict, command: str) -> dict | None:
+        return self._profile_command(request, command)
+
+    @command_handler(*{"start_run", "resume_run", "apply_action"})
+    def _cmd_service_runs(self, request: dict, command: str) -> dict | None:
+        # Retired generic aliases: explicit mode-scoped commands preserve
+        # the authority and boundary of each gameplay surface.
+        return self._error(
+            request,
+            "UNSUPPORTED_OPERATION",
+            f"{command} is a retired generic alias; use design_start/design_turn/design_action or the corresponding sandbox/forge command",
+        )

@@ -65,6 +65,42 @@ class OddsTest(unittest.TestCase):
             wins = sum(1 for x in range(1, 21) for y in range(1, 21) if x + a > y + b)
             self.assertAlmostEqual(t.contest_odds(a, b), wins / 400)
 
+    def test_contest_odds_are_exact_with_advantage_and_disadvantage(self):
+        def naturals(adv, dis):
+            if adv == dis:
+                return [x for x in range(1, 21) for _ in range(20)]
+            pick = max if adv else min
+            return [pick(x, y) for x in range(1, 21) for y in range(1, 21)]
+        for a, b in ((0, 0), (5, 2), (-1, 7), (9, -3)):
+            for aa, ad, pa, pd in ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1),
+                                   (1, 0, 0, 1), (1, 1, 1, 0), (0, 1, 1, 0)):
+                A, P = naturals(aa, ad), naturals(pa, pd)
+                wins = sum(1 for x in A for y in P if x + a > y + b)
+                self.assertAlmostEqual(
+                    t.contest_odds(a, b, active_adv=aa, active_dis=ad, passive_adv=pa, passive_dis=pd),
+                    wins / (len(A) * len(P)))
+        # Straight rolls stay bit-identical to the original 400-pair count.
+        self.assertEqual(t.contest_odds(5, 2), 247 / 400)
+
+    def test_champion_features_are_capability_tags_not_names(self):
+        from hollowstar import champion_rules
+        doran, wren, goblin = {"identity": "doran"}, {"identity": "wren"}, {"identity": "goblin"}
+        for tag in ("brace", "parry", "riposte", "dagger_bypass", "read_the_seam"):
+            self.assertTrue(t.capable(doran, tag))
+            self.assertFalse(t.capable(wren, tag))
+            self.assertFalse(t.capable(goblin, tag))
+        for tag in ("flight", "shield_reaction", "staff_weapon"):
+            self.assertTrue(t.capable(wren, tag))
+            self.assertFalse(t.capable(doran, tag))
+        self.assertEqual(t.capable(doran, "fixed_potion_heal"), "30")
+        self.assertFalse(t.capable(None, "brace"))
+        # A new champion gains a rule by data alone.
+        champion_rules.CHAMPION_RULES["soliera"] = {"brace": True}
+        try:
+            self.assertTrue(t.capable({"identity": "soliera"}, "brace"))
+        finally:
+            del champion_rules.CHAMPION_RULES["soliera"]
+
     def test_dice_odds_match_enumeration(self):
         for expression in ("2d6+1", "3d4", "1d8-3", "1d20", "7", 12):
             self.assertOdds(t.dice_odds(expression), brute(expression))

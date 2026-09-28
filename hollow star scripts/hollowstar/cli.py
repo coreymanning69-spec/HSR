@@ -12,6 +12,61 @@ from hollowstar.host import HSRHost
 from hollowstar.protocol import run_stdio, write_response
 
 
+class Ansi:
+    """ANSI styling, disabled when stdout is not a TTY or NO_COLOR is set."""
+    ENABLED = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
+    RESET, BOLD, DIM = "\033[0m", "\033[1m", "\033[2m"
+    RED, GREEN, YELLOW, CYAN = "\033[31m", "\033[32m", "\033[33m", "\033[36m"
+
+    @classmethod
+    def paint(cls, text: str, *codes: str) -> str:
+        return "".join(codes) + text + cls.RESET if cls.ENABLED and codes else text
+
+
+def format_hp_bar(current: int, maximum: int, length: int = 10) -> str:
+    fraction = max(0.0, min(1.0, (current or 0) / max(1, maximum or 1)))
+    filled = int(round(fraction * length))
+    color = Ansi.GREEN if fraction > 0.5 else Ansi.YELLOW if fraction > 0.25 else Ansi.RED
+    return f"{Ansi.paint('█' * filled + '░' * (length - filled), color)} {current}/{maximum} HP"
+
+
+def status_bar(public_view: dict) -> str:
+    """Two lines: party health, then the active actor's remaining turn budget."""
+    party = [f"{m.get('name')} {format_hp_bar(m.get('hp', 0), m.get('max_hp', 0), 8)}"
+             for m in public_view.get("party") or [] if isinstance(m, dict)]
+    econ = public_view.get("economy") or (public_view.get("combat") or {}).get("economy") or {}
+    if isinstance(econ, dict) and econ and all(isinstance(v, dict) for v in econ.values()):
+        econ = next(iter(econ.values()))
+    budget = ""
+    if isinstance(econ, dict) and econ:
+        budget = (f"[Action: {econ.get('action', 0)}/1 | Bonus: {econ.get('bonus', 0)}/1"
+                  f" | Move: {econ.get('movement', 0)}ft]")
+    return Ansi.paint(" | ".join(party) or "no party", Ansi.BOLD) + "\n" + Ansi.paint(budget or "[out of combat]", Ansi.DIM)
+
+
+def clarification_options(message: str) -> list[str]:
+    """Pull the candidate labels out of an IntentClarification message."""
+    if "—" not in message:
+        return []
+    tail = message.split("—", 1)[1].strip().rstrip("?").strip()
+    return [part.strip() for part in tail.split(",") if part.strip()]
+
+
+def prompt_disambiguation(options: list[str], labels: dict[str, str] | None = None,
+                          prompt_text: str = "Multiple matches", reader=input) -> str | None:
+    """Bridge the gulf of execution: numbered choices instead of a dead-end error."""
+    print(Ansi.paint(f"\n{prompt_text}:", Ansi.YELLOW))
+    for index, option in enumerate(options, 1):
+        print(f"  [{index}] {option}{labels.get(option, '') if labels else ''}")
+    try:
+        choice = reader(f"Select (1-{len(options)}) or [Enter] to cancel: ").strip()
+    except (EOFError, KeyboardInterrupt):
+        return None
+    if choice.isdigit() and 1 <= int(choice) <= len(options):
+        return options[int(choice) - 1]
+    return None
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Hollow Star local host")
     parser.add_argument("command", nargs="?", choices=[
@@ -236,6 +291,7 @@ def run_interactive(host: HSRHost, run_id: str | None = None, mode: str = "SANDB
     while True:
         room_name = (pv.get("room") or {}).get("name") or "HSR"
         try:
+            print(status_bar(pv))
             line = input(f"({room_name}) > ").strip()
         except (EOFError, KeyboardInterrupt):
             print("\nSaving and quitting...")
@@ -350,6 +406,24 @@ def run_interactive(host: HSRHost, run_id: str | None = None, mode: str = "SANDB
                 _show_room(pv)
         else:
             err = turn_res.get("error") or {}
-            print(f">> Error: {err.get('message', 'Action could not be performed')}")
+            message = err.get("message", "Action could not be performed")
+            options = clarification_options(message)
+            if options:
+                hp = {m.get("name"): f" (HP {m.get('hp')}/{m.get('max_hp')})"
+                      for m in (pv.get("opposition") or []) + (pv.get("party") or [])
+                      if isinstance(m, dict) and m.get("max_hp")}
+                picked = prompt_disambiguation(options, hp)
+                if picked:
+                    retry = host.handle({"id": "cli-turn", "command": "design_turn", "run_id": active_run_id,
+                                         "intent": f"{line} {picked}", "public_only": True})
+                    if retry.get("ok"):
+                        turn_data = retry.get("result", {}).get("turn") or {}
+                        event = turn_data.get("event") or {}
+                        print(f"\n>> {turn_data.get('narration') or event.get('message') or 'Action resolved.'}\n")
+                        pv = turn_data.get("public_view") or pv
+                    else:
+                        print(f">> Error: {(retry.get('error') or {}).get('message', 'Action could not be performed')}")
+                continue
+            print(f">> Error: {message}")
 
     return 0

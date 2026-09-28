@@ -36,6 +36,30 @@ CHAMPION_RULES: dict[str, dict] = {
         "alert": True,                        # cannot be surprised
         "vision_range": 120,
 
+        # ---- capability tags (tactical.capable) ----
+        # Each names one authored Doran rule so the combat engine asks
+        # "can this actor brace?" instead of "is this Doran?".
+        "dagger_mode": True,                  # weapon/dagger/cleaver mode routing + dagger visuals
+        "dagger_bypass": True,                # dagger hits bypass resistance (not Cleaver)
+        "dagger_structure_cut": True,         # daggers may cut force-construct structures
+        "read_the_seam": True,                # Read the Seam feature; crit on 16 vs read target
+        "stances": True,                      # planted / mobile / kite stances
+        "steward_maneuvers": True,            # champion action rows in the action menu
+        "innate_bonus_attack": True,          # bonus-action attack without a resource pool
+        "parry": True,                        # reaction: Parry a hit (superiority die)
+        "riposte": True,                      # reaction: Riposte / Deft Answer on a miss
+        "brace": True,                        # reaction: Brace against a mover
+        "entry_reaction": True,               # reacts to a foe entering reach
+        "ignores_disengage": True,            # opportunity attacks ignore Disengage
+        "opportunity_halts_movement": True,   # a landed opportunity attack stops the mover
+        "critical_superiority_recovery": True,  # a crit returns a superiority die once a round
+        "superiority_round_recovery": True,   # an empty superiority pool refills to 1
+        "indomitable": True,                  # reroll a failed saving throw
+        "maximized_healing": True,            # healing received is maximized
+        "regeneration_ring": True,            # ring_heal bonus action
+        "fixed_potion_heal": "30",            # potions heal a flat 30
+        "daylight_glare": True,               # plate glare in daylight within 60 ft
+
         # ---- resource defaults ----
         # (Doran's resources are set on the Actor; nothing extra here)
     },
@@ -45,6 +69,17 @@ CHAMPION_RULES: dict[str, dict] = {
         "weapon_identity": "wren",
         "staff_caster": True,                 # spells.cast() staff-caster gate
         "ranged_capable": True,               # can use ranged maneuver modes
+        "innate_bonus_attack": True,          # bonus-action attack without a resource pool
+        "shield_reaction": True,              # reaction: Shield against a hit
+        "staff_weapon": True,                 # Staff of the Magi weapon routing (crown motes)
+        "bonus_attack_menu": True,            # Attack offered on a bonus action alone
+        "staff_utility": True,                # Staff of the Magi physical utility lane
+        "spell_absorption": True,             # staff absorbs incoming spells
+        "retributive_strike": True,           # staff retributive strike
+        "unbound_save_conversion": True,      # converts an ally's failed save
+        "flight": True,                       # Otherworldly Wings: fly / land / ascend
+        "unearthly_recovery": True,           # bonus-action heal below half HP
+        "ward_reset": True,                   # ward restored to 75 when a fight ends
 
         # ---- saves ----
         "mental_save_advantage": True,        # magical saves have advantage

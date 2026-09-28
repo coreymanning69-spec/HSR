@@ -20,6 +20,7 @@ import {assetStatus} from './asset-registry.js';
 import {t} from './strings.js';
 import {runDialogue} from './dialogue-runner.js';
 import {DIALOGUES} from './dialogues.js';
+import {voiceOf, voiceLine, voiceObservations, VOICE_TOPICS} from './npc-voices.js';
 import {titleCard, storyToast} from './transitions.js';
 import {CUTSCENES, cutsceneUnlocked} from './cutscenes.js?v=cs-2';
 import {characterFigure as drawDoll, visualRole, visualIdentity, presentationAppearance, visualExpression} from './paperdoll.js?v=puppet-1';
@@ -2921,19 +2922,52 @@ function roomObjects() {
   if (!objects.length) return '';
   return `<div class="room-objects"><p class="label">Things worth a closer look</p>${objects.map(obj => `<div class="object-row" role="button" tabindex="0" data-object="${E(obj.object_id || obj.id)}"><span>${E(objectLabel(obj))}${obj.discovered ? '' : '<small> · undiscovered</small>'}</span><span class="actions compact-actions">${objectActions(obj)}</span></div>`).join('')}</div>`;
 }
-async function openExamineDialog({entity_type = '', entity_id = '', query = ''} = {}) {
+// Resident/foe row behind an examine payload, for flavor voice lines.
+function voiceEntity(entity_type, entity_id) {
+  const id = String(entity_id || '');
+  if (!id) return null;
+  const foe = (state.view?.opposition || []).find(row => String(row.id) === id);
+  if (foe) return {entity: foe, hostile: true};
+  const npc = Object.values(state.view?.room?.npcs || {}).find(row => String(row.id || row.npc_id) === id);
+  if (npc) return {entity: npc, hostile: /hostile|aggressive/i.test(String(npc.state?.disposition || npc.disposition || ''))};
+  return entity_type === 'target' ? {entity: {id}, hostile: false} : null;
+}
+function voiceSection(found, talk = false) {
+  if (!found) return '';
+  const {entity, hostile} = found;
+  const voice = voiceOf(entity, {hostile});
+  const notes = voiceObservations(entity, {hostile}).map(line => `<li>${E(line)}</li>`).join('');
+  const topics = VOICE_TOPICS[voice.kind].map(row => `<button type="button" class="action secondary" data-voice-topic="${E(row.id)}">${E(row.label)}</button>`).join('');
+  const opening = voiceLine(entity, 'greet', {hostile});
+  return `<div class="examine-section examine-observe"><small>Observations</small><ul>${notes}</ul></div>
+    <div class="examine-section examine-voice${talk ? ' is-talking' : ''}"><small>${voice.kind === 'monster' ? 'It speaks' : 'Conversation'}</small>
+      <div class="voice-log" aria-live="polite"><p class="voice-line"><b>${E(entity.name || 'They')}:</b> “${E(opening)}”</p></div>
+      <div class="voice-topics">${topics}</div></div>`;
+}
+function bindVoiceSection(dialog, found) {
+  if (!found) return;
+  const log = dialog.querySelector('.voice-log');
+  dialog.querySelectorAll('[data-voice-topic]').forEach(btn => btn.onclick = () => {
+    const pool = btn.dataset.voiceTopic;
+    log.insertAdjacentHTML('beforeend', `<p class="voice-ask">— ${E(btn.textContent)}</p><p class="voice-line"><b>${E(found.entity.name || 'They')}:</b> “${E(voiceLine(found.entity, pool, {hostile: found.hostile}))}”</p>`);
+    log.scrollTop = log.scrollHeight;
+  });
+  if (dialog.querySelector('.examine-voice.is-talking')) dialog.querySelector('[data-voice-topic]')?.focus({preventScroll: true});
+}
+async function openExamineDialog({entity_type = '', entity_id = '', query = '', talk = false} = {}) {
+  const found = voiceEntity(entity_type, entity_id);
   let dialog = document.querySelector('#examine-dialog');
   if (!dialog) {
     dialog = document.createElement('dialog');
     dialog.id = 'examine-dialog';
     document.body.appendChild(dialog);
   }
-  const targetLabel = query || entity_id || entity_type || 'entity';
+  const targetLabel = query || found?.entity?.name || entity_id || entity_type || 'entity';
   dialog.innerHTML = `
     <article class="examine-dialog-card">
       <header class="examine-dialog-header">
         <p class="eyebrow">Reliquary Analysis</p>
-        <h2>Examining ${E(targetLabel)}</h2>
+        <h2>${talk ? 'Speaking with' : 'Examining'} ${E(targetLabel)}</h2>
       </header>
       <div class="examine-dialog-body">
         <p class="muted">Querying host for observable metrics...</p>
@@ -2948,7 +2982,8 @@ async function openExamineDialog({entity_type = '', entity_id = '', query = ''} 
   dialog.addEventListener('click', e => { if (e.target === dialog) dialog.close(); });
 
   if (!state.runId) {
-    dialog.querySelector('.examine-dialog-body').innerHTML = `<p class="muted">No active run to query for this entity.</p>`;
+    dialog.querySelector('.examine-dialog-body').innerHTML = `<p class="muted">No active run to query for this entity.</p>${voiceSection(found, talk)}`;
+    bindVoiceSection(dialog, found);
     return;
   }
   try {
@@ -2959,7 +2994,8 @@ async function openExamineDialog({entity_type = '', entity_id = '', query = ''} 
     const reply = await state.client.examine(state.runId, payload);
     if (!reply?.ok || !reply?.result?.examine) {
       const err = reply?.error?.message || 'Could not examine entity.';
-      dialog.querySelector('.examine-dialog-body').innerHTML = `<p class="notice error">${E(err)}</p>`;
+      dialog.querySelector('.examine-dialog-body').innerHTML = `<p class="notice error">${E(err)}</p>${voiceSection(found, talk)}`;
+      bindVoiceSection(dialog, found);
       return;
     }
     const info = reply.result.examine;
@@ -2989,7 +3025,7 @@ async function openExamineDialog({entity_type = '', entity_id = '', query = ''} 
           <p class="examine-short">${E(info.short || '')}</p>
         </header>
         <div class="examine-dialog-body">
-          ${detailsHtml}
+          ${talk ? voiceSection(found, talk) + detailsHtml : detailsHtml + voiceSection(found, talk)}
         </div>
         <footer class="examine-dialog-footer">
           <button type="button" class="action" data-close-examine>Dismiss</button>
@@ -2998,6 +3034,7 @@ async function openExamineDialog({entity_type = '', entity_id = '', query = ''} 
     `;
     dialog.querySelectorAll('[data-close-examine]').forEach(n => n.onclick = () => dialog.close());
     dialog.addEventListener('click', e => { if (e.target === dialog) dialog.close(); });
+    bindVoiceSection(dialog, found);
   } catch (err) {
     dialog.querySelector('.examine-dialog-body').innerHTML = `<p class="notice error">${E(err.message)}</p>`;
   }
@@ -3833,6 +3870,7 @@ function contextMenu() {
   return `<aside class="hsr-context-menu" role="dialog" aria-label="${E(targetLabel)} actions" style="left:${left}px;top:${top}px;--context-width:${width}px">
     <p class="context-menu-title"><span class="context-menu-icon" aria-hidden="true">${icon}</span><strong>${E(targetLabel)}</strong></p>
     ${menu.description ? `<p class="context-menu-description">${E(menu.description)}</p>` : '<p class="notice">No additional description is available.</p>'}
+    ${menu.voice ? `<blockquote class="context-menu-voice">“${E(menu.voice)}”</blockquote>` : ''}
     <p class="context-menu-description" data-context-detail${menu.detail ? '' : ' hidden'}>${E(menu.detail || '')}</p>
     ${actions}
     
@@ -5702,10 +5740,12 @@ function bind() {
       const contextActions = [
         {label: friendly ? 'Select Ally' : 'Focus Target', target: {kind: 'stage-actor', value: id}},
         {label: 'Inspect Combatant', target: {kind: 'examine', payload: {entity_type: friendly ? 'actor' : 'target', entity_id: id}}},
+        ...(!friendly ? [{label: 'Speak to it', target: {kind: 'examine', payload: {entity_type: 'target', entity_id: id, talk: true}}}] : []),
       ];
       return {
         label: name,
         description: friendly ? 'Party member on battlefield' : 'Hostile combatant / target',
+        voice: !friendly && entity ? voiceLine(entity, 'taunt', {hostile: true}) : '',
         primaryTarget: contextActions[0].target,
         primaryLabel: contextActions[0].label,
         contextActions,
@@ -5721,10 +5761,12 @@ function bind() {
       const contextActions = [
         {label: `Talk with ${name}`, target: {kind: 'conversation', value: id, mode: conversation.dataset.conversationMode}},
         {label: 'Inspect Resident', target: {kind: 'examine', payload: {entity_type: 'target', entity_id: id}}},
+        {label: 'Chat', target: {kind: 'examine', payload: {entity_type: 'target', entity_id: id, talk: true}}},
       ];
       return {
         label: name,
         description: [resident?.role, resident?.state?.disposition || resident?.disposition, resident?.state?.reaction || resident?.reaction].filter(Boolean).join(' · '),
+        voice: voiceLine(resident || {id, name}, 'idle'),
         primaryTarget: contextActions[0].target,
         primaryLabel: contextActions[0].label,
         contextActions,
@@ -5740,10 +5782,12 @@ function bind() {
       const contextActions = [
         {label: `Talk with ${name}`, target: {kind: 'action', value: `talk:${id}`}},
         {label: 'Inspect Resident', target: {kind: 'examine', payload: {entity_type: 'target', entity_id: id}}},
+        {label: 'Chat', target: {kind: 'examine', payload: {entity_type: 'target', entity_id: id, talk: true}}},
       ];
       return {
         label: name,
         description: [resident?.role, resident?.state?.disposition || resident?.disposition].filter(Boolean).join(' · ') || residentNode.innerText.trim().slice(0, 260),
+        voice: voiceLine(resident || {id, name}, 'idle'),
         primaryTarget: contextActions[0].target,
         primaryLabel: contextActions[0].label,
         contextActions,
@@ -5924,8 +5968,9 @@ function bind() {
     const target = contextTarget(event.target) || {label: 'Workspace', contextKind: 'scene'};
     const primary = target.contextKind !== 'scene' ? target.contextActions?.find(row => !['examine', 'fullscreen', 'system_menu'].includes(row.target?.kind)) : null;
     const examine = target.examine ? {label: 'Examine', target: {kind: 'examine', payload: target.examine}} : null;
+    const talk = target.contextActions?.find(row => row.target?.payload?.talk);
     state.contextMenu = {x: event.clientX, y: event.clientY, ...target,
-      contextActions: [primary, examine, {label: 'Menu', target: {kind: 'system_menu'}}, {label: 'Fullscreen', target: {kind: 'fullscreen'}}].filter(Boolean)};
+      contextActions: [primary, talk, examine, {label: 'Menu', target: {kind: 'system_menu'}}, {label: 'Fullscreen', target: {kind: 'fullscreen'}}].filter(Boolean)};
     document.querySelector('.hsr-context-menu')?.remove();
     app.insertAdjacentHTML('beforeend', contextMenu());
     const menu = document.querySelector('.hsr-context-menu');
